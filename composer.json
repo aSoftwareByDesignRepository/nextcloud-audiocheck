@@ -1,0 +1,33 @@
+{
+	"name": "software-by-design/nextcloud-audiocheck",
+	"description": "Audio library and player for Nextcloud",
+	"type": "project",
+	"license": "AGPL-3.0-or-later",
+	"require": {
+		"php": ">=8.2",
+		"james-heinrich/getid3": "^1.9"
+	},
+	"require-dev": {
+		"nextcloud/ocp": "^32.0 || ^33.0 || ^34.0",
+		"phpunit/phpunit": "^9.6"
+	},
+	"autoload": {
+		"psr-4": {
+			"OCA\\AudioCheck\\": "lib/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"OCA\\AudioCheck\\Tests\\": "tests/",
+			"OCP\\": "vendor/nextcloud/ocp/OCP/",
+			"NCU\\": "vendor/nextcloud/ocp/NCU/"
+		}
+	},
+	"scripts": {
+		"test": "phpunit"
+	},
+	"config": {
+		"optimize-autoloader": true,
+		"sort-packages": true
+	}
+}

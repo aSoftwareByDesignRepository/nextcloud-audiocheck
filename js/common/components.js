@@ -1,0 +1,547 @@
+(function () {
+	'use strict';
+
+	function createElement(tag, props, children) {
+		const el = document.createElement(tag);
+		if (props) {
+			Object.entries(props).forEach(([key, value]) => {
+				if (value === undefined || value === null) return;
+				if (key === 'class' || key === 'className') { el.className = String(value); return; }
+				if (key === 'dataset') {
+					Object.entries(value).forEach(([dk, dv]) => { el.dataset[dk] = String(dv); });
+					return;
+				}
+				if (key === 'on') {
+					Object.entries(value).forEach(([eventName, handler]) => el.addEventListener(eventName, handler));
+					return;
+				}
+				if (key === 'attrs') {
+					Object.entries(value).forEach(([ak, av]) => {
+						if (av === null || av === undefined || av === false) { el.removeAttribute(ak); return; }
+						if (av === true) { el.setAttribute(ak, ''); return; }
+						el.setAttribute(ak, String(av));
+					});
+					return;
+				}
+				if (key === 'text') { el.textContent = String(value); return; }
+				if (key.startsWith('on') && typeof value === 'function') {
+					el.addEventListener(key.slice(2).toLowerCase(), value);
+					return;
+				}
+				if (key in el && typeof el[key] !== 'object') {
+					try { el[key] = value; return; } catch (_) { /* attr */ }
+				}
+				el.setAttribute(key, String(value));
+			});
+		}
+		if (children !== undefined && children !== null) {
+			(Array.isArray(children) ? children : [children]).forEach((child) => {
+				if (child === null || child === undefined || child === false) return;
+				if (typeof child === 'string' || typeof child === 'number') {
+					el.appendChild(document.createTextNode(String(child)));
+				} else {
+					el.appendChild(child);
+				}
+			});
+		}
+		return el;
+	}
+
+	const el = createElement;
+
+	const SVG_NS = 'http://www.w3.org/2000/svg';
+
+	function getAppLogoUrl() {
+		const root = document.getElementById('app-content');
+		const fromData = root && root.dataset ? root.dataset.acAppLogo : '';
+		if (fromData) return fromData;
+		if (window.OC && typeof OC.imagePath === 'function') {
+			return OC.imagePath('audiocheck', 'app.svg');
+		}
+		return '';
+	}
+
+	/** @type {Record<string, Array<Record<string, string>>>} */
+	const EMPTY_STATE_ICONS = {
+		playlist: [{ tag: 'path', d: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01' }],
+		folder: [{ tag: 'path', d: 'M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z' }],
+		audiobook: [
+			{ tag: 'path', d: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20' },
+			{ tag: 'path', d: 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z' },
+			{ tag: 'path', d: 'M8 7h8' },
+		],
+		music: [
+			{ tag: 'path', d: 'M9 18V5l12-2v13' },
+			{ tag: 'circle', cx: '6', cy: '18', r: '3' },
+			{ tag: 'circle', cx: '18', cy: '16', r: '3' },
+		],
+	};
+
+	function appendSvgShapes(svg, shapes) {
+		if (window.AudioCheckIcons && AudioCheckIcons.appendSvgShapes) {
+			AudioCheckIcons.appendSvgShapes(svg, shapes);
+			return;
+		}
+		(shapes || []).forEach((spec) => {
+			const node = document.createElementNS(SVG_NS, spec.tag);
+			Object.entries(spec).forEach(([key, value]) => {
+				if (key === 'tag') return;
+				node.setAttribute(key, String(value));
+			});
+			svg.appendChild(node);
+		});
+	}
+
+	function emptyStateIcon(kind) {
+		const resolved = kind || 'app';
+		const wrap = el('div', {
+			className: 'ac-empty__icon' + (resolved === 'app' ? ' ac-empty__icon--app' : ''),
+			attrs: { 'aria-hidden': 'true' },
+		});
+
+		if (resolved === 'app') {
+			const url = getAppLogoUrl();
+			if (url) {
+				wrap.appendChild(el('img', {
+					className: 'ac-empty__app-logo',
+					src: url,
+					alt: '',
+					width: '44',
+					height: '44',
+					decoding: 'async',
+				}));
+				return wrap;
+			}
+		}
+
+		const svg = document.createElementNS(SVG_NS, 'svg');
+		svg.setAttribute('viewBox', '0 0 24 24');
+		svg.setAttribute('fill', 'none');
+		svg.setAttribute('stroke', 'currentColor');
+		svg.setAttribute('stroke-width', '1.75');
+		svg.setAttribute('stroke-linecap', 'round');
+		svg.setAttribute('stroke-linejoin', 'round');
+		svg.setAttribute('class', 'ac-icon');
+		const shapes = resolved === 'app'
+			? EMPTY_STATE_ICONS.music
+			: (EMPTY_STATE_ICONS[resolved] || EMPTY_STATE_ICONS.music);
+		appendSvgShapes(svg, shapes);
+		wrap.appendChild(svg);
+		return wrap;
+	}
+
+	function appendCoverImage(wrap, fileId) {
+		const url = AudioCheckApi.coverUrl(fileId);
+		if (url) {
+			wrap.appendChild(el('img', {
+				className: 'ac-card__cover',
+				src: url,
+				alt: '',
+				loading: 'lazy',
+			}));
+		} else {
+			wrap.appendChild(el('div', {
+				className: 'ac-card__cover ac-card__cover--placeholder',
+				attrs: { 'aria-hidden': 'true' },
+			}));
+		}
+	}
+
+	window.AudioCheckComponents = {
+		el,
+		createElement,
+		pageHeader(title, help, actions) {
+			const header = el('header', {
+				className: 'ac-page-header' + (actions ? ' ac-page-header--with-actions' : ''),
+			});
+			const intro = el('div', { className: 'ac-page-header__intro' }, [
+				el('h1', { text: title }),
+				help ? el('p', { text: help }) : null,
+			]);
+			header.appendChild(intro);
+			if (actions) {
+				const wrap = el('div', { className: 'ac-page-header__actions' });
+				(Array.isArray(actions) ? actions : [actions]).forEach((node) => {
+					if (node) wrap.appendChild(node);
+				});
+				header.appendChild(wrap);
+			}
+			return header;
+		},
+		section(title, content) {
+			const wrap = el('section', { className: 'ac-section' });
+			if (title) wrap.appendChild(el('h2', { className: 'ac-section__title', text: title }));
+			if (content) wrap.appendChild(content);
+			return wrap;
+		},
+		emptyState(title, message, ctaLabel, onCta, options) {
+			let opts = options || {};
+			if (ctaLabel && typeof ctaLabel === 'object' && onCta === undefined) {
+				opts = ctaLabel;
+				ctaLabel = opts.ctaLabel;
+				onCta = opts.onCta;
+			}
+			const box = el('div', {
+				className: 'ac-empty ac-empty--page',
+				attrs: { role: 'status' },
+			});
+			box.appendChild(emptyStateIcon(opts.icon || 'app'));
+			box.appendChild(el('h2', { text: title }));
+			box.appendChild(el('p', { text: message }));
+			if (ctaLabel && onCta) {
+				box.appendChild(el('button', { type: 'button', className: 'ac-btn ac-btn--primary', text: ctaLabel, onClick: onCta }));
+			}
+			return box;
+		},
+		mediaCard(item, onPlay) {
+			const card = el('article', {
+				className: 'ac-card ac-card--media',
+				tabindex: '0',
+				role: 'button',
+				'aria-label': item.title,
+				onClick: () => onPlay(item),
+				onKeydown: (e) => {
+					if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPlay(item); }
+				},
+			});
+			const coverWrap = el('div', { className: 'ac-card__cover-wrap' });
+			const coverId = AudioCheckApi.validFileId(item.coverFileId) ?? AudioCheckApi.validFileId(item.fileId);
+			appendCoverImage(coverWrap, coverId);
+			const pct = typeof item.progressPercent === 'number' ? item.progressPercent : 0;
+			if (pct > 0 && pct < 100) {
+				coverWrap.appendChild(el('div', {
+					className: 'ac-card__progress',
+					attrs: { 'aria-hidden': 'true', style: '--ac-progress:' + String(pct) },
+				}));
+			}
+			if (item.finished) {
+				coverWrap.appendChild(el('span', {
+					className: 'ac-card__finished icon icon-checkmark',
+					attrs: { 'aria-label': t('audiocheck', 'Finished'), title: t('audiocheck', 'Finished') },
+				}));
+			}
+			card.appendChild(coverWrap);
+			card.appendChild(el('h3', { className: 'ac-card__title', text: item.title || item.fileName || '' }));
+			if (item.subtitle || item.artist) {
+				card.appendChild(el('p', { className: 'ac-card__subtitle', text: item.subtitle || item.artist || '' }));
+			}
+			if (item.browserPlayable === false) {
+				card.appendChild(el('p', {
+					className: 'ac-badge ac-badge--warn',
+					attrs: { role: 'note' },
+					text: t('audiocheck', 'May not play in this browser'),
+				}));
+			}
+			return card;
+		},
+		trackRow(track, onPlay, options) {
+			const opts = options || {};
+			const li = el('li', {
+				className: 'ac-track-list__item'
+					+ (track.unavailable ? ' ac-track-list__item--unavailable' : '')
+					+ (opts.active ? ' ac-track-list__item--active' : '')
+					+ (opts.rowVariant === 'queue' ? ' ac-track-list__item--queue' : ''),
+			});
+			if (opts.active) {
+				li.setAttribute('aria-current', opts.playing ? 'true' : 'step');
+			}
+			if (!opts.hidePlay) {
+				const playIcon = opts.active && opts.playing ? 'pause' : 'play';
+				const playBtn = el('button', {
+					type: 'button',
+					className: 'ac-btn ac-btn--icon ac-track-list__play'
+						+ (opts.active ? ' ac-track-list__play--active' : ''),
+					'aria-label': opts.active && opts.playing
+						? t('audiocheck', 'Pause {title}', { title: track.title || track.fileName || '' })
+						: t('audiocheck', 'Play {title}', { title: track.title || track.fileName || '' }),
+					disabled: !onPlay || !!track.unavailable,
+					onClick: () => {
+						if (!onPlay) return;
+						if (opts.active && opts.playing && window.AudioCheckPlayer) {
+							AudioCheckPlayer.toggle();
+							return;
+						}
+						onPlay(track);
+					},
+				});
+				if (window.AudioCheckIcons) {
+					playBtn.appendChild(AudioCheckIcons.createSvg(playIcon));
+				} else {
+					playBtn.appendChild(el('span', { className: 'icon icon-' + playIcon, 'aria-hidden': 'true' }));
+				}
+				li.appendChild(playBtn);
+			}
+			const meta = el('div', { className: 'ac-track-list__meta' });
+			meta.appendChild(el('div', { className: 'ac-track-list__title', text: track.title || track.fileName || '' }));
+			if (track.artist) {
+				meta.appendChild(el('div', { className: 'ac-track-list__artist', text: track.artist }));
+			}
+			if (opts.active) {
+				meta.appendChild(el('span', {
+					className: 'ac-track-list__status',
+					text: opts.playing ? t('audiocheck', 'Now playing') : t('audiocheck', 'Paused in queue'),
+				}));
+			}
+			if (track.browserPlayable === false) {
+				meta.appendChild(el('span', {
+					className: 'ac-badge ac-badge--warn',
+					attrs: { role: 'note' },
+					text: t('audiocheck', 'May not play in this browser'),
+				}));
+			}
+			if (track.unavailable) {
+				meta.appendChild(el('span', {
+					className: 'ac-badge ac-badge--muted',
+					attrs: { role: 'note' },
+					text: t('audiocheck', 'Unavailable'),
+				}));
+			}
+			li.appendChild(meta);
+
+			const aside = el('div', { className: 'ac-track-list__actions' });
+			aside.appendChild(el('span', {
+				className: 'ac-track-list__duration',
+				text: AudioCheckTime.formatDuration(track.durationMs),
+				attrs: { 'aria-label': AudioCheckTime.formatDurationLabel(track.durationMs) },
+			}));
+			const mountIconBtn = (btn, iconName, fallbackClass) => {
+				if (window.AudioCheckIcons) {
+					btn.appendChild(AudioCheckIcons.createSvg(iconName));
+				} else {
+					btn.appendChild(el('span', { className: 'icon ' + fallbackClass, 'aria-hidden': 'true' }));
+				}
+			};
+			if (opts.onAddPlaylist) {
+				const add = el('button', {
+					type: 'button',
+					className: 'ac-btn ac-btn--icon',
+					'aria-label': t('audiocheck', 'Add to playlist'),
+					onClick: (e) => { e.stopPropagation(); opts.onAddPlaylist(); },
+				});
+				mountIconBtn(add, 'add', 'icon-add');
+				aside.appendChild(add);
+			}
+			if (opts.onRemove) {
+				const rm = el('button', {
+					type: 'button',
+					className: 'ac-btn ac-btn--icon ac-track-list__remove',
+					'aria-label': opts.removeLabel || t('audiocheck', 'Remove from queue'),
+					onClick: (e) => { e.stopPropagation(); opts.onRemove(); },
+				});
+				mountIconBtn(rm, 'close', 'icon-close');
+				aside.appendChild(rm);
+			}
+			if (opts.onMoveUp) {
+				const up = el('button', {
+					type: 'button',
+					className: 'ac-btn ac-btn--icon',
+					'aria-label': t('audiocheck', 'Move up'),
+					disabled: !!opts.moveUpDisabled,
+					onClick: (e) => { e.stopPropagation(); opts.onMoveUp(); },
+				});
+				mountIconBtn(up, 'arrow-up', 'icon-arrow-up');
+				aside.appendChild(up);
+			}
+			if (opts.onMoveDown) {
+				const down = el('button', {
+					type: 'button',
+					className: 'ac-btn ac-btn--icon',
+					'aria-label': t('audiocheck', 'Move down'),
+					disabled: !!opts.moveDownDisabled,
+					onClick: (e) => { e.stopPropagation(); opts.onMoveDown(); },
+				});
+				mountIconBtn(down, 'arrow-down', 'icon-arrow-down');
+				aside.appendChild(down);
+			}
+			li.appendChild(aside);
+			return li;
+		},
+		volumeControl(options) {
+			const opts = options || {};
+			const prefix = opts.idPrefix || 'ac-volume';
+			const compact = !!opts.compact;
+			const wrap = el('div', {
+				className: 'ac-volume' + (compact ? ' ac-volume--compact' : ''),
+			});
+			const muteBtn = el('button', {
+				type: 'button',
+				className: 'ac-btn ac-btn--icon' + (compact ? '' : ' ac-btn--icon-lg'),
+				id: prefix + '-mute',
+				attrs: {
+					'aria-label': t('audiocheck', 'Mute'),
+					'aria-pressed': 'false',
+				},
+			});
+			if (window.AudioCheckIcons) {
+				muteBtn.appendChild(AudioCheckIcons.createSvg('volume-high'));
+			}
+			const sliderId = prefix + '-slider';
+			const slider = el('input', {
+				type: 'range',
+				id: sliderId,
+				className: 'ac-volume__slider',
+				attrs: {
+					min: '0',
+					max: '100',
+					value: '100',
+					'aria-label': t('audiocheck', 'Volume'),
+					'aria-valuetext': t('audiocheck', 'Volume {percent}%', { percent: '100' }),
+				},
+			});
+			wrap.appendChild(muteBtn);
+			wrap.appendChild(slider);
+			const ui = { muteBtn, slider, wrap };
+			muteBtn.addEventListener('click', () => AudioCheckPlayer.toggleMute());
+			let dragging = false;
+			slider.addEventListener('pointerdown', () => { dragging = true; });
+			slider.addEventListener('pointerup', () => { dragging = false; });
+			slider.addEventListener('pointercancel', () => { dragging = false; });
+			slider.addEventListener('input', (e) => {
+				AudioCheckPlayer.setVolumePercent(parseInt(e.target.value, 10), { persist: !dragging });
+			});
+			slider.addEventListener('change', () => {
+				AudioCheckPlayer.setVolumePercent(parseInt(slider.value, 10), { persist: true });
+			});
+			if (typeof AudioCheckPlayer.registerVolumeUi === 'function') {
+				ui.unsub = AudioCheckPlayer.registerVolumeUi(ui);
+			}
+			return wrap;
+		},
+	};
+
+	function focusables(root) {
+		return Array.from(root.querySelectorAll(
+			'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+		)).filter((n) => n.offsetParent !== null);
+	}
+
+	let openModalInstance = null;
+
+	/**
+	 * Accessible modal dialog (focus trap, Escape, labelled title).
+	 * @param {{ title: string, render: () => HTMLElement, primaryLabel?: string, cancelLabel?: string, onSubmit?: (ctx: object) => (boolean|Promise<boolean>), onCancel?: () => void }} options
+	 */
+	function openModal(options) {
+		const opts = Object.assign({
+			primaryLabel: t('audiocheck', 'Save'),
+			cancelLabel: t('audiocheck', 'Cancel'),
+			onSubmit: null,
+			dialogClass: '',
+		}, options || {});
+
+		if (openModalInstance) openModalInstance.close(false);
+		const previousFocus = document.activeElement;
+		const labelId = 'ac-modal-title-' + Math.random().toString(36).slice(2);
+		let overlay;
+
+		const instance = {
+			close(ok) {
+				document.body.classList.remove('ac-modal-open');
+				if (overlay) overlay.remove();
+				openModalInstance = null;
+				document.removeEventListener('keydown', onKey);
+				if (typeof opts.onCancel === 'function' && !ok) opts.onCancel();
+				if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus();
+			},
+		};
+		openModalInstance = instance;
+
+		const body = typeof opts.render === 'function' ? opts.render({ close: (ok) => instance.close(ok !== false) }) : opts.render;
+		const dialog = createElement('div', {
+			class: 'ac-modal__dialog' + (opts.dialogClass ? ' ' + opts.dialogClass : ''),
+			attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': labelId },
+		}, [
+			createElement('div', { class: 'ac-modal__header' }, [
+				createElement('h2', { id: labelId, text: opts.title }),
+				createElement('button', {
+					type: 'button',
+					class: 'ac-modal__close',
+					attrs: { 'aria-label': t('audiocheck', 'Close') },
+					text: '×',
+					on: { click: () => instance.close(false) },
+				}),
+			]),
+			createElement('div', { class: 'ac-modal__body' }, [body]),
+			createElement('div', { class: 'ac-modal__actions' }, [
+				createElement('button', {
+					type: 'button',
+					className: 'ac-btn',
+					text: opts.cancelLabel,
+					on: { click: () => instance.close(false) },
+				}),
+				createElement('button', {
+					type: 'button',
+					className: 'ac-btn ac-btn--primary',
+					text: opts.primaryLabel,
+					on: {
+						click: async () => {
+							if (typeof opts.onSubmit !== 'function') {
+								instance.close(true);
+								return;
+							}
+							try {
+								const ok = await opts.onSubmit({ body, close: (r) => instance.close(r) });
+								if (ok !== false) instance.close(true);
+							} catch (err) {
+								AudioCheckMessaging.toast(err.message || t('audiocheck', 'Request failed.'), 'error');
+							}
+						},
+					},
+				}),
+			]),
+		]);
+
+		overlay = createElement('div', {
+			class: 'ac-modal',
+			on: { click: (e) => { if (e.target === overlay) instance.close(false); } },
+		}, [dialog]);
+
+		function onKey(e) {
+			if (e.key === 'Escape') { e.preventDefault(); instance.close(false); return; }
+			if (e.key !== 'Tab') return;
+			const list = focusables(dialog);
+			if (!list.length) return;
+			const first = list[0];
+			const last = list[list.length - 1];
+			if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+			else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+		}
+
+		document.body.appendChild(overlay);
+		document.body.classList.add('ac-modal-open');
+		document.addEventListener('keydown', onKey);
+		const firstInput = dialog.querySelector('input, button, select, textarea');
+		if (firstInput) firstInput.focus();
+		return instance;
+	}
+
+	/**
+	 * @param {{ title: string, message: string, confirmLabel?: string, cancelLabel?: string, danger?: boolean, onConfirm: () => (void|Promise<void>) }} options
+	 */
+	function confirmDialog(options) {
+		return new Promise((resolve) => {
+			openModal({
+				title: options.title,
+				primaryLabel: options.confirmLabel || t('audiocheck', 'Confirm'),
+				cancelLabel: options.cancelLabel || t('audiocheck', 'Cancel'),
+				render() {
+					return createElement('p', { class: 'ac-confirm__message', text: options.message });
+				},
+				onSubmit: async () => {
+					try {
+						await options.onConfirm();
+						resolve(true);
+						return true;
+					} catch (err) {
+						AudioCheckMessaging.toast(err.message || t('audiocheck', 'Request failed.'), 'error');
+						return false;
+					}
+				},
+				onCancel: () => resolve(false),
+			});
+		});
+	}
+
+	window.AudioCheckComponents.openModal = openModal;
+	window.AudioCheckComponents.confirmDialog = confirmDialog;
+})();

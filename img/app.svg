@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 AudioCheck contributors
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true">
+	<path fill="none" stroke="#ffffff" stroke-width="2.15" stroke-linecap="round" d="M8.25 15.25a7.75 7.75 0 0 1 15.5 0"/>
+	<rect x="6.5" y="15.5" width="4.25" height="9.75" rx="2.125" fill="#ffffff"/>
+	<rect x="21.25" y="15.5" width="4.25" height="9.75" rx="2.125" fill="#ffffff"/>
+	<rect x="13.875" y="10.25" width="4.25" height="15" rx="2.125" fill="#ffffff"/>
+	<path fill="none" stroke="#ffffff" stroke-width="2.65" stroke-linecap="round" stroke-linejoin="round" d="M20.35 9.65 23.85 13.15 28.85 6.35"/>
+</svg>
