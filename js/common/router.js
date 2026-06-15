@@ -6,7 +6,7 @@
 		audiobooks: { path: '/audiobooks', view: 'audiobooks' },
 		music: { path: '/music', view: 'music' },
 		playlists: { path: '/playlists', view: 'playlists' },
-		playlist: { path: /^\/playlists\/(\d+)/, view: 'playlist' },
+		playlist: { path: /^\/playlists\/(\d+|favorites)$/, view: 'playlist' },
 		browse: { path: '/browse', view: 'browse' },
 		'now-playing': { path: '/now-playing', view: 'now-playing' },
 		library: { path: '/library', view: 'library' },
@@ -27,7 +27,13 @@
 		for (const [id, r] of Object.entries(routes)) {
 			if (r.path instanceof RegExp) {
 				const m = rel.match(r.path);
-				if (m) return { id, view: r.view, params: { playlistId: parseInt(m[1], 10) } };
+				if (m) {
+					const raw = m[1];
+					const playlistId = raw === AudioCheckConstants.FAVORITES_PLAYLIST_ID
+						? AudioCheckConstants.FAVORITES_PLAYLIST_ID
+						: parseInt(raw, 10);
+					return { id, view: r.view, params: { playlistId } };
+				}
 			} else if (rel === r.path || rel === r.path + '/') {
 				return { id, view: r.view, params: {} };
 			}
@@ -37,7 +43,7 @@
 
 	function navigate(viewId, params, push) {
 		const r = Object.entries(routes).find(([, v]) => v.view === viewId);
-		let path = appBase() + (r ? (typeof r[1].path === 'string' ? r[1].path : '/playlists/' + (params.playlistId || '')) : '/');
+		let path = appBase() + (r ? (typeof r[1].path === 'string' ? r[1].path : '/playlists/' + (params.playlistId ?? '')) : '/');
 		if (push !== false) history.pushState({ view: viewId, params }, '', path);
 		render(viewId, params || {});
 	}
@@ -78,7 +84,12 @@
 			const m = matchRoute(location.pathname);
 			const initial = document.getElementById('app-content')?.dataset?.acView || m.view;
 			const params = {};
-			if (root.dataset.acPlaylistId) params.playlistId = parseInt(root.dataset.acPlaylistId, 10);
+			if (root.dataset.acPlaylistId) {
+				const raw = root.dataset.acPlaylistId;
+				params.playlistId = raw === AudioCheckConstants.FAVORITES_PLAYLIST_ID
+					? AudioCheckConstants.FAVORITES_PLAYLIST_ID
+					: parseInt(raw, 10);
+			}
 			render(initial, params);
 		},
 		navigate,

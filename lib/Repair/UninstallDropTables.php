@@ -5,10 +5,22 @@ declare(strict_types=1);
 /**
  * SPDX-FileCopyrightText: 2026 Nextcloud DB-Standards (auto-generated)
  * SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * Drops every table the audiocheck app has ever created, migration rows, and app config.
+ *
+ * Nextcloud runs this step on disable ({@see \OC\App\AppManager::disableApp}) and again on
+ * remove ({@see \OC\Installer::removeApp}). Pass 1 preserves data (e.g. after auto-disable
+ * during a server upgrade); pass 2 performs the actual cleanup on full uninstall.
+ *
+ * Regenerate table list via:
+ *     php scripts/check-nextcloud-db-standards.php sync-uninstall --app=audiocheck
+ *
+ * Uses `DROP TABLE IF EXISTS` (not SchemaWrapper) so IDBConnection injection works on
+ * all Nextcloud versions. MySQL temporarily disables FK checks so legacy FK chains
+ * (e.g. project_files → projects) cannot block uninstall.
  */
 namespace OCA\AudioCheck\Repair;
 
-use OCA\AudioCheck\Service\CoverService;
 use OCP\IConfig;
 use OCP\IDBConnection;
 use OCP\Migration\IOutput;
@@ -22,12 +34,18 @@ final class UninstallDropTables implements IRepairStep
 
 	public const PASSES_BEFORE_DROP = 2;
 
+	/**
+	 * Sorted list of every table this app has ever created across all migrations.
+	 * Kept in sync by the DB-standards linter.
+	 */
 	public const TABLES = [
 		'ac_file_meta',
 		'ac_libraries',
 		'ac_play_state',
 		'ac_playlist_items',
 		'ac_playlists',
+		'ac_queue',
+		'ac_queue_items',
 		'ac_scan_state',
 		'ac_tracks',
 	];
@@ -35,13 +53,12 @@ final class UninstallDropTables implements IRepairStep
 	public function __construct(
 		private readonly IDBConnection $connection,
 		private readonly IConfig $config,
-		private readonly CoverService $coverService,
 	) {
 	}
 
 	public function getName(): string
 	{
-		return 'Drop AudioCheck tables and install metadata on uninstall';
+		return 'Drop audiocheck tables and install metadata on uninstall';
 	}
 
 	public function run(IOutput $output): void
@@ -50,40 +67,67 @@ final class UninstallDropTables implements IRepairStep
 		if ($pass < self::PASSES_BEFORE_DROP) {
 			$this->config->setAppValue(self::APP_ID, self::REPAIR_PASS_KEY, (string)$pass);
 			$output->info(sprintf(
-				'audiocheck: preserving data on disable (uninstall repair pass %d/%d).',
+				'audiocheck: preserving data on disable (uninstall repair pass %%d/%%d). '
+				. 'Tables, migration history, and settings are kept until the app is fully removed.',
 				$pass,
 				self::PASSES_BEFORE_DROP,
 			));
 			return;
 		}
 
-		$this->config->deleteAppValue(self::APP_ID, self::REPAIR_PASS_KEY);
-
-		$platform = $this->connection->getDatabasePlatform()->getName();
-		if ($platform === 'mysql') {
+		$provider = $this->connection->getDatabaseProvider();
+		$fkChecksDisabled = false;
+		if ($provider === IDBConnection::PLATFORM_MYSQL) {
 			$this->connection->executeStatement('SET FOREIGN_KEY_CHECKS=0');
+			$fkChecksDisabled = true;
 		}
 
-		$prefix = $this->connection->getPrefix();
+		$dropped = 0;
 		foreach (self::TABLES as $table) {
-			$full = $prefix . $table;
-			$this->connection->executeStatement('DROP TABLE IF EXISTS `' . $full . '`');
-			$output->info('Dropped table ' . $full);
+			if ($this->dropLogicalTableIfExists($table)) {
+				$dropped++;
+			}
 		}
 
-		if ($platform === 'mysql') {
+		if ($fkChecksDisabled) {
 			$this->connection->executeStatement('SET FOREIGN_KEY_CHECKS=1');
 		}
 
-		$this->connection->executeStatement(
-			'DELETE FROM `' . $prefix . 'migrations` WHERE `app` = ?',
-			[self::APP_ID],
-		);
+		$qb = $this->connection->getQueryBuilder();
+		$qb->delete('migrations')
+			->where($qb->expr()->eq('app', $qb->createNamedParameter(self::APP_ID)));
+		$migrationsRemoved = $qb->executeStatement();
+
 		$this->config->deleteAppValues(self::APP_ID);
 
-		$this->coverService->purgeCache();
-		$output->info('Purged cover art cache.');
+		$output->info(sprintf(
+			'audiocheck: dropped %d of %d table(s); removed %d migration row(s) and app config.',
+			$dropped,
+			count(self::TABLES),
+			$migrationsRemoved,
+		));
+	}
 
-		$output->info('AudioCheck uninstall cleanup complete.');
+	private function dropLogicalTableIfExists(string $logicalTable): bool
+	{
+		if (!$this->connection->tableExists($logicalTable)) {
+			return false;
+		}
+
+		$prefix = (string)$this->config->getSystemValue('dbtableprefix', 'oc_');
+		$physical = $prefix . $logicalTable;
+		$provider = $this->connection->getDatabaseProvider();
+
+		if ($provider === IDBConnection::PLATFORM_MYSQL) {
+			$this->connection->executeStatement(sprintf('DROP TABLE IF EXISTS `%s`', $physical));
+		} elseif ($provider === IDBConnection::PLATFORM_POSTGRES) {
+			$this->connection->executeStatement(sprintf('DROP TABLE IF EXISTS "%s" CASCADE', $physical));
+		} elseif ($provider === IDBConnection::PLATFORM_ORACLE) {
+			$this->connection->executeStatement(sprintf('DROP TABLE %s CASCADE CONSTRAINTS', $physical));
+		} elseif ($provider === IDBConnection::PLATFORM_SQLITE) {
+			$this->connection->executeStatement(sprintf('DROP TABLE IF EXISTS "%s"', $physical));
+		}
+
+		return true;
 	}
 }

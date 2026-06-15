@@ -130,6 +130,25 @@
 		return wrap;
 	}
 
+	function kindIcon(kind, extraClass) {
+		const resolved = kind === 'audiobook' ? 'audiobook' : (kind === 'music' ? 'music' : 'folder');
+		const wrap = el('div', {
+			className: 'ac-kind-icon ac-kind-icon--' + resolved + (extraClass ? ' ' + extraClass : ''),
+			attrs: { 'aria-hidden': 'true' },
+		});
+		const svg = document.createElementNS(SVG_NS, 'svg');
+		svg.setAttribute('viewBox', '0 0 24 24');
+		svg.setAttribute('fill', 'none');
+		svg.setAttribute('stroke', 'currentColor');
+		svg.setAttribute('stroke-width', '1.75');
+		svg.setAttribute('stroke-linecap', 'round');
+		svg.setAttribute('stroke-linejoin', 'round');
+		svg.setAttribute('class', 'ac-icon');
+		appendSvgShapes(svg, EMPTY_STATE_ICONS[resolved] || EMPTY_STATE_ICONS.folder);
+		wrap.appendChild(svg);
+		return wrap;
+	}
+
 	function appendCoverImage(wrap, fileId) {
 		const url = AudioCheckApi.coverUrl(fileId);
 		if (url) {
@@ -150,6 +169,7 @@
 	window.AudioCheckComponents = {
 		el,
 		createElement,
+		kindIcon,
 		pageHeader(title, help, actions) {
 			const header = el('header', {
 				className: 'ac-page-header' + (actions ? ' ac-page-header--with-actions' : ''),
@@ -181,12 +201,15 @@
 				ctaLabel = opts.ctaLabel;
 				onCta = opts.onCta;
 			}
+			const isSection = opts.variant === 'section';
 			const box = el('div', {
-				className: 'ac-empty ac-empty--page',
+				className: 'ac-empty' + (isSection ? ' ac-empty--section' : ' ac-empty--page'),
 				attrs: { role: 'status' },
 			});
-			box.appendChild(emptyStateIcon(opts.icon || 'app'));
-			box.appendChild(el('h2', { text: title }));
+			if (!isSection) {
+				box.appendChild(emptyStateIcon(opts.icon || 'app'));
+			}
+			box.appendChild(el(isSection ? 'h3' : 'h2', { text: title }));
 			box.appendChild(el('p', { text: message }));
 			if (ctaLabel && onCta) {
 				box.appendChild(el('button', { type: 'button', className: 'ac-btn ac-btn--primary', text: ctaLabel, onClick: onCta }));
@@ -299,11 +322,14 @@
 			li.appendChild(meta);
 
 			const aside = el('div', { className: 'ac-track-list__actions' });
-			aside.appendChild(el('span', {
-				className: 'ac-track-list__duration',
-				text: AudioCheckTime.formatDuration(track.durationMs),
-				attrs: { 'aria-label': AudioCheckTime.formatDurationLabel(track.durationMs) },
-			}));
+			const durationMs = Number(track.durationMs);
+			if (Number.isFinite(durationMs) && durationMs > 0) {
+				aside.appendChild(el('span', {
+					className: 'ac-track-list__duration',
+					text: AudioCheckTime.formatDuration(durationMs),
+					attrs: { 'aria-label': AudioCheckTime.formatDurationLabel(durationMs) },
+				}));
+			}
 			const mountIconBtn = (btn, iconName, fallbackClass) => {
 				if (window.AudioCheckIcons) {
 					btn.appendChild(AudioCheckIcons.createSvg(iconName));
@@ -320,6 +346,16 @@
 				});
 				mountIconBtn(add, 'add', 'icon-add');
 				aside.appendChild(add);
+			}
+			if (opts.onEnqueue) {
+				const queueBtn = el('button', {
+					type: 'button',
+					className: 'ac-btn ac-btn--icon',
+					'aria-label': t('audiocheck', 'Add to queue'),
+					onClick: (e) => { e.stopPropagation(); opts.onEnqueue(); },
+				});
+				mountIconBtn(queueBtn, 'queue', 'icon-queue');
+				aside.appendChild(queueBtn);
 			}
 			if (opts.onRemove) {
 				const rm = el('button', {
@@ -447,10 +483,7 @@
 		openModalInstance = instance;
 
 		const body = typeof opts.render === 'function' ? opts.render({ close: (ok) => instance.close(ok !== false) }) : opts.render;
-		const dialog = createElement('div', {
-			class: 'ac-modal__dialog' + (opts.dialogClass ? ' ' + opts.dialogClass : ''),
-			attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': labelId },
-		}, [
+		const dialogChildren = [
 			createElement('div', { class: 'ac-modal__header' }, [
 				createElement('h2', { id: labelId, text: opts.title }),
 				createElement('button', {
@@ -462,7 +495,9 @@
 				}),
 			]),
 			createElement('div', { class: 'ac-modal__body' }, [body]),
-			createElement('div', { class: 'ac-modal__actions' }, [
+		];
+		if (!opts.hideDefaultActions) {
+			dialogChildren.push(createElement('div', { class: 'ac-modal__actions' }, [
 				createElement('button', {
 					type: 'button',
 					className: 'ac-btn',
@@ -488,8 +523,12 @@
 						},
 					},
 				}),
-			]),
-		]);
+			]));
+		}
+		const dialog = createElement('div', {
+			class: 'ac-modal__dialog' + (opts.dialogClass ? ' ' + opts.dialogClass : ''),
+			attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': labelId },
+		}, dialogChildren);
 
 		overlay = createElement('div', {
 			class: 'ac-modal',
@@ -510,7 +549,8 @@
 		document.body.appendChild(overlay);
 		document.body.classList.add('ac-modal-open');
 		document.addEventListener('keydown', onKey);
-		const firstInput = dialog.querySelector('input, button, select, textarea');
+		const preferred = dialog.querySelector('[autofocus]:not([disabled])');
+		const firstInput = preferred || dialog.querySelector('input, button, select, textarea');
 		if (firstInput) firstInput.focus();
 		return instance;
 	}

@@ -27,6 +27,8 @@ class LibraryService
 	public const KIND_MUSIC = 'music';
 	public const KIND_AUDIOBOOK = 'audiobook';
 
+	public const CONTENT_KIND_AUTO = 'auto';
+
 	public function __construct(
 		private IDBConnection $db,
 		private FileAccessService $fileAccess,
@@ -53,25 +55,26 @@ class LibraryService
 		return $rows;
 	}
 
-	public function addLibrary(string $userId, int $rootFileId, bool $includeSubfolders): array
+	public function addLibrary(string $userId, ?int $rootFileId, bool $includeSubfolders, string $contentKind = self::CONTENT_KIND_AUTO, ?string $folderPath = null): array
 	{
-		$folder = $this->fileAccess->resolveReadableFolder($userId, $rootFileId);
+		$contentKind = $this->normalizeContentKind($contentKind);
+		$folder = $this->resolveLibraryFolder($userId, $rootFileId, $folderPath);
+		$rootFileId = $folder->getId();
 		$path = $folder->getPath();
 		$userHome = $this->fileAccess->getUserHomePath($userId);
 		if (str_starts_with($path, $userHome)) {
 			$path = substr($path, strlen($userHome)) ?: '/';
 		}
 
-		$qb = $this->db->getQueryBuilder();
-		$qb->select('id')->from('ac_libraries')
-			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
-			->andWhere($qb->expr()->eq('root_file_id', $qb->createNamedParameter($rootFileId, \PDO::PARAM_INT)));
-		$result = $qb->executeQuery();
-		if ($result->fetch() !== false) {
-			$result->closeCursor();
-			throw new ValidationException('Library root already exists.');
+		$existing = $this->findLibraryByRootOrPath($userId, $rootFileId, $path);
+		if ($existing !== null) {
+			$result = $this->updateLibrary($userId, (int)$existing['id'], $includeSubfolders, $contentKind);
+			return [
+				'library' => $result['library'],
+				'alreadyExisted' => true,
+				'rescanRecommended' => $result['rescanRecommended'],
+			];
 		}
-		$result->closeCursor();
 
 		$now = $this->timeFactory->getTime();
 		$qb = $this->db->getQueryBuilder();
@@ -81,12 +84,45 @@ class LibraryService
 				'folder_path' => $qb->createNamedParameter($path),
 				'root_file_id' => $qb->createNamedParameter($rootFileId, \PDO::PARAM_INT),
 				'include_subfolders' => $qb->createNamedParameter($includeSubfolders ? 1 : 0, \PDO::PARAM_INT),
+				'content_kind' => $qb->createNamedParameter($contentKind),
 				'enabled' => $qb->createNamedParameter(1, \PDO::PARAM_INT),
 				'created_at' => $qb->createNamedParameter($now, \PDO::PARAM_INT),
 			]);
 		$qb->executeStatement();
 		$id = (int)$this->db->lastInsertId('ac_libraries');
-		return $this->getLibrary($userId, $id);
+		return [
+			'library' => $this->getLibrary($userId, $id),
+			'alreadyExisted' => false,
+			'rescanRecommended' => false,
+		];
+	}
+
+	private function resolveLibraryFolder(string $userId, ?int $rootFileId, ?string $folderPath): Folder
+	{
+		if ($rootFileId !== null && $rootFileId > 0) {
+			return $this->fileAccess->resolveReadableFolder($userId, $rootFileId);
+		}
+		if ($folderPath !== null && trim($folderPath) !== '') {
+			return $this->fileAccess->resolveReadableFolderByRelativePath($userId, $folderPath);
+		}
+		throw new ValidationException('A valid folder is required.');
+	}
+
+	/** @return array<string, mixed>|null */
+	private function findLibraryByRootOrPath(string $userId, int $rootFileId, string $path): ?array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')->from('ac_libraries')
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->andWhere($qb->expr()->orX(
+				$qb->expr()->eq('root_file_id', $qb->createNamedParameter($rootFileId, \PDO::PARAM_INT)),
+				$qb->expr()->eq('folder_path', $qb->createNamedParameter($path)),
+			))
+			->setMaxResults(1);
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		return $row !== false ? $row : null;
 	}
 
 	public function removeLibrary(string $userId, int $libraryId): void
@@ -97,6 +133,89 @@ class LibraryService
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($libraryId, \PDO::PARAM_INT)))
 			->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
 		$qb->executeStatement();
+	}
+
+	/**
+	 * @return array{library:array<string,mixed>,rescanRecommended:bool}
+	 */
+	public function updateLibrary(string $userId, int $libraryId, ?bool $includeSubfolders, ?string $contentKind): array
+	{
+		$row = $this->assertLibraryOwned($userId, $libraryId);
+		$rescanRecommended = false;
+		$changed = false;
+		$qb = $this->db->getQueryBuilder();
+		$qb->update('ac_libraries')->where($qb->expr()->eq('id', $qb->createNamedParameter($libraryId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+
+		if ($includeSubfolders !== null) {
+			$previousSub = (int)($row['include_subfolders'] ?? 1) === 1;
+			if ($includeSubfolders !== $previousSub) {
+				$qb->set('include_subfolders', $qb->createNamedParameter($includeSubfolders ? 1 : 0, \PDO::PARAM_INT));
+				$changed = true;
+				$rescanRecommended = true;
+			}
+		}
+
+		if ($contentKind !== null) {
+			$normalized = $this->normalizeContentKind($contentKind);
+			$previous = $this->normalizeContentKind((string)($row['content_kind'] ?? self::CONTENT_KIND_AUTO));
+			if ($normalized !== $previous) {
+				$qb->set('content_kind', $qb->createNamedParameter($normalized));
+				$changed = true;
+				if ($normalized === self::CONTENT_KIND_AUTO) {
+					$rescanRecommended = true;
+				} else {
+					$this->applyFixedContentKindToLibrary($userId, $libraryId, $normalized);
+				}
+			}
+		}
+
+		if ($changed) {
+			$qb->executeStatement();
+		}
+
+		return [
+			'library' => $this->getLibrary($userId, $libraryId),
+			'rescanRecommended' => $rescanRecommended,
+		];
+	}
+
+	public function normalizeContentKind(mixed $value): string
+	{
+		$raw = is_string($value) ? strtolower(trim($value)) : '';
+		return match ($raw) {
+			self::KIND_AUDIOBOOK, 'audiobooks' => self::KIND_AUDIOBOOK,
+			self::KIND_MUSIC => self::KIND_MUSIC,
+			self::CONTENT_KIND_AUTO, '' => self::CONTENT_KIND_AUTO,
+			default => throw new ValidationException('Invalid content type.'),
+		};
+	}
+
+	private function applyFixedContentKindToLibrary(string $userId, int $libraryId, string $kind): void
+	{
+		if (!in_array($kind, [self::KIND_MUSIC, self::KIND_AUDIOBOOK], true)) {
+			return;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('meta_id')
+			->from('ac_tracks')
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->andWhere($qb->expr()->eq('library_id', $qb->createNamedParameter($libraryId, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->isNotNull('meta_id'));
+		$result = $qb->executeQuery();
+		$metaIds = [];
+		while ($row = $result->fetch()) {
+			$metaIds[] = (int)$row['meta_id'];
+		}
+		$result->closeCursor();
+		if ($metaIds === []) {
+			return;
+		}
+		$uq = $this->db->getQueryBuilder();
+		$uq->update('ac_file_meta')
+			->set('kind', $uq->createNamedParameter($kind))
+			->where($uq->expr()->in('id', $uq->createNamedParameter($metaIds, \Doctrine\DBAL\ArrayParameterType::INTEGER)));
+		$uq->executeStatement();
 	}
 
 	public function getLibrary(string $userId, int $libraryId): array
@@ -390,7 +509,7 @@ class LibraryService
 	/**
 	 * @return array{items:list<array<string,mixed>>,total:int}
 	 */
-	public function listFacets(string $userId, string $type, ?string $q): array
+	public function listFacets(string $userId, string $type, ?string $q, ?string $kind = null): array
 	{
 		if ($type === 'favorites') {
 			return $this->listFavoriteFacet($userId);
@@ -413,8 +532,12 @@ class LibraryService
 			$qb->select('t.rel_path')
 				->selectAlias($qb->func()->count('t.id'), 'c')
 				->from('ac_tracks', 't')
-				->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
-				->groupBy('t.rel_path');
+				->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)));
+			if ($kind !== null && in_array($kind, [self::KIND_MUSIC, self::KIND_AUDIOBOOK], true)) {
+				$qb->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'))
+					->andWhere($qb->expr()->eq('m.kind', $qb->createNamedParameter($kind)));
+			}
+			$qb->groupBy('t.rel_path');
 		} else {
 			$qb->selectAlias($column, 'name')
 				->selectAlias($qb->func()->count('t.id'), 'c')
@@ -505,14 +628,34 @@ class LibraryService
 	/** @param array<string, mixed> $row */
 	private function formatLibrary(array $row): array
 	{
+		$userId = (string)$row['user_id'];
+		$libraryId = (int)$row['id'];
 		return [
-			'id' => (int)$row['id'],
+			'id' => $libraryId,
 			'folderPath' => (string)$row['folder_path'],
 			'rootFileId' => $row['root_file_id'] !== null ? (int)$row['root_file_id'] : null,
 			'includeSubfolders' => (int)$row['include_subfolders'] === 1,
+			'contentKind' => $this->normalizeContentKind((string)($row['content_kind'] ?? self::CONTENT_KIND_AUTO)),
 			'enabled' => (int)$row['enabled'] === 1,
 			'createdAt' => (int)$row['created_at'],
+			'trackCount' => $this->countTracksForLibrary($userId, $libraryId),
 		];
+	}
+
+	private function countTracksForLibrary(string $userId, int $libraryId): int
+	{
+		if ($libraryId < 1) {
+			return 0;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select($qb->func()->count('id', 'c'))
+			->from('ac_tracks')
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->andWhere($qb->expr()->eq('library_id', $qb->createNamedParameter($libraryId, \PDO::PARAM_INT)));
+		$result = $qb->executeQuery();
+		$count = (int)($result->fetch()['c'] ?? 0);
+		$result->closeCursor();
+		return $count;
 	}
 
 	/** @param array<string, mixed> $row */

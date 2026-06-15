@@ -43,21 +43,28 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function audiobooks(): TemplateResponse
 	{
-		return $this->shell('audiobooks', $this->l10n->t('Audiobooks'), $this->l10n->t('Browse your audiobook collections.'));
+		return $this->shell('audiobooks', $this->l10n->t('Audiobooks'), $this->l10n->t('Browse audiobook titles, folders, and books.'));
 	}
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	public function music(): TemplateResponse
 	{
-		return $this->shell('music', $this->l10n->t('Music'), $this->l10n->t('Browse albums and artists.'));
+		return $this->shell('music', $this->l10n->t('Music'), $this->l10n->t('Browse tracks, folders, and albums.'));
 	}
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	public function playlists(): TemplateResponse
 	{
-		return $this->shell('playlists', $this->l10n->t('Playlists'), $this->l10n->t('Your curated playlists.'));
+		return $this->shell('playlists', $this->l10n->t('Playlists'), $this->l10n->t('Built-in Favorites and playlists you create.'));
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function favoritesPlaylist(): TemplateResponse
+	{
+		return $this->shell('playlist', $this->l10n->t('Favorites'), $this->l10n->t('Tracks you have marked as favorites.'), ['playlistId' => 'favorites']);
 	}
 
 	#[NoAdminRequired]
@@ -71,7 +78,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function browse(): TemplateResponse
 	{
-		return $this->shell('browse', $this->l10n->t('Browse'), $this->l10n->t('Explore artists, genres, and folders.'));
+		return $this->shell('browse', $this->l10n->t('Browse'), $this->l10n->t('Explore artists, genres, folders, and favorites.'));
 	}
 
 	#[NoAdminRequired]
@@ -85,7 +92,7 @@ class PageController extends Controller
 	#[NoCSRFRequired]
 	public function library(): TemplateResponse
 	{
-		return $this->shell('library', $this->l10n->t('Library'), $this->l10n->t('Manage folders and scan your audio.'));
+		return $this->shell('library', $this->l10n->t('Library'), $this->l10n->t('Choose folders to scan, then index your audio.'));
 	}
 
 	#[NoAdminRequired]
@@ -142,8 +149,11 @@ class PageController extends Controller
 			'common/playlist-actions',
 			'common/router',
 			'common/player',
+			'common/media-library-page',
+			'common/facet-browse-page',
 			'views/home',
 			'views/audiobooks',
+			'views/music',
 			'views/browse',
 			'views/playlists',
 			'views/now-playing',

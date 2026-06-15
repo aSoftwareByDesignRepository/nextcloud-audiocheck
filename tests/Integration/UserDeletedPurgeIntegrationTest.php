@@ -7,6 +7,7 @@ namespace OCA\AudioCheck\Tests\Integration;
 use OCA\AudioCheck\Service\FileAccessService;
 use OCA\AudioCheck\Service\PlaybackStateService;
 use OCA\AudioCheck\Service\PlaylistService;
+use OCA\AudioCheck\Service\PlayQueueService;
 use OCA\AudioCheck\Service\ScanService;
 use OCP\Files\File;
 use OCP\IUserManager;
@@ -56,9 +57,14 @@ final class UserDeletedPurgeIntegrationTest extends TestCase
 		$playback = \OC::$server->get(PlaybackStateService::class);
 		$playback->saveProgress(self::USER, $fileId, 5000, 100, false, 120000);
 
+		/** @var PlayQueueService $queue */
+		$queue = \OC::$server->get(PlayQueueService::class);
+		$queue->saveQueue(self::USER, [$fileId], 0, 100, false, 'off');
+
 		$this->assertTrue($this->rowExists('ac_tracks', self::USER));
 		$this->assertTrue($this->rowExists('ac_playlists', self::USER));
 		$this->assertTrue($this->rowExists('ac_play_state', self::USER));
+		$this->assertTrue($this->rowExists('ac_queue', self::USER));
 
 		$userManager->get(self::USER)?->delete();
 
@@ -66,6 +72,7 @@ final class UserDeletedPurgeIntegrationTest extends TestCase
 		$this->assertFalse($this->rowExists('ac_playlists', self::USER));
 		$this->assertFalse($this->rowExists('ac_play_state', self::USER));
 		$this->assertFalse($this->rowExists('ac_scan_state', self::USER));
+		$this->assertFalse($this->rowExists('ac_queue', self::USER));
 		$this->assertFalse($this->metaRowExists($fileId));
 	}
 

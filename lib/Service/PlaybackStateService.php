@@ -13,8 +13,8 @@ use OCP\IDBConnection;
 
 class PlaybackStateService
 {
-	/** @var list<int> */
-	public const SPEED_PRESETS = [75, 100, 125, 150, 175, 200];
+	/** @var list<int> 0.5×–4.0× in 0.25× steps (centi-multiplier) */
+	public const SPEED_PRESETS = [50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400];
 
 	public function __construct(
 		private IDBConnection $db,
@@ -178,7 +178,7 @@ class PlaybackStateService
 			return 100;
 		}
 
-		return max(50, min(300, $speed));
+		return max(50, min(400, $speed));
 	}
 
 	/** @return array<string, mixed>|null */

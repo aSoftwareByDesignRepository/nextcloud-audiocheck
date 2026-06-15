@@ -57,4 +57,15 @@ final class FileAccessServiceTest extends TestCase
 		$this->assertFalse($svc->isLikelyBrowserPlayable('audio/x-ms-wma'));
 		$this->assertFalse($svc->isLikelyBrowserPlayable('audio/aiff'));
 	}
+
+	public function testNormalizeLibraryFolderPathStripsUserFilesPrefix(): void
+	{
+		$userFolder = $this->createMock(Folder::class);
+		$userFolder->method('getPath')->willReturn('/root/files');
+		$root = $this->createMock(IRootFolder::class);
+		$root->method('getUserFolder')->with('root')->willReturn($userFolder);
+		$svc = new FileAccessService($root, $this->createMock(IEncryptionManager::class), $this->createMock(IConfig::class));
+		$this->assertSame('/Audiobooks', $svc->normalizeLibraryFolderPath('root', '/root/files/Audiobooks'));
+		$this->assertSame('/Music', $svc->normalizeLibraryFolderPath('root', '/remote.php/dav/files/root/Music'));
+	}
 }

@@ -9,6 +9,37 @@ const FORBIDDEN = [
 	{ pattern: /\beval\s*\(/u, message: 'eval forbidden' },
 ];
 const errors = [];
+
+function checkDuplicateObjectShorthand(lines, file) {
+	let depth = 0;
+	let blockStart = -1;
+	const methods = new Set();
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i];
+		const trimmed = line.trim();
+		if (depth === 0 && /=\s*\{\s*$/.test(trimmed)) {
+			blockStart = i;
+			methods.clear();
+			depth = 1;
+			continue;
+		}
+		if (depth <= 0) continue;
+		depth += (line.match(/\{/g) || []).length;
+		depth -= (line.match(/\}/g) || []).length;
+		const methodMatch = trimmed.match(/^(\w+)\s*\([^)]*\)\s*\{/);
+		if (methodMatch) methods.add(methodMatch[1]);
+		const shorthandMatch = trimmed.match(/^(\w+),$/);
+		if (shorthandMatch && methods.has(shorthandMatch[1])) {
+			errors.push(`${file}:${i + 1}: duplicate export "${shorthandMatch[1]}" — method already defined in same object`);
+		}
+		if (depth <= 0) {
+			depth = 0;
+			blockStart = -1;
+			methods.clear();
+		}
+	}
+}
+
 function walk(dir) {
 	for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
 		const full = path.join(dir, e.name);
@@ -24,6 +55,7 @@ function check(file) {
 			if (r.pattern.test(s)) errors.push(`${file}:${i + 1}: ${r.message}`);
 		});
 	});
+	checkDuplicateObjectShorthand(lines, file);
 }
 walk(JS_DIR);
 if (errors.length) {

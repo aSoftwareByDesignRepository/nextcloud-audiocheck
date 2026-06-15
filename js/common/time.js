@@ -24,5 +24,11 @@
 			if (!Array.isArray(tracks)) return 0;
 			return tracks.reduce((sum, tr) => sum + (Number(tr.durationMs) > 0 ? Number(tr.durationMs) : 0), 0);
 		},
+		tracksLabel(count) {
+			const n = Math.max(0, parseInt(count, 10) || 0);
+			return n === 1
+				? t('audiocheck', '1 track')
+				: t('audiocheck', '{count} tracks', { count: String(n) });
+		},
 	};
 })();

@@ -51,6 +51,27 @@ class ScanService
 		$this->jobList->add(\OCA\AudioCheck\BackgroundJob\ScanJob::class, ['userId' => $userId]);
 	}
 
+	public function hasConfiguredLibraries(string $userId): bool
+	{
+		return $this->listLibraryRoots($userId) !== [];
+	}
+
+	/**
+	 * Run scan batches in-process so "Scan now" works without waiting for background cron.
+	 */
+	public function runInteractiveScan(string $userId, int $maxSeconds = 25): void
+	{
+		if ($userId === '') {
+			return;
+		}
+		$this->queueScan($userId);
+		$deadline = $this->timeFactory->getTime() + max(5, $maxSeconds);
+		do {
+			$this->scanUser($userId);
+			$status = $this->getStatus($userId);
+		} while ($status['status'] !== self::STATUS_IDLE && $this->timeFactory->getTime() < $deadline);
+	}
+
 	public function getStatus(string $userId): array
 	{
 		$row = $this->getScanRow($userId);
@@ -114,6 +135,7 @@ class ScanService
 					'folder_path' => $defaultPath === '' ? '/' : '/' . $defaultPath,
 					'root_file_id' => $userFolder->getId(),
 					'include_subfolders' => $this->userWantsScanSubfolders($userId) ? 1 : 0,
+					'content_kind' => LibraryService::CONTENT_KIND_AUTO,
 				];
 			}
 
@@ -141,7 +163,15 @@ class ScanService
 					if (!$this->fileAccess->isAllowedAudioMime($node->getMimeType())) {
 						continue;
 					}
-					$this->upsertTrack($userId, $node, (int)($root['id'] ?? 0), $scanGen, $now);
+					$this->upsertTrack(
+						$userId,
+						$node,
+						(int)($root['id'] ?? 0),
+						$scanGen,
+						$now,
+						false,
+						(string)($root['content_kind'] ?? LibraryService::CONTENT_KIND_AUTO),
+					);
 					$processed++;
 					if ($processed >= self::SCAN_BATCH_SIZE) {
 						$this->saveCursor($userId, [
@@ -187,7 +217,12 @@ class ScanService
 		}
 		if ($node instanceof File && $this->fileAccess->isAllowedAudioMime($node->getMimeType())) {
 			$now = $this->timeFactory->getTime();
-			$this->upsertTrack($userId, $node, null, $now, $now, true);
+			$library = $this->resolveLibraryForFile($userId, $node);
+			$libraryId = $library !== null ? (int)($library['id'] ?? 0) : null;
+			$contentKind = $library !== null
+				? (string)($library['content_kind'] ?? LibraryService::CONTENT_KIND_AUTO)
+				: LibraryService::CONTENT_KIND_AUTO;
+			$this->upsertTrack($userId, $node, $libraryId !== null && $libraryId > 0 ? $libraryId : null, $now, $now, true, $contentKind);
 		}
 	}
 
@@ -207,6 +242,45 @@ class ScanService
 		return $rows;
 	}
 
+	/** @return array<string, mixed>|null */
+	private function resolveLibraryForFile(string $userId, File $file): ?array
+	{
+		$roots = $this->listLibraryRoots($userId);
+		if ($roots === []) {
+			return null;
+		}
+		$relPath = $file->getPath();
+		$userHome = $this->fileAccess->getUserHomePath($userId);
+		if (str_starts_with($relPath, $userHome)) {
+			$relPath = substr($relPath, strlen($userHome));
+		}
+		if ($relPath === '' || $relPath[0] !== '/') {
+			$relPath = '/' . ltrim($relPath, '/');
+		}
+
+		$best = null;
+		$bestLen = -1;
+		foreach ($roots as $root) {
+			$folderPath = rtrim((string)($root['folder_path'] ?? '/'), '/');
+			if ($folderPath === '' || $folderPath === '/') {
+				if ($best === null) {
+					$best = $root;
+					$bestLen = 0;
+				}
+				continue;
+			}
+			$prefix = $folderPath . '/';
+			if ($relPath === $folderPath || str_starts_with($relPath, $prefix)) {
+				$len = strlen($folderPath);
+				if ($len > $bestLen) {
+					$bestLen = $len;
+					$best = $root;
+				}
+			}
+		}
+		return $best;
+	}
+
 	/** @param array<string, mixed> $root */
 	private function resolveRootFolder(string $userId, array $root): ?Folder
 	{
@@ -222,10 +296,19 @@ class ScanService
 		return $this->fileAccess->getFolderByRelativePath($userId, $path);
 	}
 
-	private function upsertTrack(string $userId, File $file, ?int $libraryId, int $scanGeneration, int $addedAt, bool $forceMetadata = false): void
+	private function upsertTrack(string $userId, File $file, ?int $libraryId, int $scanGeneration, int $addedAt, bool $forceMetadata = false, string $libraryContentKind = LibraryService::CONTENT_KIND_AUTO): void
 	{
+		$resolved = $this->resolveLibraryForFile($userId, $file);
+		if ($resolved !== null) {
+			$resolvedId = (int)($resolved['id'] ?? 0);
+			if ($resolvedId > 0) {
+				$libraryId = $resolvedId;
+			}
+			$libraryContentKind = (string)($resolved['content_kind'] ?? LibraryService::CONTENT_KIND_AUTO);
+		}
+		$policyApplies = $libraryContentKind !== LibraryService::CONTENT_KIND_AUTO;
 		try {
-			$metaId = $this->metadata->analyzeFile($file, $forceMetadata);
+			$metaId = $this->metadata->analyzeFile($file, $forceMetadata || $policyApplies, $libraryContentKind);
 		} catch (\Throwable) {
 			$metaId = null;
 		}

@@ -26,6 +26,7 @@ class Version1000Date20260615120000 extends SimpleMigrationStep
 			$t->addColumn('folder_path', 'string', ['length' => 4000, 'notnull' => true]);
 			$t->addColumn('root_file_id', 'bigint', ['notnull' => false]);
 			$t->addColumn('include_subfolders', 'integer', ['notnull' => true, 'default' => 1]);
+			$t->addColumn('content_kind', 'string', ['length' => 16, 'notnull' => true, 'default' => 'auto']);
 			$t->addColumn('enabled', 'integer', ['notnull' => true, 'default' => 1]);
 			$t->addColumn('created_at', 'bigint', ['notnull' => true]);
 			$t->setPrimaryKey(['id'], 'ac_lib_pk');

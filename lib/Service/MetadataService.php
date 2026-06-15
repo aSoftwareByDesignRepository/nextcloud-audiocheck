@@ -31,7 +31,7 @@ class MetadataService
 	 *
 	 * @param bool $force When true, re-extract even if etag/mtime/size appear unchanged (filesystem write events).
 	 */
-	public function analyzeFile(File $file, bool $force = false): int
+	public function analyzeFile(File $file, bool $force = false, string $libraryContentKind = LibraryService::CONTENT_KIND_AUTO): int
 	{
 		$fileId = $file->getId();
 		$etag = $file->getEtag();
@@ -42,7 +42,7 @@ class MetadataService
 			return (int)$existing['id'];
 		}
 
-		$data = $this->extractTags($file);
+		$data = $this->extractTags($file, $libraryContentKind);
 		$now = $this->timeFactory->getTime();
 
 		if ($existing !== null) {
@@ -67,11 +67,11 @@ class MetadataService
 	/**
 	 * @return array<string, mixed>
 	 */
-	public function extractTags(File $file): array
+	public function extractTags(File $file, string $libraryContentKind = LibraryService::CONTENT_KIND_AUTO): array
 	{
 		$fallbackTitle = pathinfo($file->getName(), PATHINFO_FILENAME);
 		$defaults = [
-			'kind' => $this->guessKind($file),
+			'kind' => $this->resolveKindWithLibraryPolicy($this->guessKind($file), $libraryContentKind),
 			'duration_ms' => 0,
 			'bitrate' => 0,
 			'title' => $fallbackTitle,
@@ -134,7 +134,10 @@ class MetadataService
 			$discNo = $this->firstTagInt($tags, ['disc_number', 'discnumber', 'part_of_set', 'disc']);
 			$year = $this->firstTagInt($tags, ['year', 'date', 'recordingtime']);
 
-			$kind = $this->guessKind($file, $duration, $tags);
+			$kind = $this->resolveKindWithLibraryPolicy(
+				$this->guessKind($file, $duration, $tags),
+				$libraryContentKind,
+			);
 			$chapters = $this->extractChapters($info, $duration);
 			$hasEmbeddedCover = isset($info['comments']['picture'][0]) || isset($info['attached_picture'][0]);
 			$boundTitle = $this->bound($title, 512);
@@ -255,16 +258,28 @@ class MetadataService
 		$mime = strtolower($file->getMimeType() ?: '');
 		$name = strtolower($file->getName());
 		if (str_contains($mime, 'm4b') || str_ends_with($name, '.m4b')) {
-			return 'audiobook';
+			return LibraryService::KIND_AUDIOBOOK;
 		}
 		if ($durationMs >= 20 * 60 * 1000) {
-			return 'audiobook';
+			return LibraryService::KIND_AUDIOBOOK;
 		}
 		$genre = strtolower((string)($this->firstTag($tags, ['genre']) ?? ''));
 		if (str_contains($genre, 'audiobook') || str_contains($genre, 'speech')) {
-			return 'audiobook';
+			return LibraryService::KIND_AUDIOBOOK;
 		}
-		return 'music';
+		return LibraryService::KIND_MUSIC;
+	}
+
+	private function resolveKindWithLibraryPolicy(string $guessed, string $libraryContentKind): string
+	{
+		$policy = strtolower(trim($libraryContentKind));
+		if ($policy === LibraryService::KIND_AUDIOBOOK) {
+			return LibraryService::KIND_AUDIOBOOK;
+		}
+		if ($policy === LibraryService::KIND_MUSIC) {
+			return LibraryService::KIND_MUSIC;
+		}
+		return $guessed;
 	}
 
 	/** @param array<string, list<string>> $tags */

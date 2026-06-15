@@ -119,6 +119,85 @@
 	const SESSION_VERSION = 1;
 	let sessionPersistTimer = null;
 
+	// Durable, cross-device queue persistence. sessionStorage above stays as the
+	// instant same-tab cache; the server is the source of truth that survives a
+	// browser restart, a new tab, cleared storage, or another device.
+	const QUEUE_ENDPOINT = '/apps/audiocheck/api/queue';
+	let serverPersistTimer = null;
+	let lastServerSig = '';
+
+	function buildServerQueuePayload() {
+		const fileIds = [];
+		queue.forEach((tr) => {
+			const id = AudioCheckApi.validFileId(tr && tr.fileId);
+			if (id) fileIds.push(id);
+		});
+		return {
+			fileIds,
+			currentIndex: index < 0 ? 0 : index,
+			playbackSpeed: speed,
+			shuffle: !!shuffle,
+			repeatMode,
+		};
+	}
+
+	function queueServerSignature(payload) {
+		return payload.fileIds.join(',') + '|' + payload.currentIndex + '|'
+			+ payload.playbackSpeed + '|' + (payload.shuffle ? 1 : 0) + '|' + payload.repeatMode;
+	}
+
+	function persistServerQueue(opts) {
+		const options = opts || {};
+		clearTimeout(serverPersistTimer);
+		serverPersistTimer = null;
+		const payload = buildServerQueuePayload();
+		if (!payload.fileIds.length) return;
+		const sig = queueServerSignature(payload);
+		if (!options.force && sig === lastServerSig) return;
+		lastServerSig = sig;
+		const token = (window.OC && OC.requestToken) || document.querySelector('input[name="requesttoken"]')?.value;
+		const body = JSON.stringify(payload);
+		const unloadish = options.unload || document.visibilityState === 'hidden';
+		if (unloadish || !token) {
+			if (navigator.sendBeacon) {
+				const beaconUrl = OC.generateUrl('/apps/audiocheck/api/queue')
+					+ '?requesttoken=' + encodeURIComponent(token || '');
+				navigator.sendBeacon(beaconUrl, new Blob([body], { type: 'application/json' }));
+				return;
+			}
+			fetch(OC.generateUrl('/apps/audiocheck/api/queue'), {
+				method: 'PUT',
+				credentials: 'same-origin',
+				headers: { requesttoken: token || '', 'Content-Type': 'application/json', Accept: 'application/json' },
+				body,
+				keepalive: true,
+			}).catch(() => { lastServerSig = ''; });
+			return;
+		}
+		AudioCheckApi.put(QUEUE_ENDPOINT, payload).catch(() => { lastServerSig = ''; });
+	}
+
+	function flushQueuePersistence(unloading) {
+		clearTimeout(sessionPersistTimer);
+		clearTimeout(serverPersistTimer);
+		sessionPersistTimer = null;
+		serverPersistTimer = null;
+		persistSession();
+		persistServerQueue({ force: true, unload: !!unloading });
+	}
+
+	function scheduleServerQueue() {
+		clearTimeout(serverPersistTimer);
+		serverPersistTimer = setTimeout(() => persistServerQueue(), 400);
+	}
+
+	function clearServerQueue() {
+		lastServerSig = '';
+		clearTimeout(serverPersistTimer);
+		serverPersistTimer = null;
+		AudioCheckApi.del(QUEUE_ENDPOINT).catch(() => {});
+	}
+
 	function sessionSnapshot() {
 		const track = currentTrack();
 		if (!track || index < 0) return null;
@@ -149,7 +228,12 @@
 		try {
 			const snap = sessionSnapshot();
 			if (!snap) {
-				sessionStorage.removeItem(SESSION_KEY);
+				// Never wipe a saved session while bootstrap restore is still in
+				// flight — setSpeed/volume prefs can schedule this with an empty
+				// in-memory queue before restoreLastPlayback() finishes.
+				if (!bootstrapRestoring) {
+					sessionStorage.removeItem(SESSION_KEY);
+				}
 				return;
 			}
 			sessionStorage.setItem(SESSION_KEY, JSON.stringify(snap));
@@ -158,11 +242,41 @@
 
 	function schedulePersistSession() {
 		clearTimeout(sessionPersistTimer);
-		sessionPersistTimer = setTimeout(persistSession, 500);
+		sessionPersistTimer = setTimeout(persistSession, 300);
+		scheduleServerQueue();
 	}
 
 	function clearSession() {
 		try { sessionStorage.removeItem(SESSION_KEY); } catch (_) { /* ignore */ }
+		clearServerQueue();
+	}
+
+	function restoreFromServerProgress() {
+		const prefs = window.AudioCheckUserPrefs || {};
+		if (prefs.resumeOnOpen === false) {
+			return Promise.resolve(false);
+		}
+		return AudioCheckApi.get('/apps/audiocheck/api/progress').then((data) => {
+			const cont = (data.progress && data.progress.continue) || [];
+			if (!cont.length) return false;
+			const item = cont[0];
+			const fileId = item && item.fileId;
+			if (!fileId) return false;
+			return AudioCheckApi.get('/apps/audiocheck/api/playable/{fileId}', null, { params: { fileId } }).then((r) => {
+				const track = r.track;
+				if (!track || track.unavailable) return false;
+				let positionMs = 0;
+				if (!item.finished && typeof item.positionMs === 'number') {
+					positionMs = Math.max(0, item.positionMs);
+				}
+				if (typeof item.playbackSpeed === 'number' && item.playbackSpeed > 0) {
+					speed = normalizeSpeed(item.playbackSpeed);
+				}
+				window.AudioCheckPlayer.playQueue([track], 0, positionMs, false);
+				persistSession();
+				return true;
+			});
+		}).catch(() => false);
 	}
 
 	function restoreSession() {
@@ -183,23 +297,88 @@
 			const prefs = window.AudioCheckUserPrefs || {};
 			const resume = prefs.resumeOnOpen !== false;
 			const idx = Math.max(0, Math.min(snap.index || 0, snap.queue.length - 1));
-			const fileId = snap.queue[idx] && snap.queue[idx].fileId;
+			const fileId = AudioCheckApi.validFileId(snap.queue[idx] && snap.queue[idx].fileId);
 			if (!fileId) { resolve(false); return; }
 
-			AudioCheckApi.get('/apps/audiocheck/api/playable/{fileId}', null, { params: { fileId } }).then((r) => {
-				const tracks = snap.queue.slice();
-				tracks[idx] = Object.assign({}, tracks[idx], r.track);
+			function applySnapPlayback(tracks, autoplay) {
 				if (typeof snap.speed === 'number' && snap.speed > 0) {
 					speed = normalizeSpeed(snap.speed);
 				}
 				shuffle = !!snap.shuffle;
 				if (snap.repeatMode) repeatMode = snap.repeatMode;
 				const positionMs = resume ? Math.max(0, snap.positionMs || 0) : 0;
-				const autoplay = resume && !!snap.playing;
 				window.AudioCheckPlayer.playQueue(tracks, idx, positionMs, autoplay);
-				persistSession();
+				flushQueuePersistence(false);
+				announceRestored(tracks.length);
 				resolve(true);
-			}).catch(() => resolve(false));
+			}
+
+			AudioCheckApi.get('/apps/audiocheck/api/playable/{fileId}', null, { params: { fileId } }).then((r) => {
+				const tracks = snap.queue.slice();
+				if (r.track) tracks[idx] = Object.assign({}, tracks[idx], r.track);
+				const autoplay = resume && !!snap.playing;
+				applySnapPlayback(tracks, autoplay);
+			}).catch(() => {
+				applySnapPlayback(snap.queue.slice(), false);
+			});
+		});
+	}
+
+	function restoreServerQueue() {
+		const prefs = window.AudioCheckUserPrefs || {};
+		return AudioCheckApi.get(QUEUE_ENDPOINT).then((data) => {
+			const q = data && data.queue;
+			if (!q || !Array.isArray(q.items) || !q.items.length) return false;
+			const tracks = q.items.slice();
+			const idx = Math.max(0, Math.min(q.currentIndex || 0, tracks.length - 1));
+			if (typeof q.playbackSpeed === 'number' && q.playbackSpeed > 0) {
+				speed = normalizeSpeed(q.playbackSpeed);
+			}
+			shuffle = !!q.shuffle;
+			if (q.repeatMode) repeatMode = q.repeatMode;
+			const resume = prefs.resumeOnOpen !== false;
+			const positionMs = resume ? Math.max(0, q.positionMs || 0) : 0;
+			window.AudioCheckPlayer.playQueue(tracks, idx, positionMs, false);
+			// Server already matches what we just loaded — avoid an echo write.
+			lastServerSig = queueServerSignature(buildServerQueuePayload());
+			flushQueuePersistence(false);
+			announceRestored(tracks.length);
+			return true;
+		}).catch(() => false);
+	}
+
+	function announceRestored(count) {
+		const msg = count > 1
+			? t('audiocheck', 'Restored your queue with {count} tracks where you left off.', { count: String(count) })
+			: t('audiocheck', 'Restored where you left off.');
+		announce(msg);
+	}
+
+	let bootstrapRestoring = true;
+	let bootstrapReadyResolve = null;
+	const bootstrapReady = new Promise((resolve) => { bootstrapReadyResolve = resolve; });
+
+	function finishBootstrapRestore() {
+		bootstrapRestoring = false;
+		if (bootstrapReadyResolve) {
+			bootstrapReadyResolve();
+			bootstrapReadyResolve = null;
+		}
+	}
+
+	function restoreLastPlayback() {
+		return restoreSession().then((restored) => {
+			if (restored) return true;
+			return restoreServerQueue();
+		}).then((restored) => {
+			if (restored) return true;
+			return restoreFromServerProgress();
+		}).finally(() => {
+			finishBootstrapRestore();
+			const track = activeTrack();
+			updateMini(track, { announce: false });
+			updateMiniSeek();
+			notify();
 		});
 	}
 
@@ -236,6 +415,68 @@
 		return index >= 0 ? queue[index] : null;
 	}
 
+	function fileIdFromStreamSrc(src) {
+		if (!src) return 0;
+		const m = String(src).match(/\/api\/stream\/(\d+)/);
+		return m ? parseInt(m[1], 10) : 0;
+	}
+
+	function repairTrackState() {
+		const cur = currentTrack();
+		if (cur) return cur;
+		const a = audio();
+		if (!a || !a.src) return null;
+		const fileId = fileIdFromStreamSrc(a.src);
+		if (!fileId) return null;
+
+		for (let i = 0; i < queue.length; i++) {
+			if (queue[i] && queue[i].fileId === fileId) {
+				index = i;
+				return queue[i];
+			}
+		}
+
+		try {
+			const raw = sessionStorage.getItem(SESSION_KEY);
+			if (raw) {
+				const snap = JSON.parse(raw);
+				if (snap && Array.isArray(snap.queue) && snap.queue.length) {
+					const idx = snap.queue.findIndex((tr) => tr && tr.fileId === fileId);
+					if (idx >= 0) {
+						queue.length = 0;
+						snap.queue.forEach((item) => queue.push(item));
+						index = idx;
+						if (typeof snap.speed === 'number' && snap.speed > 0) {
+							speed = normalizeSpeed(snap.speed);
+						}
+						shuffle = !!snap.shuffle;
+						if (snap.repeatMode) repeatMode = snap.repeatMode;
+						return queue[index];
+					}
+				}
+			}
+		} catch (_) { /* ignore */ }
+
+		const stub = { fileId, title: '', fileName: '', artist: '' };
+		queue.length = 0;
+		queue.push(stub);
+		index = 0;
+		AudioCheckApi.get('/apps/audiocheck/api/playable/{fileId}', null, { params: { fileId } })
+			.then((r) => {
+				if (!r.track || index < 0 || !queue[index] || queue[index].fileId !== fileId) return;
+				queue[index] = r.track;
+				updateMini(r.track, { announce: false });
+				notify();
+				schedulePersistSession();
+			})
+			.catch(() => {});
+		return stub;
+	}
+
+	function activeTrack() {
+		return currentTrack() || repairTrackState();
+	}
+
 	function canGoPrev() {
 		const track = currentTrack();
 		const a = audio();
@@ -252,23 +493,29 @@
 		const prevBtn = document.getElementById('ac-mini-prev');
 		const nextBtn = document.getElementById('ac-mini-next');
 		const playBtn = document.getElementById('ac-mini-play');
-		const track = currentTrack();
+		const track = activeTrack();
 		const a = audio();
 		const hasTrack = !!track && index >= 0;
 		if (playBtn) {
-			playBtn.disabled = !hasTrack && !(a && a.src);
+			const hasSource = !!(a && a.src);
+			playBtn.disabled = !hasTrack && !hasSource;
 		}
 		if (prevBtn) prevBtn.disabled = !canGoPrev();
 		if (nextBtn) nextBtn.disabled = !canGoNext();
 	}
 
-	function updateMini(track) {
+	function updateMini(track, opts) {
+		const options = opts || {};
 		const title = document.getElementById('ac-mini-title');
 		const artist = document.getElementById('ac-mini-artist');
 		const cover = document.getElementById('ac-mini-cover');
 		const playBtn = document.getElementById('ac-mini-play');
 		if (!track) {
-			if (title) title.textContent = t('audiocheck', 'Nothing playing');
+			if (title) {
+				title.textContent = bootstrapRestoring
+					? t('audiocheck', 'Loading playback…')
+					: t('audiocheck', 'Nothing playing');
+			}
 			if (artist) artist.textContent = '';
 			if (cover) cover.hidden = true;
 			const now = document.getElementById('ac-mini-now');
@@ -285,7 +532,9 @@
 			now.disabled = false;
 			now.classList.remove('ac-mini-player__track--idle');
 		}
-		if (title) title.textContent = track.title || track.fileName || '';
+		if (title) {
+			title.textContent = track.title || track.fileName || t('audiocheck', 'Loading playback…');
+		}
 		if (artist) artist.textContent = track.artist || '';
 		if (cover) {
 			const url = AudioCheckApi.coverUrl(track.fileId);
@@ -308,6 +557,7 @@
 			}
 		}
 		updateTransport();
+		if (!options.announce) return;
 		announce(t('audiocheck', 'Now playing: {title} by {artist}', {
 			title: track.title || track.fileName || '',
 			artist: track.artist || t('audiocheck', 'Unknown artist'),
@@ -487,6 +737,12 @@
 		if (ni >= 0 && ni !== i) loadTrack(ni);
 		else {
 			index = -1;
+			const a = audio();
+			if (a) {
+				a.pause();
+				a.removeAttribute('src');
+				try { a.load(); } catch (_) { /* ignore */ }
+			}
 			updateMini(null);
 			notify();
 			clearSession();
@@ -522,7 +778,7 @@
 		if (!now || now.dataset.acBound) return;
 		now.dataset.acBound = '1';
 		now.addEventListener('click', () => {
-			if (currentTrack()) AudioCheckRouter.navigate('now-playing', {}, true);
+			if (activeTrack()) AudioCheckRouter.navigate('now-playing', {}, true);
 		});
 	}
 
@@ -538,8 +794,18 @@
 		a.addEventListener('volumechange', () => {
 			syncAllVolumeUis();
 		});
-		a.addEventListener('play', () => { updateMini(currentTrack()); startProgressTimer(); notify(); schedulePersistSession(); });
-		a.addEventListener('pause', () => { updateMini(currentTrack()); saveProgress(true, false); notify(); schedulePersistSession(); });
+		a.addEventListener('play', () => {
+			updateMini(activeTrack(), { announce: false });
+			startProgressTimer();
+			notify();
+			schedulePersistSession();
+		});
+		a.addEventListener('pause', () => {
+			updateMini(activeTrack(), { announce: false });
+			saveProgress(true, false);
+			notify();
+			schedulePersistSession();
+		});
 		a.addEventListener('ended', () => {
 			saveProgress(true, true);
 			if (repeatMode === AudioCheckConstants.REPEAT_ONE) { a.currentTime = 0; a.play(); return; }
@@ -605,10 +871,16 @@
 		}
 		window.addEventListener('beforeunload', () => {
 			saveProgress(true, false);
-			persistSession();
+			flushQueuePersistence(true);
+		});
+		window.addEventListener('pagehide', () => {
+			flushQueuePersistence(true);
 		});
 		document.addEventListener('visibilitychange', () => {
-			if (document.visibilityState === 'hidden') saveProgress(true, false);
+			if (document.visibilityState === 'hidden') {
+				saveProgress(true, false);
+				flushQueuePersistence(true);
+			}
 		});
 	}
 
@@ -664,8 +936,13 @@
 	function toggle() {
 		const a = audio();
 		if (!a) return;
-		if (a.paused) a.play(); else a.pause();
-		updateMini(currentTrack());
+		const track = activeTrack();
+		if (a.paused) {
+			a.play().catch(() => handlePlaybackError(index));
+		} else {
+			a.pause();
+		}
+		updateMini(track || activeTrack(), { announce: false });
 	}
 
 	function next() {
@@ -705,16 +982,44 @@
 			const a = audio();
 			if (a) a.playbackRate = speed / 100;
 			loadTrack(start, seekMs, autoplay);
+			// Persist immediately when the user starts a queue — do not rely on
+			// debounced timers alone (F5 within 1–2s would lose everything).
+			if (tracks.length) {
+				persistSession();
+				persistServerQueue({ force: true });
+			}
 		},
-		enqueue(track) { queue.push(track); if (shuffle) rebuildShuffleOrder(); if (index < 0) loadTrack(0); else notify(); },
+		enqueue(track) {
+			if (!isPlayable(track)) return false;
+			queue.push(track);
+			if (shuffle) rebuildShuffleOrder();
+			if (index < 0) loadTrack(queue.length - 1);
+			else notify();
+			schedulePersistSession();
+			return true;
+		},
+		enqueueAll(tracks) {
+			const existing = new Set(queue.map((tr) => tr.fileId));
+			const toAdd = (tracks || []).filter((tr) => isPlayable(tr) && !existing.has(tr.fileId));
+			if (!toAdd.length) return 0;
+			const shouldStart = index < 0;
+			toAdd.forEach((tr) => queue.push(tr));
+			if (shuffle) rebuildShuffleOrder();
+			if (shouldStart) loadTrack(0);
+			else notify();
+			schedulePersistSession();
+			return toAdd.length;
+		},
 		removeAt(i) {
 			if (i < 0 || i >= queue.length) return;
 			queue.splice(i, 1);
+			let emptied = false;
 			if (index === i) {
-				if (queue.length === 0) { index = -1; updateMini(null); clearSession(); }
+				if (queue.length === 0) { index = -1; updateMini(null); clearSession(); emptied = true; }
 				else loadTrack(Math.min(i, queue.length - 1));
 			} else if (index > i) index -= 1;
 			if (shuffle) rebuildShuffleOrder();
+			if (!emptied) schedulePersistSession();
 			notify();
 		},
 		moveItem(from, to) {
@@ -725,6 +1030,7 @@
 			else if (from < index && to >= index) index -= 1;
 			else if (from > index && to <= index) index += 1;
 			if (shuffle) rebuildShuffleOrder();
+			schedulePersistSession();
 			notify();
 		},
 		clearQueue() {
@@ -742,7 +1048,7 @@
 		},
 		getQueue() { return queue.slice(); },
 		getCurrentIndex() { return index; },
-		getCurrentTrack() { return currentTrack(); },
+		getCurrentTrack() { return activeTrack(); },
 		canGoPrev,
 		canGoNext,
 		getRepeatMode() { return repeatMode; },
@@ -751,6 +1057,7 @@
 			speed = normalizeSpeed(centi);
 			const a = audio();
 			if (a) a.playbackRate = speed / 100;
+			if (!bootstrapRestoring) schedulePersistSession();
 		},
 		setVolumePercent,
 		getVolumePercent() { const a = audio(); return a ? (a.muted ? 0 : Math.round(a.volume * 100)) : 100; },
@@ -761,12 +1068,13 @@
 			syncVolumeUi(ui);
 			return () => volumeUis.delete(ui);
 		},
-		setRepeat(mode) { repeatMode = mode; notify(); },
-		setShuffle(on) { shuffle = on; if (shuffle) rebuildShuffleOrder(); notify(); },
+		setRepeat(mode) { repeatMode = mode; schedulePersistSession(); notify(); },
+		setShuffle(on) { shuffle = on; if (shuffle) rebuildShuffleOrder(); schedulePersistSession(); notify(); },
 		cycleRepeat() {
 			const order = [AudioCheckConstants.REPEAT_OFF, AudioCheckConstants.REPEAT_ALL, AudioCheckConstants.REPEAT_ONE];
 			const i = order.indexOf(repeatMode);
 			repeatMode = order[(i + 1) % order.length];
+			schedulePersistSession();
 			notify();
 			return repeatMode;
 		},
@@ -775,13 +1083,21 @@
 		seekToMs(ms) { const a = audio(); if (a) a.currentTime = ms / 1000; },
 		subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
 		toggle, next, prev,
-		clearQueue,
 		restoreSession,
+		restoreLastPlayback,
+		whenReady() { return bootstrapReady; },
+		isRestoring() { return bootstrapRestoring; },
 		init() {
 			bindAudio();
 			bindMiniNowOpen();
 			initMiniVolume();
 			applyDefaultVolume();
+			if (bootstrapRestoring && !activeTrack()) {
+				updateMini(null);
+			} else {
+				const track = activeTrack();
+				if (track) updateMini(track, { announce: false });
+			}
 			updateTransport();
 			updateMiniSeek();
 		},

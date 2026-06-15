@@ -12,7 +12,7 @@ use OCA\AudioCheck\Service\IconCatalog;
 	</div>
 	<ul class="ac-nav__list">
 		<?php foreach (($_['navigation'] ?? []) as $item): ?>
-		<li>
+		<li data-ac-nav-id="<?php p((string)$item['id']); ?>"<?php if (($item['id'] ?? '') === 'now-playing'): ?> hidden<?php endif; ?>>
 			<a href="<?php p((string)$item['url']); ?>"
 				class="ac-nav__link<?php if (!empty($item['active'])): ?> ac-nav__link--active<?php endif; ?>"
 				<?php if (!empty($item['active'])): ?>aria-current="page"<?php endif; ?>>

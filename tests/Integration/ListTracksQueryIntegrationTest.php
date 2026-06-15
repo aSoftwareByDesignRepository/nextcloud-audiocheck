@@ -23,7 +23,8 @@ final class ListTracksQueryIntegrationTest extends TestCase
 	{
 		/** @var LibraryService $library */
 		$library = \OC::$server->get(LibraryService::class);
-		$result = $library->listTracks('root', null, null, LibraryService::SORT_ADDED, 1, 8);
+		$limit = 8;
+		$result = $library->listTracks('root', null, null, LibraryService::SORT_ADDED, 1, $limit);
 		if ($result['total'] === 0) {
 			$this->markTestSkipped('No indexed tracks for root in this instance.');
 		}
@@ -31,6 +32,8 @@ final class ListTracksQueryIntegrationTest extends TestCase
 		$first = $result['items'][0];
 		$this->assertGreaterThan(0, (int)($first['fileId'] ?? 0));
 		$this->assertNotSame('', (string)($first['title'] ?? ''));
-		$this->assertSame($result['total'], count($result['items']), 'First page should return all tracks when under limit');
+		// The first page is populated with real rows (not an empty placeholder
+		// after the count query): it holds min(total, limit) items.
+		$this->assertSame(min($result['total'], $limit), count($result['items']), 'First page must be fully populated up to the page limit');
 	}
 }

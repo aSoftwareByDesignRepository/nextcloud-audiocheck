@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\AudioCheck\Listener;
 
 use OCA\AudioCheck\Service\AccessControlService;
+use OCA\AudioCheck\Service\PlayQueueService;
 use OCA\AudioCheck\Service\ScanService;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
@@ -16,6 +17,7 @@ class UserDeletedListener implements IEventListener
 	public function __construct(
 		private AccessControlService $access,
 		private ScanService $scan,
+		private PlayQueueService $queue,
 	) {
 	}
 
@@ -27,5 +29,6 @@ class UserDeletedListener implements IEventListener
 		$uid = $event->getUser()->getUID();
 		$this->access->purgeUser($uid);
 		$this->scan->purgeUserData($uid);
+		$this->queue->purgeUser($uid);
 	}
 }

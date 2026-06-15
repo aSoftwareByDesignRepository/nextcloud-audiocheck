@@ -21,6 +21,29 @@
 		return btn;
 	}
 
+	function nowActionBtn(label, iconName, onClick, options) {
+		const opts = options || {};
+		const classes = ['ac-btn', 'ac-now-action'];
+		if (opts.variant) classes.push('ac-now-action--' + opts.variant);
+		if (opts.active) classes.push('ac-now-action--active');
+		const attrs = {};
+		if (opts.pressed !== undefined) {
+			attrs['aria-pressed'] = opts.pressed ? 'true' : 'false';
+		}
+		const btn = C.el('button', {
+			type: 'button',
+			className: classes.join(' '),
+			attrs,
+			disabled: !!opts.disabled,
+			onClick,
+		});
+		if (iconName && window.AudioCheckIcons) {
+			btn.appendChild(AudioCheckIcons.createSvg(iconName));
+		}
+		btn.appendChild(C.el('span', { className: 'ac-btn__label', text: label }));
+		return btn;
+	}
+
 	AudioCheckRouter.register('now-playing', {
 		render() {
 			const frag = document.createDocumentFragment();
@@ -107,9 +130,119 @@
 			let posEl = null;
 			let durEl = null;
 			let renderedFileId = 0;
-			let renderedEmpty = true;
+			let renderedEmpty = false;
 			let lastQueueSig = '';
 			let seekDragging = false;
+			let idleMode = '';
+
+			function playContinueItem(item) {
+				const positionMs = item.finished ? 0 : (item.positionMs || 0);
+				if (typeof item.playbackSpeed === 'number' && item.playbackSpeed > 0) {
+					AudioCheckPlayer.setSpeed(item.playbackSpeed);
+				}
+				AudioCheckApi.get('/apps/audiocheck/api/playable/{fileId}', null, { params: { fileId: item.fileId } })
+					.then((r) => {
+						AudioCheckPlayer.playQueue([r.track], 0, positionMs, false);
+					})
+					.catch((e) => AudioCheckMessaging.toast(e.message, 'error'));
+			}
+
+			function paintRestoring() {
+				idleMode = 'loading';
+				body.textContent = '';
+				const box = C.el('div', { className: 'ac-now-playing__loading' });
+				box.appendChild(C.el('div', {
+					className: 'ac-now-playing__loading-inner',
+					attrs: { role: 'status', 'aria-live': 'polite' },
+				}, [
+					C.el('span', { className: 'ac-skeleton ac-skeleton--title' }),
+					C.el('span', { className: 'ac-skeleton ac-skeleton--card' }),
+					C.el('p', { className: 'ac-field__hint', text: t('audiocheck', 'Loading playback…') }),
+				]));
+				body.appendChild(box);
+			}
+
+			function paintContinueSection(items) {
+				idleMode = 'resume';
+				body.textContent = '';
+				const section = C.el('section', {
+					className: 'ac-section ac-now-resume',
+					attrs: { 'aria-labelledby': 'ac-now-resume-heading' },
+				});
+				section.appendChild(C.el('h2', {
+					id: 'ac-now-resume-heading',
+					className: 'ac-section__title',
+					text: t('audiocheck', 'Resume listening'),
+				}));
+				section.appendChild(C.el('p', {
+					className: 'ac-field__hint ac-now-resume__intro',
+					text: t('audiocheck', 'Pick up where you left off. Tap a title to load it, then press Play.'),
+				}));
+				const grid = C.el('div', { className: 'ac-grid ac-now-resume__grid' });
+				items.slice(0, 6).forEach((item) => {
+					grid.appendChild(C.mediaCard({
+						fileId: item.fileId,
+						title: item.title,
+						artist: item.artist,
+						progressPercent: item.durationMs > 0
+							? Math.min(100, Math.round((item.positionMs / item.durationMs) * 100))
+							: 0,
+						finished: !!item.finished,
+					}, () => playContinueItem(item)));
+				});
+				section.appendChild(grid);
+				body.appendChild(section);
+				const actions = C.el('div', {
+					className: 'ac-toolbar ac-toolbar--compact ac-now-resume__actions',
+					attrs: { 'aria-label': t('audiocheck', 'More actions') },
+				});
+				actions.appendChild(C.el('button', {
+					type: 'button',
+					className: 'ac-btn',
+					text: t('audiocheck', 'Browse'),
+					onClick: () => AudioCheckRouter.navigate('browse', {}, true),
+				}));
+				actions.appendChild(C.el('button', {
+					type: 'button',
+					className: 'ac-btn ac-btn--text',
+					text: t('audiocheck', 'Go to Home'),
+					onClick: () => AudioCheckRouter.navigate('home', {}, true),
+				}));
+				body.appendChild(actions);
+			}
+
+			function paintTrulyEmpty() {
+				idleMode = 'empty';
+				body.textContent = '';
+				body.appendChild(C.emptyState(
+					t('audiocheck', 'Nothing playing'),
+					t('audiocheck', 'Choose audio from Home or Browse to start listening.'),
+					{
+						icon: 'music',
+						ctaLabel: t('audiocheck', 'Browse'),
+						onCta: () => AudioCheckRouter.navigate('browse', {}, true),
+					},
+				));
+			}
+
+			function paintNoTrackState() {
+				if (AudioCheckPlayer.isRestoring && AudioCheckPlayer.isRestoring()) {
+					paintRestoring();
+					return;
+				}
+				paintRestoring();
+				AudioCheckApi.get('/apps/audiocheck/api/progress').then((data) => {
+					if (AudioCheckPlayer.getCurrentTrack()) return;
+					const cont = (data.progress && data.progress.continue) || [];
+					if (cont.length) {
+						paintContinueSection(cont);
+					} else {
+						paintTrulyEmpty();
+					}
+				}).catch(() => {
+					if (!AudioCheckPlayer.getCurrentTrack()) paintTrulyEmpty();
+				});
+			}
 
 			function queueSignature() {
 				const queue = AudioCheckPlayer.getQueue();
@@ -178,9 +311,11 @@
 				const isEmpty = !track;
 
 				if (!force && isEmpty === renderedEmpty && fileId === renderedFileId) {
-					paintSeek();
-					paintTransport();
-					paintChapters();
+					if (!isEmpty) {
+						paintSeek();
+						paintTransport();
+						paintChapters();
+					}
 					return;
 				}
 				renderedEmpty = isEmpty;
@@ -192,29 +327,18 @@
 				durEl = null;
 
 				body.textContent = '';
+				idleMode = '';
+				body.classList.remove('ac-now-playing__body--active');
 
 				if (!track) {
-					body.appendChild(C.emptyState(
-						t('audiocheck', 'Nothing playing'),
-						t('audiocheck', 'Pick a track from Home, Browse, or your playlists.'),
-						{
-							icon: 'music',
-							ctaLabel: t('audiocheck', 'Browse'),
-							onCta: () => AudioCheckRouter.navigate('browse', {}, true),
-						},
-					));
-					body.appendChild(C.el('p', {
-						className: 'ac-field__hint ac-now-playing__hint',
-						text: t('audiocheck', 'Or open Home to continue listening.'),
-					}));
-					body.appendChild(C.el('button', {
-						type: 'button',
-						className: 'ac-btn ac-btn--text ac-now-playing__home-link',
-						text: t('audiocheck', 'Go to Home'),
-						onClick: () => AudioCheckRouter.navigate('home', {}, true),
-					}));
+					renderedEmpty = true;
+					renderedFileId = 0;
+					paintNoTrackState();
 					return;
 				}
+
+				renderedEmpty = false;
+				body.classList.add('ac-now-playing__body--active');
 
 				const hero = C.el('article', { className: 'ac-card ac-now-card ac-now-card--playing', id: 'ac-now-card' });
 				const coverWrap = C.el('div', { className: 'ac-now-card__cover-wrap' });
@@ -293,37 +417,58 @@
 				seekWrap.appendChild(timeRow);
 				cardBody.appendChild(seekWrap);
 
-				const actions = C.el('div', { className: 'ac-toolbar ac-toolbar--compact ac-now-actions' });
-				actions.appendChild(C.el('button', {
-					type: 'button',
-					className: 'ac-btn ac-btn--text',
-					text: track.favorite ? t('audiocheck', 'Unfavorite') : t('audiocheck', 'Favorite'),
-					onClick: () => {
+				const actions = C.el('div', {
+					className: 'ac-now-actions',
+					attrs: { role: 'group', 'aria-label': t('audiocheck', 'Track actions') },
+				});
+				const favLabel = track.favorite ? t('audiocheck', 'Unfavorite') : t('audiocheck', 'Favorite');
+				const favBtn = nowActionBtn(
+					favLabel,
+					track.favorite ? 'heart-filled' : 'heart',
+					() => {
+						const fileId = AudioCheckApi.validFileId(track.fileId);
+						if (!fileId) return;
 						const next = !track.favorite;
-						AudioCheckApi.put('/apps/audiocheck/api/tracks/{fileId}/favorite', { favorite: next }, { params: { fileId: track.fileId } })
+						favBtn.disabled = true;
+						AudioCheckApi.put('/apps/audiocheck/api/tracks/{fileId}/favorite', { favorite: next }, { params: { fileId } })
 							.then(() => {
 								track.favorite = next;
+								AudioCheckMessaging.toast(next
+									? t('audiocheck', 'Added to Favorites.')
+									: t('audiocheck', 'Removed from Favorites.'));
 								paintNow(true);
-							}).catch((e) => AudioCheckMessaging.toast(e.message, 'error'));
+							}).catch((e) => {
+								AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error');
+								favBtn.disabled = false;
+							});
 					},
-				}));
-				actions.appendChild(C.el('button', {
-					type: 'button',
-					className: 'ac-btn ac-btn--text',
-					text: t('audiocheck', 'Reset progress'),
-					onClick: () => {
-						AudioCheckApi.del('/apps/audiocheck/api/progress/{fileId}', null, { params: { fileId: track.fileId } })
-							.then(() => AudioCheckMessaging.toast(t('audiocheck', 'Progress reset.')))
-							.catch((e) => AudioCheckMessaging.toast(e.message, 'error'));
+					{
+						variant: 'favorite',
+						active: !!track.favorite,
+						pressed: !!track.favorite,
 					},
-				}));
+				);
+				const resetLabel = t('audiocheck', 'Reset progress');
+				const resetBtn = nowActionBtn(resetLabel, 'rotate-ccw', () => {
+					const fileId = AudioCheckApi.validFileId(track.fileId);
+					if (!fileId) return;
+					resetBtn.disabled = true;
+					AudioCheckApi.del('/apps/audiocheck/api/progress/{fileId}', null, { params: { fileId } })
+						.then(() => AudioCheckMessaging.toast(t('audiocheck', 'Progress reset.')))
+						.catch((e) => AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error'))
+						.finally(() => { resetBtn.disabled = false; });
+				});
+				actions.appendChild(favBtn);
+				actions.appendChild(resetBtn);
 				cardBody.appendChild(actions);
 				hero.appendChild(cardBody);
 
+				const panels = C.el('div', { className: 'ac-now-playing__panels' });
 				body.appendChild(hero);
-				body.appendChild(playbackSection);
-				body.appendChild(queueSection);
-				body.appendChild(chaptersSection);
+				panels.appendChild(playbackSection);
+				panels.appendChild(queueSection);
+				panels.appendChild(chaptersSection);
+				body.appendChild(panels);
 				playbackSection.hidden = false;
 				queueSection.hidden = false;
 
@@ -369,9 +514,13 @@
 				const playing = !!(a && !a.paused);
 				const metaEl = document.getElementById('ac-queue-meta');
 				if (metaEl) {
-					metaEl.textContent = queue.length
-						? t('audiocheck', '{count} tracks in queue', { count: String(queue.length) })
-						: '';
+					if (queue.length === 1) {
+						metaEl.textContent = t('audiocheck', '1 track in queue');
+					} else if (queue.length) {
+						metaEl.textContent = t('audiocheck', '{count} tracks in queue', { count: String(queue.length) });
+					} else {
+						metaEl.textContent = '';
+					}
 				}
 				if (queueClear) queueClear.hidden = queue.length === 0;
 				queueUl.textContent = '';
@@ -422,6 +571,14 @@
 			paintNow();
 			paintQueue();
 			paintControls();
+
+			if (typeof AudioCheckPlayer.whenReady === 'function') {
+				AudioCheckPlayer.whenReady().then(() => {
+					paintNow(true);
+					paintQueue();
+					paintControls();
+				});
+			}
 
 			const observer = new MutationObserver(() => {
 				if (!document.body.contains(body)) {

@@ -35,16 +35,22 @@ final class EnsureAudioCheckSchema implements IRepairStep
 		$this->ensureBackgroundJobs($output);
 
 		$missingBefore = $this->missingTables();
-		if ($missingBefore === []) {
+		$needsMigrate = $missingBefore !== [] || $this->missingLibraryContentKindColumn();
+
+		if (!$needsMigrate) {
 			$output->info('AudioCheck: all ' . count(AudioCheckTableCatalog::TABLES) . ' tables are present.');
 			return;
 		}
 
-		$output->info(sprintf(
-			'AudioCheck: %d table(s) missing (%s); running pending migrations.',
-			count($missingBefore),
-			implode(', ', $missingBefore),
-		));
+		if ($missingBefore !== []) {
+			$output->info(sprintf(
+				'AudioCheck: %d table(s) missing (%s); running pending migrations.',
+				count($missingBefore),
+				implode(', ', $missingBefore),
+			));
+		} else {
+			$output->info('AudioCheck: library content_kind column missing; running pending migrations.');
+		}
 
 		$migrationService = new MigrationService(
 			AudioCheckTableCatalog::APP_ID,
@@ -53,15 +59,15 @@ final class EnsureAudioCheckSchema implements IRepairStep
 		$migrationService->migrate('latest', false);
 
 		$missingAfter = $this->missingTables();
-		if ($missingAfter === []) {
-			$output->info('AudioCheck: schema repair completed; all tables are now present.');
-			return;
+		if ($missingAfter !== [] || $this->missingLibraryContentKindColumn()) {
+			throw new \RuntimeException(sprintf(
+				'AudioCheck schema is still incomplete after migrate("latest"). Missing tables: %s; content_kind: %s.',
+				$missingAfter === [] ? 'none' : implode(', ', $missingAfter),
+				$this->missingLibraryContentKindColumn() ? 'missing' : 'ok',
+			));
 		}
 
-		throw new \RuntimeException(sprintf(
-			'AudioCheck schema is still incomplete after migrate("latest"). Missing: %s.',
-			implode(', ', $missingAfter),
-		));
+		$output->info('AudioCheck: schema repair completed; all tables and columns are now present.');
 	}
 
 	/** @return list<string> */
@@ -82,5 +88,17 @@ final class EnsureAudioCheckSchema implements IRepairStep
 			$this->jobList->add(ScanSchedulerJob::class, null);
 			$output->info('AudioCheck: registered ScanSchedulerJob background job.');
 		}
+	}
+
+	private function missingLibraryContentKindColumn(): bool
+	{
+		if (!$this->connection->tableExists('ac_libraries')) {
+			return false;
+		}
+		$schema = $this->connection->createSchema();
+		if (!$schema->hasTable('ac_libraries')) {
+			return false;
+		}
+		return !$schema->getTable('ac_libraries')->hasColumn('content_kind');
 	}
 }

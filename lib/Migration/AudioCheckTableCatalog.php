@@ -20,5 +20,7 @@ final class AudioCheckTableCatalog
 		'ac_playlist_items',
 		'ac_play_state',
 		'ac_scan_state',
+		'ac_queue',
+		'ac_queue_items',
 	];
 }

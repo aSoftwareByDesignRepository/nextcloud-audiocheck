@@ -1,122 +1,63 @@
 (function () {
 	'use strict';
-	const C = AudioCheckComponents;
-	const PA = () => window.AudioCheckPlaylistActions;
 
-	AudioCheckRouter.register('browse', {
-		render() {
-			const frag = document.createDocumentFragment();
-			frag.appendChild(C.pageHeader(t('audiocheck', 'Browse'), t('audiocheck', 'Explore artists, genres, and folders.')));
-
-			const tabs = [
-				{ id: 'artists', label: t('audiocheck', 'Artists') },
-				{ id: 'authors', label: t('audiocheck', 'Authors') },
-				{ id: 'series', label: t('audiocheck', 'Series') },
-				{ id: 'genres', label: t('audiocheck', 'Genres') },
-				{ id: 'folders', label: t('audiocheck', 'Folders') },
-				{ id: 'favorites', label: t('audiocheck', 'Favorites') },
-				{ id: 'tags', label: t('audiocheck', 'Tags') },
-			];
-			let active = 'artists';
-			const tabBar = C.el('div', { className: 'ac-browse-tabs', role: 'tablist', attrs: { 'aria-label': t('audiocheck', 'Browse categories') } });
-			const panel = C.el('div', {
-				id: 'ac-browse-panel',
-				attrs: {
-					role: 'tabpanel',
-					'aria-labelledby': 'ac-browse-tab-artists',
-				},
-			});
-
-			function facetTrackParams(type, item) {
-				const params = { limit: 100 };
-				if (type === 'favorites') {
-					params.favorite = '1';
-				} else if (type === 'tags' && item.id) {
-					params.tagId = item.id;
-				} else if (type === 'genres') {
-					params.genre = item.name;
-				} else if (type === 'artists') {
-					params.artist = item.name;
-					params.kind = 'music';
-				} else if (type === 'authors') {
-					params.artist = item.name;
-					params.kind = 'audiobook';
-				} else if (type === 'series') {
-					params.series = item.name;
-				} else if (type === 'folders') {
-					params.folder = item.name;
-				}
-				return params;
-			}
-
-			function openFacetTracks(label, params) {
-				if (PA()) PA().openTrackListFromApi(label, params);
-			}
-
-			function loadFacet(type) {
-				panel.textContent = '';
-				panel.setAttribute('aria-labelledby', 'ac-browse-tab-' + type);
-				const loading = C.el('p', { text: '…', attrs: { role: 'status', 'aria-live': 'polite' } });
-				panel.appendChild(loading);
-				AudioCheckApi.get('/apps/audiocheck/api/facets/{type}', null, { params: { type } }).then((data) => {
-					panel.textContent = '';
-					const ul = C.el('ul', { className: 'ac-track-list ac-browse-facet-list' });
-					const items = data.items || [];
-					if (!items.length) {
-						panel.appendChild(C.el('p', { text: t('audiocheck', 'Nothing here yet') }));
-						return;
-					}
-					items.forEach((item) => {
-						const label = type === 'favorites'
-							? t('audiocheck', 'Favorites') + ' (' + item.count + ')'
-							: item.name + ' (' + item.count + ')';
-						const li = C.el('li', { className: 'ac-track-list__item ac-browse-facet-list__item' });
-						const btn = C.el('button', {
-							type: 'button',
-							className: 'ac-btn ac-btn--text ac-browse-facet-list__btn',
-							text: label,
-							attrs: { 'aria-label': t('audiocheck', 'Open tracks: {name}', { name: item.name || label }) },
-							onClick: () => openFacetTracks(label, facetTrackParams(type, item)),
-						});
-						li.appendChild(btn);
-						ul.appendChild(li);
-					});
-					panel.appendChild(ul);
-				}).catch((e) => {
-					panel.textContent = '';
-					panel.appendChild(C.el('p', { text: e.message || t('audiocheck', 'Request failed.') }));
-				});
-			}
-
-			tabs.forEach((tab) => {
-				const btn = C.el('button', {
-					type: 'button',
-					className: 'ac-btn',
-					text: tab.label,
-					attrs: {
-						role: 'tab',
-						id: 'ac-browse-tab-' + tab.id,
-						'aria-controls': 'ac-browse-panel',
-						'aria-selected': tab.id === active ? 'true' : 'false',
-						tabindex: tab.id === active ? '0' : '-1',
-					},
-					onClick: () => {
-						active = tab.id;
-						tabBar.querySelectorAll('button').forEach((b) => {
-							const on = b.id === 'ac-browse-tab-' + tab.id;
-							b.setAttribute('aria-selected', on ? 'true' : 'false');
-							b.setAttribute('tabindex', on ? '0' : '-1');
-						});
-						loadFacet(tab.id);
-					},
-				});
-				tabBar.appendChild(btn);
-			});
-
-			frag.appendChild(tabBar);
-			frag.appendChild(panel);
-			loadFacet(active);
-			return frag;
+	AudioCheckFacetBrowsePage.register({
+		viewId: 'browse',
+		title: t('audiocheck', 'Browse'),
+		help: t('audiocheck', 'Explore artists, genres, folders, and favorites.'),
+		viewsAriaLabel: t('audiocheck', 'Browse categories'),
+		tabs: [
+			{ id: 'folders', labelKey: 'Folders' },
+			{ id: 'artists', labelKey: 'Artists' },
+			{ id: 'genres', labelKey: 'Genres' },
+			{ id: 'favorites', labelKey: 'Favorites' },
+			{ id: 'authors', labelKey: 'Authors' },
+			{ id: 'series', labelKey: 'Series' },
+			{ id: 'tags', labelKey: 'Tags' },
+		],
+		tabLeads: {
+			folders: t('audiocheck', 'All audio grouped by folder. Open a group to see its tracks and press Play on a row.'),
+			artists: t('audiocheck', 'Music grouped by artist tag. Open an artist to see their tracks.'),
+			genres: t('audiocheck', 'Tracks grouped by genre. Open a genre to browse and play.'),
+			favorites: t('audiocheck', 'Tracks you starred in Now playing or Browse. They also sync with the Files app.'),
+			authors: t('audiocheck', 'Audiobooks grouped by author. Open an author to see their titles.'),
+			series: t('audiocheck', 'Audiobook series from your file tags. Open a series to see its titles.'),
+			tags: t('audiocheck', 'System tags from the Files app. Open a tag to see matching tracks.'),
+		},
+		emptyCopy: {
+			artists: {
+				title: 'No artist tags yet',
+				message: 'Artist names appear here when your audio files include artist metadata. Try Folders or open Music to browse by album.',
+				icon: 'music',
+			},
+			authors: {
+				title: 'No audiobook authors yet',
+				message: 'Audiobooks with author metadata appear here after scanning. Add .m4b files or long tracks in Library.',
+				icon: 'audiobook',
+			},
+			series: {
+				title: 'No series yet',
+				message: 'Audiobook series tags appear here when your files include them.',
+				icon: 'audiobook',
+			},
+			genres: {
+				title: 'No genres yet',
+				message: 'Genre tags appear here when your audio files include genre metadata.',
+			},
+			folders: {
+				title: 'No folders yet',
+				message: 'Folder groups appear after you add library folders and scan.',
+				icon: 'folder',
+			},
+			favorites: {
+				title: 'No favorite tracks yet',
+				message: 'Star tracks in Now playing or Browse. Favorites also appear in the Files app.',
+				icon: 'playlist',
+			},
+			tags: {
+				title: 'No tags yet',
+				message: 'System tags from the Files app appear here when assigned to your audio files.',
+			},
 		},
 	});
 })();

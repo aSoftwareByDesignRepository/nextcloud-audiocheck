@@ -19,6 +19,7 @@ use OCA\AudioCheck\Service\FileAccessService;
 use OCA\AudioCheck\Service\LibraryService;
 use OCA\AudioCheck\Service\MetadataService;
 use OCA\AudioCheck\Service\PlaybackStateService;
+use OCA\AudioCheck\Service\PlayQueueService;
 use OCA\AudioCheck\Service\PlaylistService;
 use OCA\AudioCheck\Service\RateLimitService;
 use OCA\AudioCheck\Service\ScanService;
@@ -134,6 +135,15 @@ class Application extends App implements IBootstrap
 				$c->query(FileAccessService::class),
 				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
 				$c->query(\OCP\IConfig::class),
+			);
+		});
+
+		$context->registerService(PlayQueueService::class, function ($c): PlayQueueService {
+			return new PlayQueueService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(LibraryService::class),
+				$c->query(PlaybackStateService::class),
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
 			);
 		});
 

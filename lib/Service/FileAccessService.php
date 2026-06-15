@@ -125,6 +125,61 @@ class FileAccessService
 	}
 
 	/**
+	 * Resolve a readable library folder from a user-relative path (e.g. /Audiobooks).
+	 *
+	 * @throws NotFoundException
+	 * @throws \OCA\AudioCheck\Exception\ValidationException
+	 */
+	public function resolveReadableFolderByRelativePath(string $userId, string $path): Folder
+	{
+		$relative = $this->normalizeLibraryFolderPath($userId, $path);
+		$folder = $this->getFolderByRelativePath($userId, $relative);
+		if ($folder === null || !$folder->isReadable()) {
+			throw new NotFoundException();
+		}
+		return $folder;
+	}
+
+	/**
+	 * Normalize a folder path from the file picker to a user-relative library path.
+	 *
+	 * @throws \OCA\AudioCheck\Exception\ValidationException
+	 */
+	public function normalizeLibraryFolderPath(string $userId, string $path): string
+	{
+		$path = trim(str_replace('\\', '/', $path));
+		if ($path === '') {
+			throw new \OCA\AudioCheck\Exception\ValidationException('A valid folder is required.');
+		}
+		if (str_contains($path, '..')) {
+			throw new \OCA\AudioCheck\Exception\ValidationException('Invalid folder path.');
+		}
+
+		$home = $this->getUserHomePath($userId);
+		if ($home !== '' && str_starts_with($path, $home)) {
+			$path = substr($path, strlen($home)) ?: '/';
+		}
+
+		$filesMarker = '/' . $userId . '/files';
+		$pos = stripos($path, $filesMarker);
+		if ($pos !== false) {
+			$path = substr($path, $pos + strlen($filesMarker)) ?: '/';
+		}
+
+		$davMarker = '/remote.php/dav/files/' . $userId;
+		if (str_starts_with($path, $davMarker)) {
+			$path = substr($path, strlen($davMarker)) ?: '/';
+		}
+
+		$path = '/' . trim($path, '/');
+		if ($path === '/') {
+			throw new \OCA\AudioCheck\Exception\ValidationException('Select a folder inside your Files, not your entire home.');
+		}
+
+		return $path;
+	}
+
+	/**
 	 * Check whether a file is accessible without throwing (for listing validation).
 	 */
 	public function isFileAccessible(string $userId, int $fileId): bool
@@ -282,6 +337,9 @@ class FileAccessService
 					}
 				}
 			}
+			if ($files === []) {
+				$files = $this->collectAudioFilesRecursive($folder);
+			}
 		} else {
 			foreach ($folder->getDirectoryListing() as $node) {
 				if ($node instanceof File && $node->isReadable() && $this->isAllowedAudioMime($node->getMimeType())) {
@@ -291,6 +349,24 @@ class FileAccessService
 		}
 
 		usort($files, static fn (File $a, File $b): int => strnatcasecmp($a->getName(), $b->getName()));
+		return $files;
+	}
+
+	/** @return list<File> */
+	private function collectAudioFilesRecursive(Folder $folder): array
+	{
+		$files = [];
+		foreach ($folder->getDirectoryListing() as $node) {
+			if ($node instanceof File && $node->isReadable() && $this->isAllowedAudioMime($node->getMimeType())) {
+				$files[] = $node;
+				continue;
+			}
+			if ($node instanceof Folder && $node->isReadable()) {
+				foreach ($this->collectAudioFilesRecursive($node) as $child) {
+					$files[] = $child;
+				}
+			}
+		}
 		return $files;
 	}
 

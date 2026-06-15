@@ -14,6 +14,7 @@ use OCA\AudioCheck\Exception\ValidationException;
 use OCA\AudioCheck\Service\AccessControlService;
 use OCA\AudioCheck\Service\LibraryService;
 use OCA\AudioCheck\Service\PlaybackStateService;
+use OCA\AudioCheck\Service\PlayQueueService;
 use OCA\AudioCheck\Service\PlaylistService;
 use OCA\AudioCheck\Service\RateLimitService;
 use OCA\AudioCheck\Service\ScanService;
@@ -35,6 +36,7 @@ class ApiController extends Controller
 		private LibraryService $library,
 		private ScanService $scan,
 		private PlaybackStateService $playback,
+		private PlayQueueService $queue,
 		private PlaylistService $playlists,
 		private UserPrefsService $prefs,
 		private RateLimitService $rateLimit,
@@ -126,7 +128,9 @@ class ApiController extends Controller
 	{
 		return $this->safe(function (string $userId) use ($type): array {
 			$q = $this->request->getParam('q');
-			return $this->library->listFacets($userId, $type, is_string($q) ? $q : null);
+			$kind = $this->request->getParam('kind');
+			$kindFilter = is_string($kind) && in_array($kind, ['music', 'audiobook'], true) ? $kind : null;
+			return $this->library->listFacets($userId, $type, is_string($q) ? $q : null, $kindFilter);
 		});
 	}
 
@@ -168,6 +172,45 @@ class ApiController extends Controller
 	{
 		return $this->safe(function (string $userId) use ($fileId): array {
 			$this->playback->deleteProgress($userId, $fileId);
+			return [];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function getQueue(): JSONResponse
+	{
+		return $this->safe(fn (string $userId): array => ['queue' => $this->queue->getQueue($userId)]);
+	}
+
+	#[NoAdminRequired]
+	public function saveQueue(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$body = $this->getJsonBody();
+			$fileIds = is_array($body['fileIds'] ?? null) ? array_values($body['fileIds']) : [];
+			return ['queue' => $this->queue->saveQueue(
+				$userId,
+				$fileIds,
+				(int)($body['currentIndex'] ?? 0),
+				(int)($body['playbackSpeed'] ?? 100),
+				(bool)($body['shuffle'] ?? false),
+				(string)($body['repeatMode'] ?? 'off'),
+			)];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function saveQueueBeacon(): JSONResponse
+	{
+		return $this->saveQueue();
+	}
+
+	#[NoAdminRequired]
+	public function clearQueue(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$this->queue->clearQueue($userId);
 			return [];
 		});
 	}
@@ -264,11 +307,40 @@ class ApiController extends Controller
 	{
 		return $this->safe(function (string $userId): array {
 			$body = $this->getJsonBody();
-			return ['library' => $this->library->addLibrary(
+			$rootFileId = (int)($body['rootFileId'] ?? 0);
+			$folderPath = isset($body['folderPath']) ? trim((string)$body['folderPath']) : null;
+			if ($folderPath === '') {
+				$folderPath = null;
+			}
+			if ($rootFileId < 1 && $folderPath === null) {
+				throw new ValidationException('A valid folder is required.');
+			}
+			$result = $this->library->addLibrary(
 				$userId,
-				(int)($body['rootFileId'] ?? 0),
+				$rootFileId > 0 ? $rootFileId : null,
 				(bool)($body['includeSubfolders'] ?? true),
-			)];
+				isset($body['contentKind']) ? (string)$body['contentKind'] : LibraryService::CONTENT_KIND_AUTO,
+				$folderPath,
+			);
+			if ($result['rescanRecommended']) {
+				$this->scan->queueScan($userId);
+			}
+			return $result;
+		});
+	}
+
+	#[NoAdminRequired]
+	public function updateLibrary(int $id): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($id): array {
+			$body = $this->getJsonBody();
+			$includeSubfolders = array_key_exists('includeSubfolders', $body) ? (bool)$body['includeSubfolders'] : null;
+			$contentKind = array_key_exists('contentKind', $body) ? (string)$body['contentKind'] : null;
+			$result = $this->library->updateLibrary($userId, $id, $includeSubfolders, $contentKind);
+			if ($result['rescanRecommended']) {
+				$this->scan->queueScan($userId);
+			}
+			return $result;
 		});
 	}
 
@@ -293,7 +365,10 @@ class ApiController extends Controller
 	{
 		return $this->safe(function (string $userId): array {
 			$this->rateLimit->assertAllowed($userId, 'scan', 3, 300);
-			$this->scan->queueScan($userId);
+			if (!$this->scan->hasConfiguredLibraries($userId)) {
+				throw new ValidationException('Add a library folder before scanning.');
+			}
+			$this->scan->runInteractiveScan($userId);
 			return ['scan' => $this->scan->getStatus($userId)];
 		});
 	}

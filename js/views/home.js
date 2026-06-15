@@ -23,7 +23,7 @@
 			const addFolderBtn = C.el('button', {
 				type: 'button',
 				className: 'ac-btn',
-				text: t('audiocheck', 'Add folder'),
+				text: t('audiocheck', 'Open Library'),
 				onClick: () => AudioCheckRouter.navigate('library', {}, true),
 			});
 			quickInner.appendChild(shuffleBtn);

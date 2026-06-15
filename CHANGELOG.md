@@ -2,6 +2,63 @@
 
 All notable changes to AudioCheck are documented in this file.
 
+## [1.2.0] — 2026-06-15
+
+### Added
+
+- **App Store listing assets** — seven screenshots (`screenshots/audiocheck-screenshot-01.png` … `07.png`) covering Library, Music, Playlists, Favorites, Browse, Settings, and App settings.
+- Expanded **EN + DE** store descriptions in `appinfo/info.xml` with quick-start steps, feature highlights, and accessibility notes.
+
+### Changed
+
+- `README.md` updated with feature list, quick start, and App Store release checklist.
+
+## [1.1.1] — 2026-06-15
+
+### Fixed
+
+- **Queue lost on F5 / reload.** `setSpeed()` during bootstrap scheduled a delayed
+  `persistSession()` that **wiped `sessionStorage`** before restore could finish;
+  restore now starts immediately (before prefs), default speed applies only when
+  nothing was restored, and empty snapshots no longer clear storage during
+  bootstrap.
+- **Server queue never saved on reload.** `sendBeacon` only supports POST (added
+  `POST /api/queue` beacon route); queue now persists immediately on `playQueue`,
+  uses `validFileId()` for string IDs, and flushes via `pagehide` / `beforeunload`.
+- **Restore fallback** when playable API is slow: session snapshot still loads the
+  full queue from cached track metadata.
+
+## [1.1.0] — 2026-06-15
+
+### Added
+
+- **Durable, cross-device playback queue.** The full queue (all tracks of a
+  multi-file audiobook), the current track, playback speed, shuffle, and repeat
+  are now persisted server-side and restored after a browser reload, a new tab,
+  a browser restart, or on another device — not just a same-tab reload. New
+  `ac_queue` + `ac_queue_items` tables (migration `1004Date20260618120000`) and
+  `GET/PUT/DELETE /api/queue`.
+
+### Changed
+
+- Resume position remains the single source of truth in `ac_play_state`; the
+  queue only stores ordering + pointer + settings, so frequent saves stay cheap
+  (items are only rewritten when the ordering actually changes; debounced PUTs).
+- `sessionStorage` is now an instant same-tab cache layered on top of the
+  durable server queue; restore order is local cache → server queue → single
+  continue-listening track.
+- Every queue mutation (reorder, remove, speed/shuffle/repeat) now persists.
+- Screen-reader announcement when a queue is restored ("Restored your queue with
+  N tracks where you left off").
+
+### Security
+
+- Queue items are authorised on read: each restored file is resolved through the
+  `FileAccessService` choke point and marked unavailable (no metadata leaked) if
+  the user can no longer access it. Persisted writes are bounded
+  (`MAX_ITEMS = 2000`) and atomic (transactional save/clear).
+- User deletion purges `ac_queue` + `ac_queue_items`; uninstall drops both tables.
+
 ## [1.0.0] — 2026-06-15
 
 ### Added
