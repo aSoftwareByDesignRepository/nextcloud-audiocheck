@@ -53,6 +53,61 @@
 		return parts.join(' · ');
 	}
 
+	function collectionListenedCounts(allTracks) {
+		const indexed = (allTracks || []).filter((tr) => tr && !tr.unavailable);
+		const listened = indexed.filter((tr) => tr.listened || tr.finished).length;
+		return {
+			listened,
+			total: indexed.length,
+			fullyListened: indexed.length > 0 && listened >= indexed.length,
+		};
+	}
+
+	function toggleCollectionListened(collectionKey, allTracks, nextListened, listenedBtn, statusEl) {
+		if (!collectionKey) return;
+		listenedBtn.disabled = true;
+		AudioCheckApi.put('/apps/audiocheck/api/collections/{key}/listened', { listened: nextListened }, { params: { key: collectionKey } })
+			.then((data) => {
+				const col = data.collection || {};
+				const refreshed = Array.isArray(col.tracks) ? col.tracks : [];
+				const byId = {};
+				refreshed.forEach((tr) => {
+					if (tr && tr.fileId) byId[tr.fileId] = tr;
+				});
+				allTracks.forEach((tr) => {
+					const next = byId[tr.fileId];
+					if (next) {
+						tr.listened = !!next.listened;
+						tr.finished = !!next.finished;
+					}
+				});
+				const counts = collectionListenedCounts(allTracks);
+				if (statusEl) {
+					statusEl.textContent = counts.total > 0
+						? t('audiocheck', '{listened} of {total} tracks listened', {
+							listened: String(counts.listened),
+							total: String(counts.total),
+						})
+						: '';
+				}
+				const label = counts.fullyListened
+					? t('audiocheck', 'Mark collection as not listened')
+					: t('audiocheck', 'Mark collection as listened');
+				listenedBtn.querySelector('.ac-btn__label').textContent = label;
+				listenedBtn.setAttribute('aria-pressed', counts.fullyListened ? 'true' : 'false');
+				const skipped = Number(data.skippedCount || 0);
+				let msg = nextListened
+					? t('audiocheck', 'Collection marked as listened.')
+					: t('audiocheck', 'Collection marked as not listened.');
+				if (skipped > 0) {
+					msg += ' ' + t('audiocheck', '{count} unavailable tracks are hidden.', { count: String(skipped) });
+				}
+				AudioCheckMessaging.toast(msg);
+			})
+			.catch((e) => AudioCheckMessaging.toast(e.message, 'error'))
+			.finally(() => { listenedBtn.disabled = false; });
+	}
+
 	function coverNode(track) {
 		const wrap = C.createElement('div', {
 			className: 'ac-collection-detail__cover-wrap',
@@ -257,6 +312,19 @@
 					attrs: { role: 'status' },
 					text: collectionMetaLine(tracks, all, meta),
 				}));
+				const listenedCounts = collectionListenedCounts(all);
+				let listenedStatusEl = null;
+				if (collectionKey && listenedCounts.total > 0) {
+					listenedStatusEl = C.createElement('p', {
+						className: 'ac-collection-detail__listened',
+						attrs: { role: 'status' },
+						text: t('audiocheck', '{listened} of {total} tracks listened', {
+							listened: String(listenedCounts.listened),
+							total: String(listenedCounts.total),
+						}),
+					});
+					intro.appendChild(listenedStatusEl);
+				}
 				if (unavailableCount > 0) {
 					intro.appendChild(C.createElement('p', {
 						className: 'ac-field__hint ac-collection-detail__warn',
@@ -292,6 +360,29 @@
 					() => addAllToQueue(tracks, closeModal),
 					{ disabled: !hasPlayable },
 				));
+				if (collectionKey && listenedCounts.total > 0) {
+					const markLabel = listenedCounts.fullyListened
+						? t('audiocheck', 'Mark collection as not listened')
+						: t('audiocheck', 'Mark collection as listened');
+					const listenedBtn = actionButton(
+						markLabel,
+						listenedCounts.fullyListened ? 'checkmark' : 'checkmark-outline',
+						listenedCounts.fullyListened ? 'ac-btn--success' : null,
+						() => toggleCollectionListened(
+							collectionKey,
+							all,
+							!listenedCounts.fullyListened,
+							listenedBtn,
+							listenedStatusEl,
+						),
+						{
+							disabled: !hasPlayable,
+							pressed: listenedCounts.fullyListened,
+						},
+					);
+					listenedBtn.setAttribute('aria-pressed', listenedCounts.fullyListened ? 'true' : 'false');
+					actions.appendChild(listenedBtn);
+				}
 				root.appendChild(actions);
 
 				if (showTrackList) {
@@ -313,12 +404,18 @@
 					} else {
 						all.forEach((track) => {
 							const playable = tracks.indexOf(track);
+							const rowOpts = window.AudioCheckTrackListUi
+								? AudioCheckTrackListUi.trackRowOptions(track, {
+									onAddPlaylist: track.unavailable ? null : () => openAddToPlaylist(track.fileId),
+									onEnqueue: track.unavailable ? null : () => enqueueTrack(track),
+								})
+								: {
+									onAddPlaylist: track.unavailable ? null : () => openAddToPlaylist(track.fileId),
+									onEnqueue: track.unavailable ? null : () => enqueueTrack(track),
+								};
 							ul.appendChild(C.trackRow(track, () => {
 								if (playable >= 0) startPlayback(tracks, playable, closeModal);
-							}, {
-								onAddPlaylist: track.unavailable ? null : () => openAddToPlaylist(track.fileId),
-								onEnqueue: track.unavailable ? null : () => enqueueTrack(track),
-							}));
+							}, rowOpts));
 						});
 					}
 					trackSection.appendChild(ul);
@@ -399,11 +496,138 @@
 		}).catch((e) => AudioCheckMessaging.toast(e.message, 'error'));
 	}
 
+	function mountFolderListenedBar(bodyWrap, folderPath, kind, reloadTracks) {
+		if (!bodyWrap || !folderPath) return null;
+		const uid = 'ac-folder-listened-' + String(Math.random()).slice(2, 10);
+		const headingId = uid + '-heading';
+		const statusId = uid + '-status';
+
+		const wrap = C.createElement('section', {
+			className: 'ac-folder-listened',
+			attrs: { 'aria-labelledby': headingId },
+		});
+		wrap.appendChild(C.createElement('h3', {
+			id: headingId,
+			className: 'ac-sr-only',
+			text: t('audiocheck', 'Listened progress'),
+		}));
+
+		const progressWrap = C.createElement('div', {
+			className: 'ac-folder-listened__progress',
+			attrs: {
+				role: 'progressbar',
+				'aria-valuemin': '0',
+				'aria-valuemax': '0',
+				'aria-valuenow': '0',
+				'aria-labelledby': statusId,
+			},
+		});
+		const progressFill = C.createElement('div', {
+			className: 'ac-folder-listened__progress-fill',
+			attrs: { 'aria-hidden': 'true' },
+		});
+		progressWrap.appendChild(progressFill);
+
+		const statusEl = C.createElement('p', {
+			id: statusId,
+			className: 'ac-folder-listened__status',
+			attrs: { 'aria-live': 'polite', 'aria-atomic': 'true' },
+			text: '',
+		});
+
+		const meta = C.createElement('div', { className: 'ac-folder-listened__meta' }, [progressWrap, statusEl]);
+
+		const markBtn = C.createElement('button', {
+			type: 'button',
+			className: 'ac-btn ac-btn--icon ac-folder-listened__toggle',
+			attrs: {
+				'aria-pressed': 'false',
+				'aria-describedby': statusId,
+				'aria-label': t('audiocheck', 'Mark folder as listened'),
+				disabled: true,
+			},
+		});
+		if (window.AudioCheckIcons) {
+			AudioCheckIcons.mount(markBtn, 'circle');
+		}
+
+		function updateToggle(fully, total) {
+			const label = fully
+				? t('audiocheck', 'Mark folder as not listened')
+				: t('audiocheck', 'Mark folder as listened');
+			markBtn.setAttribute('aria-label', label);
+			markBtn.setAttribute('aria-pressed', fully ? 'true' : 'false');
+			markBtn.classList.toggle('ac-btn--success', fully);
+			markBtn.disabled = total === 0;
+			if (window.AudioCheckIcons) {
+				AudioCheckIcons.mount(markBtn, fully ? 'circle-check' : 'circle');
+			}
+		}
+
+		function applyStats(stats) {
+			const listened = stats.listenedCount || 0;
+			const total = stats.trackCount || 0;
+			const fully = !!stats.fullyListened;
+			const pct = total > 0 ? Math.min(100, Math.round((listened / total) * 100)) : 0;
+
+			progressWrap.hidden = total === 0;
+			progressWrap.setAttribute('aria-valuenow', String(listened));
+			progressWrap.setAttribute('aria-valuemax', String(total));
+			progressFill.style.width = pct + '%';
+
+			statusEl.textContent = total > 0
+				? t('audiocheck', '{listened} of {total} tracks listened', {
+					listened: String(listened),
+					total: String(total),
+				})
+				: t('audiocheck', 'No tracks in this folder.');
+
+			updateToggle(fully, total);
+			return fully;
+		}
+
+		function loadStats() {
+			const params = { folder: folderPath };
+			if (kind) params.kind = kind;
+			return AudioCheckApi.get('/apps/audiocheck/api/folders/listened-stats', params)
+				.then((data) => applyStats(data.stats || {}));
+		}
+
+		markBtn.addEventListener('click', () => {
+			const next = markBtn.getAttribute('aria-pressed') !== 'true';
+			markBtn.disabled = true;
+			const body = { folder: folderPath, listened: next };
+			if (kind) body.kind = kind;
+			AudioCheckApi.put('/apps/audiocheck/api/folders/listened', body)
+				.then((data) => {
+					applyStats(data);
+					const skipped = Number(data.skippedCount || 0);
+					let msg = next
+						? t('audiocheck', 'Folder marked as listened.')
+						: t('audiocheck', 'Folder marked as not listened.');
+					if (skipped > 0) {
+						msg += ' ' + t('audiocheck', '{count} unavailable tracks are hidden.', { count: String(skipped) });
+					}
+					AudioCheckMessaging.toast(msg);
+					if (typeof reloadTracks === 'function') reloadTracks();
+				})
+				.catch((e) => AudioCheckMessaging.toast(e.message, 'error'))
+				.finally(() => { loadStats().catch(() => {}); });
+		});
+
+		wrap.appendChild(meta);
+		wrap.appendChild(markBtn);
+		bodyWrap.insertBefore(wrap, bodyWrap.firstChild);
+		loadStats().catch(() => {});
+		return { refresh: loadStats };
+	}
+
 	window.AudioCheckPlaylistActions = {
 		openAddToPlaylist,
 		openCollectionDetail,
 		openTracksSheet,
 		openTrackListFromApi,
 		shufflePinnedPlaylist,
+		mountFolderListenedBar,
 	};
 })();

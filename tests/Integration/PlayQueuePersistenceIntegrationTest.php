@@ -129,6 +129,28 @@ final class PlayQueuePersistenceIntegrationTest extends TestCase
 		$this->assertSame(0, $queue->getQueue($user)['currentIndex']);
 	}
 
+	public function testStaleClientWriteDoesNotOverwriteNewerQueue(): void
+	{
+		$user = $this->makeUser('stale');
+		$a = $this->makeFile($user, 'a.mp3');
+		$b = $this->makeFile($user, 'b.mp3');
+
+		/** @var PlayQueueService $queue */
+		$queue = \OC::$server->get(PlayQueueService::class);
+		$fresh = $queue->saveQueue($user, [$a, $b], 1, 110, false, 'off');
+		$serverAt = (int)$fresh['updatedAt'];
+		$this->assertGreaterThan(0, $serverAt);
+
+		$stale = $queue->saveQueue($user, [$b], 0, 100, false, 'off', $serverAt - 60);
+		$this->assertTrue($stale['stale'] ?? false);
+		$this->assertSame($serverAt, $stale['updatedAt']);
+
+		$restored = $queue->getQueue($user);
+		$this->assertSame([$a, $b], array_map(static fn (array $i): int => (int)$i['fileId'], $restored['items']));
+		$this->assertSame(1, $restored['currentIndex']);
+		$this->assertSame(110, $restored['playbackSpeed']);
+	}
+
 	private function makeUser(string $suffix): string
 	{
 		$uid = 'ac_int_queue_' . $suffix;

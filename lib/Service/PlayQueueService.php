@@ -40,7 +40,7 @@ class PlayQueueService
 	}
 
 	/**
-	 * @return array{items:list<array<string,mixed>>,currentIndex:int,positionMs:int,playbackSpeed:int,shuffle:bool,repeatMode:string,updatedAt:int}
+	 * @return array{items:list<array<string,mixed>>,currentIndex:int,positionMs:int,progressUpdatedAt:int,playbackSpeed:int,shuffle:bool,repeatMode:string,updatedAt:int}
 	 */
 	public function getQueue(string $userId): array
 	{
@@ -66,15 +66,27 @@ class PlayQueueService
 		}
 
 		$positionMs = 0;
+		$progressUpdatedAt = 0;
 		$current = $items[$currentIndex];
 		if (($current['unavailable'] ?? true) === false && (int)$current['fileId'] > 0) {
-			$positionMs = $this->currentPosition($userId, (int)$current['fileId']);
+			try {
+				$progress = $this->playback->getProgress($userId, (int)$current['fileId']);
+				if (!empty($progress['finished'])) {
+					$positionMs = 0;
+				} else {
+					$positionMs = max(0, (int)($progress['positionMs'] ?? 0));
+				}
+				$progressUpdatedAt = (int)($progress['updatedAt'] ?? 0);
+			} catch (NotFoundException) {
+				$positionMs = 0;
+			}
 		}
 
 		return [
 			'items' => $items,
 			'currentIndex' => $currentIndex,
 			'positionMs' => $positionMs,
+			'progressUpdatedAt' => $progressUpdatedAt,
 			'playbackSpeed' => $this->playback->clampSpeed((int)$queue['playback_speed']),
 			'shuffle' => (int)$queue['shuffle'] === 1,
 			'repeatMode' => $this->clampRepeat((string)$queue['repeat_mode']),
@@ -87,14 +99,23 @@ class PlayQueueService
 	 * actually changes, so frequent pointer/setting updates stay cheap.
 	 *
 	 * @param list<int|string> $fileIds
-	 * @return array{updatedAt:int,count:int}
+	 * @return array{updatedAt:int,count:int,stale?:bool}
 	 */
-	public function saveQueue(string $userId, array $fileIds, int $currentIndex, int $playbackSpeed, bool $shuffle, string $repeatMode): array
+	public function saveQueue(string $userId, array $fileIds, int $currentIndex, int $playbackSpeed, bool $shuffle, string $repeatMode, ?int $clientUpdatedAt = null): array
 	{
 		$clean = $this->sanitizeFileIds($fileIds);
 		if ($clean === []) {
 			$this->clearQueue($userId);
 			return ['updatedAt' => 0, 'count' => 0];
+		}
+
+		$existing = $this->findQueue($userId);
+		if ($existing !== null && $clientUpdatedAt !== null && $clientUpdatedAt > 0) {
+			$lastAt = (int)$existing['updated_at'];
+			if ($clientUpdatedAt < $lastAt) {
+				$ids = $this->loadItemFileIds((int)$existing['id']);
+				return ['updatedAt' => $lastAt, 'count' => count($ids), 'stale' => true];
+			}
 		}
 
 		$count = count($clean);
@@ -319,7 +340,7 @@ class PlayQueueService
 	}
 
 	/**
-	 * @return array{items:list<array<string,mixed>>,currentIndex:int,positionMs:int,playbackSpeed:int,shuffle:bool,repeatMode:string,updatedAt:int}
+	 * @return array{items:list<array<string,mixed>>,currentIndex:int,positionMs:int,progressUpdatedAt:int,playbackSpeed:int,shuffle:bool,repeatMode:string,updatedAt:int}
 	 */
 	private function emptyQueue(): array
 	{
@@ -327,6 +348,7 @@ class PlayQueueService
 			'items' => [],
 			'currentIndex' => 0,
 			'positionMs' => 0,
+			'progressUpdatedAt' => 0,
 			'playbackSpeed' => 100,
 			'shuffle' => false,
 			'repeatMode' => 'off',

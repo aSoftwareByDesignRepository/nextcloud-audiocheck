@@ -88,19 +88,20 @@
 						title: tr.title,
 						subtitle: tr.artist,
 						coverFileId: tr.fileId,
+						listened: !!(tr.listened || tr.finished),
 					}, () => playTracks(recent.items, i))));
 					wrap.appendChild(C.section(t('audiocheck', 'Recently added'), g));
 				}
 				if (audioBooks.items?.length) {
 					const g = document.createElement('div'); g.className = 'ac-grid';
-					audioBooks.items.forEach((c) => g.appendChild(C.mediaCard({ title: c.title, subtitle: c.subtitle, coverFileId: c.coverFileId }, () => {
+					audioBooks.items.forEach((c) => g.appendChild(C.mediaCard({ title: c.title, subtitle: c.subtitle, coverFileId: c.coverFileId, listened: !!c.fullyListened, finished: !!c.fullyListened }, () => {
 						if (PA()) PA().openCollectionDetail(c.key, c.title);
 					})));
 					wrap.appendChild(C.section(t('audiocheck', 'Audiobooks'), g));
 				}
 				if (music.items?.length) {
 					const g = document.createElement('div'); g.className = 'ac-grid';
-					music.items.forEach((c) => g.appendChild(C.mediaCard({ title: c.title, subtitle: c.subtitle, coverFileId: c.coverFileId }, () => {
+					music.items.forEach((c) => g.appendChild(C.mediaCard({ title: c.title, subtitle: c.subtitle, coverFileId: c.coverFileId, listened: !!c.fullyListened, finished: !!c.fullyListened }, () => {
 						if (PA()) PA().openCollectionDetail(c.key, c.title);
 					})));
 					wrap.appendChild(C.section(t('audiocheck', 'Music'), g));

@@ -26,6 +26,7 @@ final class LibraryContentKindTest extends TestCase
 			$this->createMock(ITagManager::class),
 			$this->createMock(ISystemTagManager::class),
 			$this->createMock(ISystemTagObjectMapper::class),
+			$this->createMock(\OCA\AudioCheck\Service\PlaybackStateService::class),
 		);
 	}
 

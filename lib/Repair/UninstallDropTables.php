@@ -21,6 +21,7 @@ declare(strict_types=1);
  */
 namespace OCA\AudioCheck\Repair;
 
+use OCA\AudioCheck\Service\CoverService;
 use OCP\IConfig;
 use OCP\IDBConnection;
 use OCP\Migration\IOutput;
@@ -53,6 +54,7 @@ final class UninstallDropTables implements IRepairStep
 	public function __construct(
 		private readonly IDBConnection $connection,
 		private readonly IConfig $config,
+		private readonly CoverService $covers,
 	) {
 	}
 
@@ -77,6 +79,9 @@ final class UninstallDropTables implements IRepairStep
 
 		$provider = $this->connection->getDatabaseProvider();
 		$fkChecksDisabled = false;
+
+		$this->covers->purgeCache();
+
 		if ($provider === IDBConnection::PLATFORM_MYSQL) {
 			$this->connection->executeStatement('SET FOREIGN_KEY_CHECKS=0');
 			$fkChecksDisabled = true;

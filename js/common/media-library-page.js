@@ -3,6 +3,7 @@
 
 	const C = AudioCheckComponents;
 	const PA = () => window.AudioCheckPlaylistActions;
+	const UIL = () => window.AudioCheckTrackListUi;
 	const PAGE_SIZE = 48;
 	const PLAY_ALL_PAGE_SIZE = 100;
 	const PLAY_ALL_MAX_TRACKS = 500;
@@ -49,7 +50,7 @@
 		AudioCheckRouter.register(config.viewId, {
 			render() {
 				const frag = document.createDocumentFragment();
-				const body = C.el('div', { className: 'ac-page-body ac-media-library-page' });
+				const body = C.el('div', { className: 'ac-page-body ac-media-library-page ac-facet-browse-page' });
 
 				let activeTab = config.tabs[0].id;
 				let sort = 'title';
@@ -198,16 +199,7 @@
 				}
 
 				function appendTracksToList(list, tracks, cache) {
-					tracks.forEach((track) => {
-						let playIdx = -1;
-						if (!track.unavailable) {
-							playIdx = cache.length;
-							cache.push(track);
-						}
-						list.appendChild(C.trackRow(trackDisplayMeta(track), playIdx >= 0
-							? () => AudioCheckPlayer.playQueue(cache, playIdx)
-							: null));
-					});
+					UIL().appendTracksToList(list, tracks, cache, C, trackDisplayMeta);
 				}
 
 				function loadTracks(reset) {
@@ -254,66 +246,46 @@
 					const folderPath = item.name || '';
 					const count = item.count || 0;
 					const label = displayFolderLabel(folderPath);
-					const cache = [];
-					const details = C.el('details', {
-						className: 'ac-media-folder-group',
-						attrs: startOpen ? { open: true } : {},
+					const trackParams = () => ({
+						folder: folderPath,
+						kind: config.kind,
+						limit: UIL().FACET_TRACK_LIMIT,
+						sort,
 					});
-					const summary = C.el('summary', { className: 'ac-media-folder-group__summary' });
-					summary.appendChild(C.el('span', { className: 'ac-media-folder-group__name', text: label }));
-					summary.appendChild(C.el('span', {
-						className: 'ac-media-folder-group__count',
-						text: AudioCheckTime.tracksLabel(count),
-					}));
-					details.appendChild(summary);
-					const bodyWrap = C.el('div', { className: 'ac-media-folder-group__body' });
-					const list = C.el('ul', { className: 'ac-track-list' });
-					bodyWrap.appendChild(list);
-					details.appendChild(bodyWrap);
-					host.appendChild(details);
 
-					let loaded = false;
-					function loadList() {
-						if (loaded) return;
-						loaded = true;
-						list.appendChild(C.el('li', {
-							className: 'ac-track-list__empty',
-							text: t('audiocheck', 'Loading…'),
-						}));
-						AudioCheckApi.get('/apps/audiocheck/api/tracks', {
-							folder: folderPath,
-							kind: config.kind,
-							limit: 500,
-							sort,
-						}).then((data) => {
-							list.textContent = '';
+					UIL().renderExpandableTrackGroup({
+						C,
+						label,
+						count,
+						host,
+						startOpen,
+						displayMeta: trackDisplayMeta,
+						loadTracks: () => AudioCheckApi.get('/apps/audiocheck/api/tracks', trackParams()),
+						playAllTracks: async () => {
+							const data = await AudioCheckApi.get('/apps/audiocheck/api/tracks', trackParams());
 							const tracks = data.items || [];
-							if (!tracks.length) {
-								list.appendChild(C.el('li', {
-									className: 'ac-track-list__empty',
-									text: t('audiocheck', 'Nothing here yet'),
-								}));
-								return;
+							const totalTracks = data.total != null ? data.total : tracks.length;
+							if (totalTracks > tracks.length) {
+								AudioCheckMessaging.toast(
+									t('audiocheck', 'Playing first {count} tracks.', { count: String(tracks.length) }),
+									'info',
+								);
 							}
-							appendTracksToList(list, tracks, cache);
-						}).catch((e) => {
-							list.textContent = '';
-							list.appendChild(C.el('li', {
-								className: 'ac-track-list__empty',
-								text: e.message || t('audiocheck', 'Request failed.'),
-							}));
-						});
-					}
-
-					if (startOpen) loadList();
-					else details.addEventListener('toggle', () => { if (details.open) loadList(); });
+							return tracks;
+						},
+						mountBodyExtra: PA() && typeof PA().mountFolderListenedBar === 'function'
+							? (bodyWrap, reload) => {
+								PA().mountFolderListenedBar(bodyWrap, folderPath, config.kind, reload);
+							}
+							: undefined,
+					});
 				}
 
 				function loadFolders() {
 					panel.replaceChildren();
 					moreWrap.textContent = '';
 					status.textContent = t('audiocheck', 'Loading…');
-					const host = C.el('div', { className: 'ac-media-folder-groups' });
+					const host = C.el('div', { className: 'ac-media-folder-groups ac-facet-groups' });
 					panel.appendChild(host);
 
 					AudioCheckApi.get('/apps/audiocheck/api/facets/{type}', null, {
@@ -380,6 +352,8 @@
 								title: col.title,
 								subtitle: col.subtitle,
 								coverFileId: col.coverFileId,
+								listened: !!col.fullyListened,
+								finished: !!col.fullyListened,
 							}, () => {
 								if (PA()) PA().openCollectionDetail(col.key, col.title);
 							}));
@@ -419,22 +393,22 @@
 				});
 				panel = C.el('div', {
 					id: idPrefix + '-panel',
-					className: 'ac-media-library-panel',
+					className: 'ac-media-library-panel ac-facet-browse-panel',
 					attrs: {
 						role: 'tabpanel',
 						'aria-labelledby': idPrefix + '-tab-' + activeTab,
 					},
 				});
 				leadEl = C.el('p', {
-					className: 'ac-section__lead ac-media-library-lead',
+					className: 'ac-section__lead ac-media-library-lead ac-facet-browse-lead',
 					text: config.tabLeads[activeTab] || '',
 				});
-				toolbar = C.el('div', { className: 'ac-toolbar ac-collection-toolbar ac-media-library-toolbar' });
+				toolbar = C.el('div', { className: 'ac-toolbar ac-collection-toolbar ac-media-library-toolbar ac-facet-browse-toolbar' });
 				status = C.el('p', {
-					className: 'ac-field__hint ac-media-library-status',
+					className: 'ac-field__hint ac-media-library-status ac-facet-browse-status',
 					attrs: { role: 'status', 'aria-live': 'polite' },
 				});
-				moreWrap = C.el('div', { className: 'ac-toolbar ac-toolbar--compact ac-collection-more' });
+				moreWrap = C.el('div', { className: 'ac-toolbar ac-toolbar--compact ac-collection-more ac-facet-browse-more' });
 
 				tabButtons = config.tabs.map((tab) => {
 					const btn = C.el('button', {

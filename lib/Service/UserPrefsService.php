@@ -22,6 +22,16 @@ class UserPrefsService
 			'defaultVolume' => $this->playback->getDefaultVolume($userId),
 			'resumeOnOpen' => $this->config->getUserValue($userId, Application::APP_ID, 'resume_on_open', '1') === '1',
 			'scanSubfolders' => $this->config->getUserValue($userId, Application::APP_ID, 'scan_subfolders', '1') === '1',
+			'listenedThresholdPercent' => $this->playback->getListenedThresholdPercent($userId),
+			'mobile' => [
+				'minApiVersion' => 1,
+				'features' => [
+					'offlineDownloads' => true,
+					'chapters' => true,
+					'playlists' => true,
+					'librarySync' => true,
+				],
+			],
 		];
 	}
 
@@ -38,6 +48,9 @@ class UserPrefsService
 		}
 		if (array_key_exists('scanSubfolders', $payload)) {
 			$this->config->setUserValue($userId, Application::APP_ID, 'scan_subfolders', $payload['scanSubfolders'] ? '1' : '0');
+		}
+		if (isset($payload['listenedThresholdPercent'])) {
+			$this->playback->saveListenedThresholdPercent($userId, (int)$payload['listenedThresholdPercent']);
 		}
 		return $this->getPrefs($userId);
 	}

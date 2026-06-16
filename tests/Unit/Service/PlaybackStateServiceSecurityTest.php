@@ -19,6 +19,28 @@ final class PlaybackStateServiceSecurityTest extends TestCase
 		);
 	}
 
+	public function testSetListenedResolvesFileAccessFirst(): void
+	{
+		$source = file_get_contents(dirname(__DIR__, 3) . '/lib/Service/PlaybackStateService.php');
+		$this->assertIsString($source);
+		$this->assertMatchesRegularExpression(
+			'/function setListened\([^)]+\)[^{]*\{[^}]*resolveReadableFile/s',
+			$source,
+		);
+	}
+
+	public function testSetListenedBulkResolvesFileAccessPerTrack(): void
+	{
+		$source = file_get_contents(dirname(__DIR__, 3) . '/lib/Service/PlaybackStateService.php');
+		$this->assertIsString($source);
+		$this->assertStringContainsString('function setListenedBulk', $source);
+		$this->assertMatchesRegularExpression(
+			'/function setListenedBulk\([^)]+\)[\s\S]*resolveReadableFile/s',
+			$source,
+		);
+		$this->assertStringContainsString('MAX_BULK_LISTENED', $source);
+	}
+
 	public function testContinueListeningUsesLeftJoinForUnindexedFiles(): void
 	{
 		$source = file_get_contents(dirname(__DIR__, 3) . '/lib/Service/PlaybackStateService.php');

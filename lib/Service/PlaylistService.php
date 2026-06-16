@@ -15,6 +15,7 @@ class PlaylistService
 		private IDBConnection $db,
 		private FileAccessService $fileAccess,
 		private LibraryService $library,
+		private PlaybackStateService $playback,
 		private ITimeFactory $timeFactory,
 	) {
 	}
@@ -242,9 +243,9 @@ class PlaylistService
 				'id' => (int)$row['id'],
 				'fileId' => $fileId,
 				'sortOrder' => (int)$row['sort_order'],
-				'title' => (string)($row['title'] ?? ''),
-				'artist' => (string)($row['artist'] ?? ''),
-				'album' => (string)($row['album'] ?? ''),
+				'title' => $accessible ? (string)($row['title'] ?? '') : '',
+				'artist' => $accessible ? (string)($row['artist'] ?? '') : '',
+				'album' => $accessible ? (string)($row['album'] ?? '') : '',
 				'durationMs' => (int)($row['duration_ms'] ?? 0),
 				'mimetype' => $mime,
 				'kind' => (string)($row['kind'] ?? 'music'),
@@ -253,6 +254,15 @@ class PlaylistService
 			];
 		}
 		$result->closeCursor();
+		$map = $this->playback->getListenedMap($userId, array_map(static fn (array $item): int => (int)$item['fileId'], $items));
+		foreach ($items as &$item) {
+			$item['listened'] = $map[(int)$item['fileId']] ?? false;
+		}
+		unset($item);
+		foreach ($items as &$item) {
+			$item['favorite'] = $this->library->isFavorite((int)$item['fileId']);
+		}
+		unset($item);
 		return $items;
 	}
 

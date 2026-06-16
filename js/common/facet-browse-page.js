@@ -3,6 +3,7 @@
 
 	const C = AudioCheckComponents;
 	const PA = () => window.AudioCheckPlaylistActions;
+	const UIL = () => window.AudioCheckTrackListUi;
 	const PAGE_SIZE = 48;
 	const FACET_TRACK_LIMIT = 500;
 	const PLAY_ALL_PAGE_SIZE = 100;
@@ -253,29 +254,41 @@
 					));
 				}
 
-				function trackRowOptions(track) {
-					if (track.unavailable) return {};
-					return {
-						onAddPlaylist: PA() ? () => PA().openAddToPlaylist(track.fileId) : null,
-						onEnqueue: () => {
-							if (!track || track.unavailable) return;
-							if (AudioCheckPlayer.enqueue(track)) {
-								AudioCheckMessaging.toast(t('audiocheck', 'Added to queue.'));
-							}
-						},
-					};
+				function appendTracksToList(list, tracks, cache) {
+					UIL().appendTracksToList(list, tracks, cache, C, trackDisplayMeta);
 				}
 
-				function appendTracksToList(list, tracks, cache) {
-					tracks.forEach((track) => {
-						let playIdx = -1;
-						if (!track.unavailable) {
-							playIdx = cache.length;
-							cache.push(track);
-						}
-						list.appendChild(C.trackRow(trackDisplayMeta(track), playIdx >= 0
-							? () => AudioCheckPlayer.playQueue(cache, playIdx)
-							: null, trackRowOptions(track)));
+				function renderFacetGroup(type, item, host, startOpen) {
+					const label = facetGroupLabel(type, item);
+					const count = item.count || 0;
+					const params = () => ({ ...facetTrackParams(type, item), sort, limit: UIL().FACET_TRACK_LIMIT });
+
+					UIL().renderExpandableTrackGroup({
+						C,
+						label,
+						count,
+						host,
+						startOpen,
+						displayMeta: trackDisplayMeta,
+						loadTracks: () => AudioCheckApi.get('/apps/audiocheck/api/tracks', params()),
+						playAllTracks: async () => {
+							const data = await AudioCheckApi.get('/apps/audiocheck/api/tracks', params());
+							const tracks = data.items || [];
+							const totalTracks = data.total != null ? data.total : tracks.length;
+							if (totalTracks > tracks.length) {
+								AudioCheckMessaging.toast(
+									t('audiocheck', 'Playing first {count} tracks.', { count: String(tracks.length) }),
+									'info',
+								);
+							}
+							return tracks;
+						},
+						mountBodyExtra: type === 'folders' && PA() && typeof PA().mountFolderListenedBar === 'function'
+							? (bodyWrap, reload) => {
+								const trackParams = facetTrackParams(type, item);
+								PA().mountFolderListenedBar(bodyWrap, item.name || '', trackParams.kind, reload);
+							}
+							: undefined,
 					});
 				}
 
@@ -318,104 +331,6 @@
 					}).catch((e) => {
 						status.textContent = e.message || t('audiocheck', 'Request failed.');
 					});
-				}
-
-				function renderFacetGroup(type, item, host, startOpen) {
-					const label = facetGroupLabel(type, item);
-					const count = item.count || 0;
-					const cache = [];
-					const details = C.el('details', {
-						className: 'ac-media-folder-group ac-facet-group',
-						attrs: startOpen ? { open: true } : {},
-					});
-					const summary = C.el('summary', { className: 'ac-media-folder-group__summary ac-facet-group__summary' });
-					summary.appendChild(C.el('span', { className: 'ac-media-folder-group__name', text: label }));
-					summary.appendChild(C.el('span', {
-						className: 'ac-media-folder-group__count',
-						text: AudioCheckTime.tracksLabel(count),
-					}));
-					const playGroupBtn = C.el('button', {
-						type: 'button',
-						className: 'ac-btn ac-btn--icon ac-facet-group__play',
-						attrs: {
-							'aria-label': t('audiocheck', 'Play all {kind}', { kind: label }),
-						},
-						onClick: (ev) => {
-							ev.preventDefault();
-							ev.stopPropagation();
-							playGroupBtn.disabled = true;
-							const params = { ...facetTrackParams(type, item), sort };
-							AudioCheckApi.get('/apps/audiocheck/api/tracks', params).then((data) => {
-								const tracks = (data.items || []).filter((tr) => tr && !tr.unavailable);
-								if (!tracks.length) {
-									AudioCheckMessaging.toast(t('audiocheck', 'Nothing here yet'), 'warning');
-									return;
-								}
-								const totalTracks = data.total != null ? data.total : tracks.length;
-								if (totalTracks > tracks.length) {
-									AudioCheckMessaging.toast(
-										t('audiocheck', 'Playing first {count} tracks.', { count: String(tracks.length) }),
-										'info',
-									);
-								}
-								AudioCheckPlayer.playQueue(tracks, 0);
-								AudioCheckRouter.navigate('now-playing', {}, true);
-							}).catch((e) => {
-								AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error');
-							}).finally(() => {
-								playGroupBtn.disabled = false;
-							});
-						},
-					});
-					if (window.AudioCheckIcons) {
-						playGroupBtn.appendChild(AudioCheckIcons.createSvg('play'));
-					}
-					summary.appendChild(playGroupBtn);
-					details.appendChild(summary);
-					const bodyWrap = C.el('div', { className: 'ac-media-folder-group__body' });
-					const list = C.el('ul', { className: 'ac-track-list' });
-					bodyWrap.appendChild(list);
-					details.appendChild(bodyWrap);
-					host.appendChild(details);
-
-					let loaded = false;
-					function loadList() {
-						if (loaded) return;
-						loaded = true;
-						list.appendChild(C.el('li', {
-							className: 'ac-track-list__empty',
-							text: t('audiocheck', 'Loading…'),
-						}));
-						const params = { ...facetTrackParams(type, item), sort };
-						AudioCheckApi.get('/apps/audiocheck/api/tracks', params).then((data) => {
-							list.textContent = '';
-							const tracks = data.items || [];
-							if (!tracks.length) {
-								list.appendChild(C.el('li', {
-									className: 'ac-track-list__empty',
-									text: t('audiocheck', 'Nothing here yet'),
-								}));
-								return;
-							}
-							appendTracksToList(list, tracks, cache);
-							const trackTotal = data.total != null ? data.total : tracks.length;
-							if (trackTotal > tracks.length) {
-								list.appendChild(C.el('li', {
-									className: 'ac-track-list__empty ac-facet-group__truncated',
-									text: t('audiocheck', 'Showing first {count} tracks.', { count: String(tracks.length) }),
-								}));
-							}
-						}).catch((e) => {
-							list.textContent = '';
-							list.appendChild(C.el('li', {
-								className: 'ac-track-list__empty',
-								text: e.message || t('audiocheck', 'Request failed.'),
-							}));
-						});
-					}
-
-					if (startOpen) loadList();
-					else details.addEventListener('toggle', () => { if (details.open) loadList(); });
 				}
 
 				function loadFacets(type) {

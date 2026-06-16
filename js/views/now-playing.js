@@ -145,6 +145,7 @@
 			let durEl = null;
 			let renderedFileId = 0;
 			let renderedEmpty = false;
+			let renderedListenedKey = '';
 			let lastQueueSig = '';
 			let seekDragging = false;
 			let idleMode = '';
@@ -342,6 +343,37 @@
 						pressed: !!track.favorite,
 					},
 				);
+				const listenedLabel = track.listened ? t('audiocheck', 'Mark as not listened') : t('audiocheck', 'Mark as listened');
+				const listenedBtn = nowActionBtn(
+					listenedLabel,
+					track.listened ? 'circle-check' : 'circle',
+					() => {
+						const fileId = AudioCheckApi.validFileId(track.fileId);
+						if (!fileId) return;
+						const next = !track.listened;
+						listenedBtn.disabled = true;
+						AudioCheckApi.put('/apps/audiocheck/api/tracks/{fileId}/listened', { listened: next }, { params: { fileId } })
+							.then((r) => {
+								track.listened = !!(r.progress && r.progress.listened);
+								track.finished = !!(r.progress && r.progress.finished);
+								if (window.AudioCheckTrackListUi) {
+									AudioCheckTrackListUi.syncListenedState(track);
+								}
+								AudioCheckMessaging.toast(next
+									? t('audiocheck', 'Marked as listened.')
+									: t('audiocheck', 'Marked as not listened.'));
+								paintNow(true);
+							}).catch((e) => {
+								AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error');
+								listenedBtn.disabled = false;
+							});
+					},
+					{
+						variant: 'secondary',
+						active: !!track.listened,
+						pressed: !!track.listened,
+					},
+				);
 				const resetBtn = nowActionBtn(t('audiocheck', 'Reset progress'), 'rotate-ccw', () => {
 					const fileId = AudioCheckApi.validFileId(track.fileId);
 					if (!fileId) return;
@@ -352,6 +384,7 @@
 						.finally(() => { resetBtn.disabled = false; });
 				});
 				trackActions.appendChild(favBtn);
+				trackActions.appendChild(listenedBtn);
 				trackActions.appendChild(resetBtn);
 			}
 
@@ -373,7 +406,9 @@
 				const fileId = track ? (track.fileId || 0) : 0;
 				const isEmpty = !track;
 
-				if (!force && isEmpty === renderedEmpty && fileId === renderedFileId) {
+				const listenedKey = track ? ((track.listened ? '1' : '0') + (track.finished ? '1' : '0')) : '';
+
+				if (!force && isEmpty === renderedEmpty && fileId === renderedFileId && listenedKey === renderedListenedKey) {
 					if (!isEmpty) {
 						paintSeek();
 						paintTransport();
@@ -383,6 +418,7 @@
 				}
 				renderedEmpty = isEmpty;
 				renderedFileId = fileId;
+				renderedListenedKey = listenedKey;
 				lastQueueSig = '';
 				playBtn = null;
 				seekInput = null;
@@ -444,6 +480,13 @@
 						className: 'ac-badge ac-badge--warn',
 						attrs: { role: 'note' },
 						text: t('audiocheck', 'May not play in this browser'),
+					}));
+				}
+				if (track.listened || track.finished) {
+					meta.appendChild(C.el('p', {
+						className: 'ac-badge ac-badge--ok ac-now-card__listened-badge',
+						attrs: { role: 'status' },
+						text: t('audiocheck', 'Listened'),
 					}));
 				}
 				cardBody.appendChild(meta);
@@ -561,13 +604,22 @@
 				}
 				queue.forEach((qTrack, i) => {
 					const rowTrack = trackForQueueRow(qTrack, i, cur);
-					queueUl.appendChild(C.trackRow(rowTrack, () => AudioCheckPlayer.playQueue(queue, i), {
-						rowVariant: 'queue',
-						active: i === cur,
-						playing: i === cur && playing,
-						removeLabel: t('audiocheck', 'Remove from queue'),
-						onRemove: () => AudioCheckPlayer.removeAt(i),
-					}));
+					const rowOpts = window.AudioCheckTrackListUi
+						? AudioCheckTrackListUi.trackRowOptions(rowTrack, {
+							rowVariant: 'queue',
+							active: i === cur,
+							playing: i === cur && playing,
+							removeLabel: t('audiocheck', 'Remove from queue'),
+							onRemove: () => AudioCheckPlayer.removeAt(i),
+						})
+						: {
+							rowVariant: 'queue',
+							active: i === cur,
+							playing: i === cur && playing,
+							removeLabel: t('audiocheck', 'Remove from queue'),
+							onRemove: () => AudioCheckPlayer.removeAt(i),
+						};
+					queueUl.appendChild(C.trackRow(rowTrack, () => AudioCheckPlayer.playQueue(queue, i), rowOpts));
 				});
 			}
 
@@ -610,9 +662,16 @@
 				});
 			}
 
+			const onListenedChanged = () => {
+				paintNow(true);
+				paintQueue();
+			};
+			document.addEventListener('audiocheck-listened-changed', onListenedChanged);
+
 			const observer = new MutationObserver(() => {
 				if (!document.body.contains(body)) {
 					unsub();
+					document.removeEventListener('audiocheck-listened-changed', onListenedChanged);
 					observer.disconnect();
 				}
 			});

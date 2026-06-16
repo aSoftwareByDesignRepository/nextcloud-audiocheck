@@ -36,6 +36,7 @@ class LibraryService
 		private ITagManager $tagManager,
 		private ISystemTagManager $systemTagManager,
 		private ISystemTagObjectMapper $systemTagObjectMapper,
+		private PlaybackStateService $playback,
 	) {
 	}
 
@@ -227,7 +228,7 @@ class LibraryService
 	/**
 	 * @return array{items:list<array<string,mixed>>,total:int,page:int,limit:int}
 	 */
-	public function listTracks(string $userId, ?string $kind, ?string $q, string $sort, int $page, int $limit, bool $favoritesOnly = false, ?int $tagId = null, ?string $genre = null, ?string $artist = null, ?string $series = null, ?string $folder = null): array
+	public function listTracks(string $userId, ?string $kind, ?string $q, string $sort, int $page, int $limit, bool $favoritesOnly = false, ?int $tagId = null, ?string $genre = null, ?string $artist = null, ?string $series = null, ?string $folder = null, bool $hideListened = false): array
 	{
 		$page = max(1, $page);
 		$limit = min(100, max(1, $limit));
@@ -289,6 +290,16 @@ class LibraryService
 			}
 			$qb->andWhere($qb->expr()->in('t.file_id', $qb->createNamedParameter($tagFileIds, \Doctrine\DBAL\ArrayParameterType::INTEGER)));
 		}
+		if ($hideListened) {
+			$qb->leftJoin('t', 'ac_play_state', 'ps_hl', $qb->expr()->andX(
+				$qb->expr()->eq('ps_hl.user_id', $qb->createNamedParameter($userId)),
+				$qb->expr()->eq('ps_hl.file_id', 't.file_id'),
+			));
+			$qb->andWhere($qb->expr()->orX(
+				$qb->expr()->isNull('ps_hl.file_id'),
+				$qb->expr()->eq('ps_hl.listened', $qb->createNamedParameter(0, \PDO::PARAM_INT)),
+			));
+		}
 
 		if ($sort === self::SORT_PLAYED) {
 			$qb->leftJoin('t', 'ac_play_state', 'ps', $qb->expr()->andX(
@@ -305,7 +316,7 @@ class LibraryService
 		$total = (int)($countResult->fetch()['c'] ?? 0);
 		$countResult->closeCursor();
 
-		$qb->select('t.file_id', 't.file_name', 't.rel_path', 't.added_at', 'm.title', 'm.artist', 'm.album', 'm.album_artist', 'm.kind', 'm.duration_ms', 'm.mimetype', 'm.has_chapters', 'm.cover_state');
+		$qb->select('t.file_id', 't.file_name', 't.rel_path', 't.added_at', 't.size', 'm.title', 'm.artist', 'm.album', 'm.album_artist', 'm.kind', 'm.duration_ms', 'm.mimetype', 'm.has_chapters', 'm.cover_state');
 		$qb->setMaxResults($limit)->setFirstResult($offset);
 		$result = $qb->executeQuery();
 		$items = [];
@@ -313,6 +324,8 @@ class LibraryService
 			$items[] = $this->formatTrackForUser($userId, $row);
 		}
 		$result->closeCursor();
+		$this->applyListenedFlags($userId, $items);
+		$this->applyFavoriteFlags($items);
 
 		return ['items' => $items, 'total' => $total, 'page' => $page, 'limit' => $limit];
 	}
@@ -324,7 +337,7 @@ class LibraryService
 		if ($row === null) {
 			throw new NotFoundException();
 		}
-		return $this->formatTrackRow($row, $fileId);
+		return $this->formatTrackRow($row, $fileId, $userId);
 	}
 
 	/**
@@ -337,7 +350,7 @@ class LibraryService
 		$file = $this->fileAccess->resolveReadableFile($userId, $fileId);
 		$row = $this->findTrackRow($userId, $fileId);
 		if ($row !== null) {
-			return $this->formatTrackRow($row, $fileId);
+			return $this->formatTrackRow($row, $fileId, $userId);
 		}
 		return $this->minimalTrackFromFile($file);
 	}
@@ -353,7 +366,7 @@ class LibraryService
 		foreach ($files as $file) {
 			$row = $this->findTrackRow($userId, (int)$file->getId());
 			$items[] = $row !== null
-				? $this->formatTrackRow($row, (int)$file->getId())
+				? $this->formatTrackRow($row, (int)$file->getId(), $userId)
 				: $this->minimalTrackFromFile($file);
 		}
 		return [
@@ -423,6 +436,10 @@ class LibraryService
 				$qb->expr()->eq('ps.file_id', 't.file_id'),
 			))
 			->selectAlias($qb->func()->max('ps.updated_at'), 'last_played_at')
+			->selectAlias(
+				$qb->createFunction('SUM(CASE WHEN COALESCE(ps.listened, 0) = 1 THEN 1 ELSE 0 END)'),
+				'listened_count',
+			)
 			->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
 			->groupBy($qb->createFunction($albumExpr))
 			->addGroupBy($qb->createFunction($albumArtistExpr))
@@ -455,12 +472,16 @@ class LibraryService
 		$items = [];
 		while ($row = $result->fetch()) {
 			$key = $this->collectionKey((string)$row['album'], (string)($row['album_artist'] ?? ''), (string)$row['kind']);
+			$trackCount = (int)$row['track_count'];
+			$listenedCount = (int)($row['listened_count'] ?? 0);
 			$items[] = [
 				'key' => $key,
 				'title' => (string)$row['album'],
 				'subtitle' => (string)($row['album_artist'] ?: $row['artist'] ?? ''),
 				'kind' => (string)$row['kind'],
-				'trackCount' => (int)$row['track_count'],
+				'trackCount' => $trackCount,
+				'listenedCount' => $listenedCount,
+				'fullyListened' => $trackCount > 0 && $listenedCount >= $trackCount,
 				'coverFileId' => (int)$row['cover_file_id'],
 				'addedAt' => (int)$row['added_at'],
 			];
@@ -497,13 +518,205 @@ class LibraryService
 		if ($tracks === []) {
 			throw new NotFoundException();
 		}
-		return [
+		$this->applyListenedFlags($userId, $tracks);
+		return $this->enrichCollectionListenedStats([
 			'key' => $key,
 			'title' => $decoded['album'],
 			'subtitle' => $decoded['albumArtist'],
 			'kind' => $decoded['kind'],
 			'tracks' => $tracks,
+		]);
+	}
+
+	/**
+	 * Mark every accessible track in a collection listened/unlistened (plan §3.5 collection-level).
+	 *
+	 * @return array{collection:array<string,mixed>,updatedCount:int,skippedCount:int}
+	 */
+	public function setCollectionListened(string $userId, string $key, bool $listened): array
+	{
+		$collection = $this->getCollection($userId, $key);
+		$fileIds = array_map(
+			static fn (array $track): int => (int)($track['fileId'] ?? 0),
+			$collection['tracks'] ?? [],
+		);
+		$result = $this->setListenedForFileIds($userId, $fileIds, $listened);
+		$refreshed = $this->getCollection($userId, $key);
+
+		return [
+			'collection' => $refreshed,
+			'updatedCount' => $result['updated'],
+			'skippedCount' => $result['skipped'],
 		];
+	}
+
+	/**
+	 * @param list<int> $fileIds
+	 * @return array{updated:int,skipped:int}
+	 */
+	public function setListenedBulk(string $userId, array $fileIds, bool $listened): array
+	{
+		$fileIds = array_values(array_unique(array_filter(
+			array_map(static fn (mixed $id): int => (int)$id, $fileIds),
+			static fn (int $id): bool => $id > 0,
+		)));
+		if (count($fileIds) > PlaybackStateService::MAX_BULK_LISTENED_REQUEST) {
+			throw new ValidationException('Too many tracks in one request.');
+		}
+
+		return $this->setListenedForFileIds($userId, $fileIds, $listened);
+	}
+
+	/**
+	 * @return array{folderPath:string,trackCount:int,listenedCount:int,fullyListened:bool}
+	 */
+	public function getFolderPathListenedStats(string $userId, string $folderPath, ?string $kind): array
+	{
+		$fileIds = $this->listTrackFileIdsByFolderPath($userId, $folderPath, $kind);
+
+		return $this->buildListenedStats($folderPath, $fileIds, $userId);
+	}
+
+	/**
+	 * Mark every indexed track under a library folder path listened/unlistened.
+	 *
+	 * @return array{folderPath:string,trackCount:int,listenedCount:int,fullyListened:bool,updatedCount:int,skippedCount:int}
+	 */
+	public function setFolderPathListened(string $userId, string $folderPath, ?string $kind, bool $listened): array
+	{
+		$normalized = $this->normalizeFolderPath($folderPath);
+		$fileIds = $this->listTrackFileIdsByFolderPath($userId, $normalized, $kind);
+		$result = $this->setListenedForFileIds($userId, $fileIds, $listened);
+		$stats = $this->buildListenedStats($normalized, $fileIds, $userId);
+
+		return array_merge($stats, [
+			'updatedCount' => $result['updated'],
+			'skippedCount' => $result['skipped'],
+		]);
+	}
+
+	/**
+	 * Mark every audio file in a Nextcloud folder listened/unlistened (non-recursive).
+	 *
+	 * @return array{folderId:int,folderName:string,trackCount:int,listenedCount:int,fullyListened:bool,updatedCount:int,skippedCount:int}
+	 */
+	public function setFolderIdListened(string $userId, int $folderId, bool $listened): array
+	{
+		$folder = $this->fileAccess->resolveReadableFolder($userId, $folderId);
+		$files = $this->fileAccess->listAudioFilesInFolder($folder, false);
+		$fileIds = array_values(array_unique(array_map(static fn ($file): int => (int)$file->getId(), $files)));
+		$result = $this->setListenedForFileIds($userId, $fileIds, $listened);
+		$map = $this->playback->getListenedMap($userId, $fileIds);
+		$listenedCount = count(array_filter($map));
+		$trackCount = count($fileIds);
+
+		return [
+			'folderId' => $folderId,
+			'folderName' => $folder->getName(),
+			'trackCount' => $trackCount,
+			'listenedCount' => $listenedCount,
+			'fullyListened' => $trackCount > 0 && $listenedCount >= $trackCount,
+			'updatedCount' => $result['updated'],
+			'skippedCount' => $result['skipped'],
+		];
+	}
+
+	/**
+	 * @param list<int> $fileIds
+	 * @return array{updated:int,skipped:int}
+	 */
+	private function setListenedForFileIds(string $userId, array $fileIds, bool $listened): array
+	{
+		if ($fileIds === []) {
+			return ['updated' => 0, 'skipped' => 0];
+		}
+		$updated = 0;
+		$skipped = 0;
+		foreach (array_chunk($fileIds, PlaybackStateService::MAX_BULK_LISTENED) as $chunk) {
+			$result = $this->playback->setListenedBulk($userId, $chunk, $listened);
+			$updated += $result['updated'];
+			$skipped += $result['skipped'];
+		}
+
+		return ['updated' => $updated, 'skipped' => $skipped];
+	}
+
+	/**
+	 * @return list<int>
+	 */
+	private function listTrackFileIdsByFolderPath(string $userId, string $folderPath, ?string $kind): array
+	{
+		$folderPath = $this->normalizeFolderPath($folderPath);
+		$like = $this->db->escapeLikeParameter($folderPath) . '/%';
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('t.file_id')
+			->from('ac_tracks', 't')
+			->leftJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'))
+			->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
+			->andWhere($qb->expr()->like('t.rel_path', $qb->createNamedParameter($like)));
+		if ($kind !== null && in_array($kind, [self::KIND_MUSIC, self::KIND_AUDIOBOOK], true)) {
+			$qb->andWhere($qb->expr()->eq('m.kind', $qb->createNamedParameter($kind)));
+		}
+		$result = $qb->executeQuery();
+		$fileIds = [];
+		while ($row = $result->fetch()) {
+			$fileIds[] = (int)$row['file_id'];
+		}
+		$result->closeCursor();
+
+		return array_values(array_unique($fileIds));
+	}
+
+	private function normalizeFolderPath(string $folderPath): string
+	{
+		$folderPath = rtrim(trim($folderPath), '/');
+		if ($folderPath === '') {
+			throw new ValidationException('Folder path is required.');
+		}
+
+		return $folderPath;
+	}
+
+	/**
+	 * @param list<int> $fileIds
+	 * @return array{folderPath:string,trackCount:int,listenedCount:int,fullyListened:bool}
+	 */
+	private function buildListenedStats(string $folderPath, array $fileIds, string $userId): array
+	{
+		$map = $this->playback->getListenedMap($userId, $fileIds);
+		$listenedCount = count(array_filter($map));
+		$trackCount = count($fileIds);
+
+		return [
+			'folderPath' => $folderPath,
+			'trackCount' => $trackCount,
+			'listenedCount' => $listenedCount,
+			'fullyListened' => $trackCount > 0 && $listenedCount >= $trackCount,
+		];
+	}
+
+	/** @param array<string, mixed> $collection */
+	private function enrichCollectionListenedStats(array $collection): array
+	{
+		$tracks = $collection['tracks'] ?? [];
+		if (!is_array($tracks)) {
+			$tracks = [];
+		}
+		$trackCount = count($tracks);
+		$listenedCount = 0;
+		foreach ($tracks as $track) {
+			if (!is_array($track)) {
+				continue;
+			}
+			if (!empty($track['listened'])) {
+				$listenedCount++;
+			}
+		}
+		$collection['trackCount'] = $trackCount;
+		$collection['listenedCount'] = $listenedCount;
+		$collection['fullyListened'] = $trackCount > 0 && $listenedCount >= $trackCount;
+
+		return $collection;
 	}
 
 	/**
@@ -565,11 +778,21 @@ class LibraryService
 		while ($row = $result->fetch()) {
 			if ($type === 'folders') {
 				$path = (string)$row['rel_path'];
+				$count = (int)$row['c'];
 				$folder = dirname($path);
 				if ($folder === '.' || $folder === '') {
 					continue;
 				}
-				$items[$folder] = ($items[$folder] ?? 0) + (int)$row['c'];
+				// Count tracks recursively per folder prefix so counts match listTracks(folder=…).
+				$current = $folder;
+				while ($current !== '.' && $current !== '' && $current !== 'files') {
+					$items[$current] = ($items[$current] ?? 0) + $count;
+					$parent = dirname($current);
+					if ($parent === $current) {
+						break;
+					}
+					$current = $parent;
+				}
 			} else {
 				$name = (string)$row['name'];
 				if ($name !== '') {
@@ -670,6 +893,7 @@ class LibraryService
 			'albumArtist' => (string)($row['album_artist'] ?? ''),
 			'kind' => (string)($row['kind'] ?? 'music'),
 			'durationMs' => (int)($row['duration_ms'] ?? 0),
+			'sizeBytes' => max(0, (int)($row['size'] ?? 0)),
 			'mimetype' => (string)($row['mimetype'] ?? ''),
 			'browserPlayable' => $this->isBrowserPlayableMime((string)($row['mimetype'] ?? '')),
 			'hasChapters' => (int)($row['has_chapters'] ?? 0) === 1,
@@ -684,6 +908,19 @@ class LibraryService
 	{
 		$track = $this->formatTrack($row);
 		$track['unavailable'] = !$this->fileAccess->isFileAccessible($userId, (int)$row['file_id']);
+		return $this->redactUnavailableMetadata($track);
+	}
+
+	/** @param array<string, mixed> $track */
+	private function redactUnavailableMetadata(array $track): array
+	{
+		if (!($track['unavailable'] ?? false)) {
+			return $track;
+		}
+		$track['title'] = '';
+		$track['artist'] = '';
+		$track['album'] = '';
+		$track['fileName'] = '';
 		return $track;
 	}
 
@@ -749,8 +986,86 @@ class LibraryService
 		return $row === false ? null : $row;
 	}
 
+	/** @param list<array<string, mixed>> $items */
+	private function applyListenedFlags(string $userId, array &$items): void
+	{
+		$fileIds = array_map(static fn (array $item): int => (int)($item['fileId'] ?? 0), $items);
+		$map = $this->playback->getListenedMap($userId, $fileIds);
+		foreach ($items as &$item) {
+			$fileId = (int)($item['fileId'] ?? 0);
+			$item['listened'] = $map[$fileId] ?? false;
+		}
+		unset($item);
+	}
+
+	/** @param list<array<string, mixed>> $items */
+	private function applyFavoriteFlags(array &$items): void
+	{
+		$tagger = $this->tagManager->load('files');
+		$favoriteSet = [];
+		if ($tagger !== null) {
+			foreach (array_map('intval', $tagger->getFavorites()) as $fileId) {
+				if ($fileId > 0) {
+					$favoriteSet[$fileId] = true;
+				}
+			}
+		}
+		foreach ($items as &$item) {
+			$fileId = (int)($item['fileId'] ?? 0);
+			$item['favorite'] = isset($favoriteSet[$fileId]);
+		}
+		unset($item);
+	}
+
+	/** @return array{revision:int,trackCount:int} */
+	public function getLibrarySyncState(string $userId): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select($qb->func()->max('last_seen_at', 'max_seen'))
+			->addSelect($qb->func()->count('id', 'track_count'))
+			->from('ac_tracks')
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+
+		return [
+			'revision' => (int)($row['max_seen'] ?? 0),
+			'trackCount' => (int)($row['track_count'] ?? 0),
+		];
+	}
+
+	/**
+	 * @param list<int> $fileIds
+	 * @return array<int, bool>
+	 */
+	public function queryListenedMap(string $userId, array $fileIds): array
+	{
+		$clean = [];
+		foreach ($fileIds as $fileId) {
+			$fileId = (int)$fileId;
+			if ($fileId < 1 || isset($clean[$fileId])) {
+				continue;
+			}
+			try {
+				$this->fileAccess->resolveReadableFile($userId, $fileId);
+				$clean[$fileId] = true;
+			} catch (\Throwable) {
+				continue;
+			}
+			if (count($clean) >= 500) {
+				break;
+			}
+		}
+		if ($clean === []) {
+			return [];
+		}
+
+		return $this->playback->getListenedMap($userId, array_map('intval', array_keys($clean)));
+	}
+
 	/** @param array<string, mixed> $row */
-	private function formatTrackRow(array $row, int $fileId): array
+	private function formatTrackRow(array $row, int $fileId, string $userId): array
 	{
 		$track = $this->formatTrack($row);
 		if (!empty($row['chapters_json'])) {
@@ -761,6 +1076,7 @@ class LibraryService
 			}
 		}
 		$track['favorite'] = $this->isFavorite($fileId);
+		$track['listened'] = $this->playback->getListenedMap($userId, [$fileId])[$fileId] ?? false;
 		$track['unavailable'] = false;
 		return $track;
 	}
@@ -785,7 +1101,9 @@ class LibraryService
 			'coverState' => 'none',
 			'addedAt' => 0,
 			'relPath' => '',
+			'sizeBytes' => max(0, (int)$file->getSize()),
 			'favorite' => $this->isFavorite((int)$file->getId()),
+			'listened' => false,
 			'unavailable' => false,
 		];
 	}

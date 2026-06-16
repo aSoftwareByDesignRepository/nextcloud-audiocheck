@@ -65,6 +65,7 @@ class ApiController extends Controller
 				isset($params['artist']) ? (string)$params['artist'] : null,
 				isset($params['series']) ? (string)$params['series'] : null,
 				isset($params['folder']) ? (string)$params['folder'] : null,
+				isset($params['hideListened']) && ($params['hideListened'] === '1' || $params['hideListened'] === 'true'),
 			);
 		});
 	}
@@ -189,13 +190,14 @@ class ApiController extends Controller
 		return $this->safe(function (string $userId): array {
 			$body = $this->getJsonBody();
 			$fileIds = is_array($body['fileIds'] ?? null) ? array_values($body['fileIds']) : [];
-			return ['queue' => $this->queue->saveQueue(
+			return ['result' => $this->queue->saveQueue(
 				$userId,
 				$fileIds,
 				(int)($body['currentIndex'] ?? 0),
 				(int)($body['playbackSpeed'] ?? 100),
 				(bool)($body['shuffle'] ?? false),
 				(string)($body['repeatMode'] ?? 'off'),
+				isset($body['clientUpdatedAt']) ? (int)$body['clientUpdatedAt'] : null,
 			)];
 		});
 	}
@@ -420,6 +422,106 @@ class ApiController extends Controller
 		return $this->safe(function (string $userId) use ($fileId): array {
 			$body = $this->getJsonBody();
 			return $this->library->setFavorite($userId, $fileId, (bool)($body['favorite'] ?? false));
+		});
+	}
+
+	#[NoAdminRequired]
+	public function setListened(int $fileId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($fileId): array {
+			$body = $this->getJsonBody();
+			return ['progress' => $this->playback->setListened($userId, $fileId, (bool)($body['listened'] ?? false))];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function setListenedBulk(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$body = $this->getJsonBody();
+			$fileIds = is_array($body['fileIds'] ?? null) ? $body['fileIds'] : [];
+			$result = $this->library->setListenedBulk($userId, array_map('intval', $fileIds), (bool)($body['listened'] ?? false));
+
+			return array_merge($result, [
+				'updatedCount' => $result['updated'],
+			]);
+		});
+	}
+
+	#[NoAdminRequired]
+	public function setCollectionListened(string $key): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($key): array {
+			$body = $this->getJsonBody();
+			return $this->library->setCollectionListened($userId, $key, (bool)($body['listened'] ?? false));
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function getFolderListenedStats(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$params = $this->request->getParams();
+			$folder = isset($params['folder']) ? (string)$params['folder'] : '';
+			$kind = isset($params['kind']) ? (string)$params['kind'] : null;
+			$kindFilter = is_string($kind) && in_array($kind, [LibraryService::KIND_MUSIC, LibraryService::KIND_AUDIOBOOK], true)
+				? $kind
+				: null;
+
+			return ['stats' => $this->library->getFolderPathListenedStats($userId, $folder, $kindFilter)];
+		});
+	}
+
+	#[NoAdminRequired]
+	public function setFolderPathListened(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$body = $this->getJsonBody();
+			$folder = trim((string)($body['folder'] ?? ''));
+			$kind = isset($body['kind']) ? (string)$body['kind'] : null;
+			$kindFilter = is_string($kind) && in_array($kind, [LibraryService::KIND_MUSIC, LibraryService::KIND_AUDIOBOOK], true)
+				? $kind
+				: null;
+
+			return $this->library->setFolderPathListened($userId, $folder, $kindFilter, (bool)($body['listened'] ?? false));
+		});
+	}
+
+	#[NoAdminRequired]
+	public function setFolderListened(int $folderId): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($folderId): array {
+			$body = $this->getJsonBody();
+
+			return $this->library->setFolderIdListened($userId, $folderId, (bool)($body['listened'] ?? false));
+		});
+	}
+
+	#[NoAdminRequired]
+	public function queryListenedMap(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$body = $this->getJsonBody();
+			$raw = $body['fileIds'] ?? [];
+			if (!is_array($raw)) {
+				throw new ValidationException('fileIds must be an array.');
+			}
+			$fileIds = array_values(array_filter(array_map('intval', $raw), static fn (int $id): bool => $id > 0));
+			if ($fileIds === []) {
+				return ['map' => []];
+			}
+
+			return ['map' => $this->library->queryListenedMap($userId, $fileIds)];
+		});
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function getLibrarySyncState(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			return ['sync' => $this->library->getLibrarySyncState($userId)];
 		});
 	}
 

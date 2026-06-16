@@ -126,6 +126,7 @@ class Application extends App implements IBootstrap
 				$c->query(\OCP\ITagManager::class),
 				$c->query(\OCP\SystemTag\ISystemTagManager::class),
 				$c->query(\OCP\SystemTag\ISystemTagObjectMapper::class),
+				$c->query(PlaybackStateService::class),
 			);
 		});
 
@@ -152,6 +153,7 @@ class Application extends App implements IBootstrap
 				$c->query(\OCP\IDBConnection::class),
 				$c->query(FileAccessService::class),
 				$c->query(LibraryService::class),
+				$c->query(PlaybackStateService::class),
 				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
 			);
 		});

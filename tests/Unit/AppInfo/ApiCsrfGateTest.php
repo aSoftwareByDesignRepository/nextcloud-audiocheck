@@ -14,6 +14,7 @@ final class ApiCsrfGateTest extends TestCase
 		'getTrackInfo',
 		'getPlayableTrack',
 		'listFolderTracks',
+		'getFolderListenedStats',
 		'listCollections',
 		'getCollection',
 		'listFacets',
@@ -49,6 +50,11 @@ final class ApiCsrfGateTest extends TestCase
 		'triggerScan',
 		'savePrefs',
 		'setFavorite',
+		'setListened',
+		'setListenedBulk',
+		'setCollectionListened',
+		'setFolderPathListened',
+		'setFolderListened',
 		'saveAppPolicy',
 	];
 

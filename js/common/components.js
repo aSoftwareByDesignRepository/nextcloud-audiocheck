@@ -225,11 +225,15 @@
 			return box;
 		},
 		mediaCard(item, onPlay) {
+			const isListened = !!(item.listened || item.finished);
+			const title = item.title || item.fileName || '';
 			const card = el('article', {
 				className: 'ac-card ac-card--media',
 				tabindex: '0',
 				role: 'button',
-				'aria-label': item.title,
+				'aria-label': isListened
+					? t('audiocheck', '{title}, listened', { title })
+					: title,
 				onClick: () => onPlay(item),
 				onKeydown: (e) => {
 					if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPlay(item); }
@@ -245,16 +249,17 @@
 					attrs: { 'aria-hidden': 'true', style: '--ac-progress:' + String(pct) },
 				}));
 			}
-			if (item.finished) {
-				coverWrap.appendChild(el('span', {
-					className: 'ac-card__finished icon icon-checkmark',
-					attrs: { 'aria-label': t('audiocheck', 'Finished'), title: t('audiocheck', 'Finished') },
-				}));
-			}
 			card.appendChild(coverWrap);
-			card.appendChild(el('h3', { className: 'ac-card__title', text: item.title || item.fileName || '' }));
+			card.appendChild(el('h3', { className: 'ac-card__title', text: title }));
 			if (item.subtitle || item.artist) {
 				card.appendChild(el('p', { className: 'ac-card__subtitle', text: item.subtitle || item.artist || '' }));
+			}
+			if (isListened) {
+				card.appendChild(el('span', {
+					className: 'ac-badge ac-badge--ok ac-card__listened-badge',
+					attrs: { role: 'status' },
+					text: t('audiocheck', 'Listened'),
+				}));
 			}
 			if (item.browserPlayable === false) {
 				card.appendChild(el('p', {
@@ -267,9 +272,11 @@
 		},
 		trackRow(track, onPlay, options) {
 			const opts = options || {};
+			const isListened = !!(track.listened || track.finished);
 			const li = el('li', {
 				className: 'ac-track-list__item'
 					+ (track.unavailable ? ' ac-track-list__item--unavailable' : '')
+					+ (isListened ? ' ac-track-list__item--listened' : '')
 					+ (opts.active ? ' ac-track-list__item--active' : '')
 					+ (opts.rowVariant === 'queue' ? ' ac-track-list__item--queue' : ''),
 			});
@@ -306,6 +313,15 @@
 			meta.appendChild(el('div', { className: 'ac-track-list__title', text: track.title || track.fileName || '' }));
 			if (track.artist) {
 				meta.appendChild(el('div', { className: 'ac-track-list__artist', text: track.artist }));
+			}
+			let listenedBadge = null;
+			if (isListened) {
+				listenedBadge = el('span', {
+					className: 'ac-badge ac-badge--ok ac-track-list__listened-badge',
+					attrs: { role: 'status' },
+					text: t('audiocheck', 'Listened'),
+				});
+				meta.appendChild(listenedBadge);
 			}
 			if (opts.active) {
 				meta.appendChild(el('span', {
@@ -345,6 +361,57 @@
 					btn.appendChild(el('span', { className: 'icon ' + fallbackClass, 'aria-hidden': 'true' }));
 				}
 			};
+			if (opts.onToggleListened) {
+				const listenedBtn = el('button', {
+					type: 'button',
+					className: 'ac-btn ac-btn--icon ac-track-list__listened'
+						+ (isListened ? ' ac-btn--success' : ''),
+					attrs: {
+						'aria-label': isListened
+							? t('audiocheck', 'Mark as not listened')
+							: t('audiocheck', 'Mark as listened'),
+						'aria-pressed': isListened ? 'true' : 'false',
+					},
+					onClick: (e) => {
+						e.stopPropagation();
+						listenedBtn.disabled = true;
+						Promise.resolve(opts.onToggleListened(track))
+							.then(() => {
+								const on = !!(track.listened || track.finished);
+								li.classList.toggle('ac-track-list__item--listened', on);
+								listenedBtn.classList.toggle('ac-btn--success', on);
+								listenedBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+								listenedBtn.setAttribute('aria-label', on
+									? t('audiocheck', 'Mark as not listened')
+									: t('audiocheck', 'Mark as listened'));
+								if (window.AudioCheckIcons) {
+									AudioCheckIcons.mount(listenedBtn, on ? 'circle-check' : 'circle');
+								}
+								if (on) {
+									if (!listenedBadge) {
+										listenedBadge = el('span', {
+											className: 'ac-badge ac-badge--ok ac-track-list__listened-badge',
+											attrs: { role: 'status' },
+											text: t('audiocheck', 'Listened'),
+										});
+										meta.appendChild(listenedBadge);
+									}
+								} else if (listenedBadge) {
+									listenedBadge.remove();
+									listenedBadge = null;
+								}
+							})
+							.catch((err) => {
+								AudioCheckMessaging.toast(err.message || t('audiocheck', 'Request failed.'), 'error');
+							})
+							.finally(() => {
+								listenedBtn.disabled = false;
+							});
+					},
+				});
+				mountIconBtn(listenedBtn, isListened ? 'circle-check' : 'circle', 'icon-checkmark');
+				aside.appendChild(listenedBtn);
+			}
 			if (opts.onAddPlaylist) {
 				const add = el('button', {
 					type: 'button',

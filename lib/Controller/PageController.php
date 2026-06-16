@@ -147,6 +147,7 @@ class PageController extends Controller
 			'common/entity-picker',
 			'common/folder-picker',
 			'common/playlist-actions',
+			'common/track-list-ui',
 			'common/router',
 			'common/player',
 			'common/media-library-page',

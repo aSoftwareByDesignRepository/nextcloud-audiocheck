@@ -73,6 +73,20 @@
 		'chevron-up': [
 			{ tag: 'path', d: 'm6 15 6-6 6 6' },
 		],
+		'circle-check': [
+			{ tag: 'circle', cx: '12', cy: '12', r: '10' },
+			{ tag: 'path', d: 'm9 12 2 2 4-4' },
+		],
+		circle: [
+			{ tag: 'circle', cx: '12', cy: '12', r: '10' },
+		],
+		checkmark: [
+			{ tag: 'circle', cx: '12', cy: '12', r: '10' },
+			{ tag: 'path', d: 'm9 12 2 2 4-4' },
+		],
+		'checkmark-outline': [
+			{ tag: 'circle', cx: '12', cy: '12', r: '10' },
+		],
 	};
 
 	function appendSvgShapes(svg, shapes) {

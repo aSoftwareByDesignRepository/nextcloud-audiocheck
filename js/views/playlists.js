@@ -2,143 +2,24 @@
 	'use strict';
 	const C = AudioCheckComponents;
 	const PA = () => window.AudioCheckPlaylistActions;
+	const UIL = () => window.AudioCheckTrackListUi;
 	const FAVORITES_ID = AudioCheckConstants.FAVORITES_PLAYLIST_ID;
 	const isFavorites = (id) => AudioCheckConstants.isFavoritesPlaylist(id);
+	const PAGE_SIZE = 48;
+	const PLAY_ALL_PAGE_SIZE = 100;
+	const PLAY_ALL_MAX_TRACKS = 500;
 
-	function navigatePlaylist(id) {
-		AudioCheckRouter.navigate('playlist', { playlistId: id }, true);
-	}
-
-	function fetchFavoriteTracks() {
-		const all = [];
-		let page = 1;
-		let total = 0;
-		function next() {
-			return AudioCheckApi.get('/apps/audiocheck/api/tracks', { favorite: '1', limit: 100, page, sort: 'title' })
-				.then((data) => {
-					const items = data.items || [];
-					all.push(...items);
-					total = typeof data.total === 'number' ? data.total : all.length;
-					if (all.length < total && items.length > 0) {
-						page += 1;
-						return next();
-					}
-					return all;
-				});
-		}
-		return next();
-	}
-
-	function fetchFavoriteCount() {
-		return AudioCheckApi.get('/apps/audiocheck/api/tracks', { favorite: '1', limit: 1 })
-			.then((data) => (typeof data.total === 'number' ? data.total : (data.items || []).length));
-	}
-
-	function playlistCard(pl, onOpen) {
-		const trackLine = pl.trackCount != null ? AudioCheckTime.tracksLabel(pl.trackCount) : '';
-		const ariaLabel = pl.isPinned
-			? pl.name + ' (' + t('audiocheck', 'Pinned') + ')' + (trackLine ? ', ' + trackLine : '')
-			: pl.name + (trackLine ? ', ' + trackLine : '');
-		const card = C.el('article', {
-			className: 'ac-card ac-card--media ac-playlist-card' + (pl.isPinned ? ' ac-playlist-card--pinned' : ''),
-			tabindex: '0',
-			role: 'button',
-			'aria-label': ariaLabel,
-			onClick: () => onOpen(pl.id),
-			onKeydown: (e) => {
-				if (e.key === 'Enter' || e.key === ' ') {
-					e.preventDefault();
-					onOpen(pl.id);
-				}
+	function summaryActionBtn(label, onClick) {
+		return C.el('button', {
+			type: 'button',
+			className: 'ac-btn ac-btn--compact ac-playlist-group__action',
+			text: label,
+			onClick: (ev) => {
+				ev.preventDefault();
+				ev.stopPropagation();
+				onClick();
 			},
 		});
-		card.appendChild(C.el('div', {
-			className: 'ac-playlist-card__icon',
-			'aria-hidden': 'true',
-			text: pl.isPinned ? '★' : '♫',
-		}));
-		card.appendChild(C.el('h3', { className: 'ac-card__title', text: pl.name }));
-		if (trackLine) {
-			card.appendChild(C.el('p', { className: 'ac-card__subtitle', text: trackLine }));
-		}
-		if (pl.isPinned) {
-			card.appendChild(C.el('span', {
-				className: 'ac-badge ac-badge--muted',
-				text: t('audiocheck', 'Pinned'),
-			}));
-		}
-		return card;
-	}
-
-	function favoritesCard(count) {
-		const trackLine = count == null
-			? ''
-			: (count === 0
-				? t('audiocheck', 'No favorite tracks yet')
-				: AudioCheckTime.tracksLabel(count));
-		const ariaLabel = trackLine
-			? t('audiocheck', 'Favorites, {detail}', { detail: trackLine })
-			: t('audiocheck', 'Favorites');
-		const card = C.el('article', {
-			className: 'ac-card ac-card--media ac-playlist-card ac-playlist-card--favorites',
-			tabindex: '0',
-			role: 'button',
-			'aria-label': ariaLabel,
-			onClick: () => navigatePlaylist(FAVORITES_ID),
-			onKeydown: (e) => {
-				if (e.key === 'Enter' || e.key === ' ') {
-					e.preventDefault();
-					navigatePlaylist(FAVORITES_ID);
-				}
-			},
-		});
-		card.appendChild(C.el('div', {
-			className: 'ac-playlist-card__icon ac-playlist-card__icon--favorites',
-			'aria-hidden': 'true',
-			text: '♥',
-		}));
-		card.appendChild(C.el('h3', { className: 'ac-card__title', text: t('audiocheck', 'Favorites') }));
-		if (trackLine) {
-			card.appendChild(C.el('p', { className: 'ac-card__subtitle', text: trackLine }));
-		}
-		card.appendChild(C.el('span', {
-			className: 'ac-badge ac-badge--muted',
-			text: t('audiocheck', 'Built-in'),
-		}));
-		return card;
-	}
-
-	function playlistsLoading() {
-		return C.el('div', {
-			className: 'ac-playlists-loading',
-			attrs: { role: 'status', 'aria-live': 'polite' },
-		}, [
-			C.el('span', { className: 'ac-skeleton ac-skeleton--title' }),
-			C.el('span', { className: 'ac-skeleton ac-skeleton--card' }),
-			C.el('span', { className: 'ac-skeleton ac-skeleton--card' }),
-		]);
-	}
-
-	function renderPlaylistsPage(body, list, favCount, reload) {
-		body.textContent = '';
-
-		const section = C.el('section', {
-			className: 'ac-section ac-playlists-section',
-			attrs: { 'aria-label': t('audiocheck', 'Playlists') },
-		});
-		const grid = C.el('div', { className: 'ac-grid ac-playlist-grid' });
-		grid.appendChild(favoritesCard(favCount));
-		list.forEach((pl) => grid.appendChild(playlistCard(pl, navigatePlaylist)));
-		section.appendChild(grid);
-
-		if (!list.length) {
-			section.appendChild(C.el('p', {
-				className: 'ac-field__hint ac-playlists-hint',
-				text: t('audiocheck', 'Group tracks in any order — for moods, albums, or listening sessions.'),
-			}));
-		}
-
-		body.appendChild(section);
 	}
 
 	function createPlaylistModal(onCreated) {
@@ -290,127 +171,313 @@
 		});
 	}
 
-	AudioCheckRouter.register('playlists', {
-		render() {
-			const frag = document.createDocumentFragment();
-			const reload = () => AudioCheckRouter.navigate('playlists', {}, false);
-			const createBtn = C.el('button', {
-				type: 'button',
-				className: 'ac-btn ac-btn--primary',
-				text: t('audiocheck', 'New playlist'),
-				onClick: () => createPlaylistModal(reload),
-			});
-			frag.appendChild(C.pageHeader(
-				t('audiocheck', 'Playlists'),
-				t('audiocheck', 'Built-in Favorites and playlists you create.'),
-				createBtn,
-			));
+	function fetchFavoriteCount() {
+		return AudioCheckApi.get('/apps/audiocheck/api/tracks', { favorite: '1', limit: 1 })
+			.then((data) => (typeof data.total === 'number' ? data.total : (data.items || []).length));
+	}
 
-			const body = C.el('div', { className: 'ac-page-body ac-playlists-page' });
-			body.appendChild(playlistsLoading());
-			frag.appendChild(body);
+	function playlistRowOptionsForUserPlaylist(track, playlistId, items, reload) {
+		const index = items.findIndex((it) => it.id === track.id);
+		return UIL().trackRowOptions(track, {
+			onRemove: () => {
+				AudioCheckApi.del('/apps/audiocheck/api/playlist-items/{id}', null, { params: { id: track.id } })
+					.then(() => reload())
+					.catch((e) => AudioCheckMessaging.toast(e.message, 'error'));
+			},
+			removeLabel: t('audiocheck', 'Remove from playlist'),
+			onMoveUp: index > 0 ? () => reorderPlaylistItems(playlistId, items, index, -1, reload) : null,
+			onMoveDown: index >= 0 && index < items.length - 1
+				? () => reorderPlaylistItems(playlistId, items, index, 1, reload)
+				: null,
+			moveUpDisabled: index <= 0,
+			moveDownDisabled: index < 0 || index >= items.length - 1,
+		});
+	}
 
+	function reorderPlaylistItems(playlistId, items, index, delta, reload) {
+		const target = index + delta;
+		if (target < 0 || target >= items.length) return;
+		const ids = items.map((it) => it.id);
+		const tmp = ids[index];
+		ids[index] = ids[target];
+		ids[target] = tmp;
+		AudioCheckApi.put('/apps/audiocheck/api/playlists/{id}/items/reorder', { itemIds: ids }, { params: { id: playlistId } })
+			.then(() => reload())
+			.catch((e) => AudioCheckMessaging.toast(e.message, 'error'));
+	}
+
+	function mountPlaylistSummaryActions(summary, pl, reload) {
+		const actions = C.el('div', { className: 'ac-playlist-group__actions' });
+		actions.appendChild(summaryActionBtn(
+			t('audiocheck', 'Add tracks'),
+			() => addTracksModal(pl.id, reload),
+		));
+		actions.appendChild(summaryActionBtn(
+			pl.isPinned ? t('audiocheck', 'Unpin') : t('audiocheck', 'Pin'),
+			() => {
+				AudioCheckApi.put('/apps/audiocheck/api/playlists/{id}', { isPinned: !pl.isPinned }, { params: { id: pl.id } })
+					.then(() => reload())
+					.catch((e) => AudioCheckMessaging.toast(e.message, 'error'));
+			},
+		));
+		actions.appendChild(summaryActionBtn(
+			t('audiocheck', 'Rename'),
+			() => renamePlaylistModal(pl.id, pl.name, reload),
+		));
+		actions.appendChild(summaryActionBtn(
+			t('audiocheck', 'Delete'),
+			() => {
+				C.confirmDialog({
+					title: t('audiocheck', 'Delete playlist?'),
+					message: t('audiocheck', 'This cannot be undone.'),
+					confirmLabel: t('audiocheck', 'Delete playlist'),
+					onConfirm: async () => {
+						await AudioCheckApi.del('/apps/audiocheck/api/playlists/{id}', null, { params: { id: pl.id } });
+						AudioCheckMessaging.toast(t('audiocheck', 'Playlist deleted.'));
+						reload();
+					},
+				});
+			},
+		));
+		summary.appendChild(actions);
+	}
+
+	function renderFavoritesGroup(host, count, startOpen, reloadPage) {
+		const label = t('audiocheck', 'Favorites');
+		const group = UIL().renderExpandableTrackGroup({
+			C,
+			label,
+			count,
+			host,
+			startOpen,
+			groupClassName: 'ac-playlist-group ac-playlist-group--favorites',
+			loadTracks: () => AudioCheckApi.get('/apps/audiocheck/api/tracks', {
+				favorite: '1',
+				limit: UIL().FACET_TRACK_LIMIT,
+				sort: 'title',
+			}),
+			playAllTracks: async () => {
+				const tracks = [];
+				let pageNum = 1;
+				let totalTracks = Infinity;
+				while (tracks.length < totalTracks && tracks.length < PLAY_ALL_MAX_TRACKS) {
+					const data = await AudioCheckApi.get('/apps/audiocheck/api/tracks', {
+						favorite: '1',
+						sort: 'title',
+						limit: PLAY_ALL_PAGE_SIZE,
+						page: pageNum,
+					});
+					const batch = data.items || [];
+					batch.forEach((tr) => {
+						if (tr && !tr.unavailable) tracks.push(tr);
+					});
+					totalTracks = data.total != null ? data.total : tracks.length;
+					if (batch.length < PLAY_ALL_PAGE_SIZE) break;
+					pageNum += 1;
+				}
+				if (totalTracks > tracks.length) {
+					AudioCheckMessaging.toast(
+						t('audiocheck', 'Playing first {count} tracks.', { count: String(tracks.length) }),
+						'info',
+					);
+				}
+				return tracks;
+			},
+			rowOptionsForTrack: (track) => UIL().trackRowOptions(track, {
+				onRemove: () => {
+					AudioCheckApi.put('/apps/audiocheck/api/tracks/{fileId}/favorite', { favorite: false }, { params: { fileId: track.fileId } })
+						.then(() => {
+							group.reload();
+							reloadPage();
+						})
+						.catch((e) => AudioCheckMessaging.toast(e.message, 'error'));
+				},
+				removeLabel: t('audiocheck', 'Remove from favorites'),
+			}),
+		});
+		return group;
+	}
+
+	function renderUserPlaylistGroup(host, pl, startOpen, reloadPage) {
+		const label = pl.name || t('audiocheck', 'Playlist');
+		const count = pl.trackCount != null ? pl.trackCount : 0;
+		let currentItems = [];
+
+		const group = UIL().renderExpandableTrackGroup({
+			C,
+			label,
+			count,
+			host,
+			startOpen,
+			groupClassName: 'ac-playlist-group' + (pl.isPinned ? ' ac-playlist-group--pinned' : ''),
+			mountSummaryExtra: (summary) => mountPlaylistSummaryActions(summary, pl, reloadPage),
+			loadTracks: async () => {
+				const data = await AudioCheckApi.get('/apps/audiocheck/api/playlists/{id}', null, { params: { id: pl.id } });
+				const playlist = data.playlist || {};
+				currentItems = playlist.items || [];
+				return { items: currentItems, total: currentItems.length };
+			},
+			playAllTracks: async () => {
+				const data = await AudioCheckApi.get('/apps/audiocheck/api/playlists/{id}', null, { params: { id: pl.id } });
+				return (data.playlist?.items || []);
+			},
+			rowOptionsForTrack: (track) => playlistRowOptionsForUserPlaylist(track, pl.id, currentItems, () => {
+				group.reload();
+				reloadPage();
+			}),
+		});
+		return group;
+	}
+
+	function renderPlaylistsIndex(body, playlists, favCount) {
+		body.textContent = '';
+		const lead = C.el('p', {
+			className: 'ac-section__lead ac-facet-browse-lead',
+			text: t('audiocheck', 'Open a playlist to see its tracks. Use Play on a row or Play all on a group header.'),
+		});
+		const status = C.el('p', {
+			className: 'ac-field__hint ac-facet-browse-status',
+			attrs: { role: 'status', 'aria-live': 'polite' },
+		});
+		const panel = C.el('div', { className: 'ac-media-library-panel ac-facet-browse-panel' });
+		const host = C.el('div', { className: 'ac-media-folder-groups ac-facet-groups' });
+		panel.appendChild(host);
+		body.appendChild(lead);
+		body.appendChild(status);
+		body.appendChild(panel);
+
+		function reloadPage() {
 			Promise.all([
 				AudioCheckApi.get('/apps/audiocheck/api/playlists'),
 				fetchFavoriteCount().catch(() => 0),
-			]).then(([data, favCount]) => {
-				renderPlaylistsPage(body, data.playlists || [], favCount, reload);
+			]).then(([data, newFavCount]) => {
+				renderPlaylistsIndex(body, data.playlists || [], newFavCount);
 			}).catch((e) => {
-				body.textContent = '';
-				body.appendChild(C.emptyState(
-					t('audiocheck', 'Could not load playlists'),
-					e.message || t('audiocheck', 'Request failed.'),
-					{ icon: 'playlist' },
-				));
+				status.textContent = e.message || t('audiocheck', 'Request failed.');
 			});
+		}
 
-			return frag;
-		},
-	});
+		const openAll = playlists.length === 0;
+		renderFavoritesGroup(host, favCount, openAll, reloadPage);
+		const openFirst = playlists.length === 1;
+		playlists.forEach((pl, idx) => {
+			renderUserPlaylistGroup(host, pl, openFirst && idx === 0, reloadPage);
+		});
 
-	AudioCheckRouter.register('playlist', {
-		render(params) {
-			const playlistId = params.playlistId;
-			const frag = document.createDocumentFragment();
-			const header = C.el('header', { className: 'ac-page-header' });
-			const titleEl = C.el('h1', { text: t('audiocheck', 'Playlist') });
-			const actions = C.el('div', { className: 'ac-toolbar ac-toolbar--wrap' });
-			header.appendChild(titleEl);
-			header.appendChild(actions);
-			frag.appendChild(header);
+		const totalPlaylists = playlists.length + 1;
+		const trackTotal = playlists.reduce((sum, pl) => sum + (pl.trackCount || 0), 0) + (favCount || 0);
+		status.textContent = t('audiocheck', '{count} items', { count: String(totalPlaylists) })
+			+ ' — '
+			+ AudioCheckTime.tracksLabel(trackTotal);
 
-			const hint = C.el('p', { className: 'ac-field__hint ac-playlist-hint', hidden: true });
-			frag.appendChild(hint);
+		if (playlists.length === 0 && favCount === 0) {
+			status.textContent = '';
+		}
+	}
 
-			const ul = C.el('ul', { className: 'ac-track-list' });
-			frag.appendChild(ul);
+	function renderPlaylistDetail(frag, playlistId) {
+		const isFav = isFavorites(playlistId);
+		let sort = 'title';
+		let query = '';
+		let page = 1;
+		let total = 0;
+		let timer = null;
+		let playableCache = [];
+		let playlistData = null;
 
-			function renderFavoritesPlaylist(tracks) {
-				titleEl.textContent = t('audiocheck', 'Favorites');
-				hint.hidden = false;
-				hint.textContent = t('audiocheck', 'Star tracks in Now playing or Browse. Favorites also appear in the Files app.');
-				actions.textContent = '';
+		const header = C.el('header', { className: 'ac-page-header ac-page-header--with-actions' });
+		const titleEl = C.el('h1', { text: isFav ? t('audiocheck', 'Favorites') : t('audiocheck', 'Playlist') });
+		const intro = C.el('p', {
+			text: isFav
+				? t('audiocheck', 'Tracks you starred in Now playing or Browse. They also sync with the Files app.')
+				: '',
+		});
+		const actions = C.el('div', { className: 'ac-page-header__actions ac-toolbar ac-toolbar--wrap' });
+		header.appendChild(C.el('div', { className: 'ac-page-header__intro' }, [titleEl, intro]));
+		header.appendChild(actions);
+		frag.appendChild(header);
 
-				const playable = (tracks || []).filter((x) => !x.unavailable);
-				const playLabel = playable.length === 1
-					? t('audiocheck', 'Play')
-					: t('audiocheck', 'Play all');
-				const playAll = C.el('button', {
-					type: 'button',
-					className: 'ac-btn ac-btn--primary',
-					text: playLabel,
-					disabled: playable.length === 0,
-					onClick: () => AudioCheckPlayer.playQueue(playable, 0),
-				});
-				const back = C.el('button', {
-					type: 'button',
-					className: 'ac-btn',
-					text: t('audiocheck', 'Back to playlists'),
-					onClick: () => AudioCheckRouter.navigate('playlists', {}, true),
-				});
-				actions.appendChild(playAll);
-				actions.appendChild(back);
+		const body = C.el('div', { className: 'ac-page-body ac-playlists-page ac-facet-browse-page' });
+		const toolbar = C.el('div', { className: 'ac-toolbar ac-collection-toolbar ac-facet-browse-toolbar' });
+		const status = C.el('p', {
+			className: 'ac-field__hint ac-facet-browse-status',
+			attrs: { role: 'status', 'aria-live': 'polite' },
+		});
+		const panel = C.el('div', { className: 'ac-media-library-panel ac-facet-browse-panel' });
+		const moreWrap = C.el('div', { className: 'ac-toolbar ac-toolbar--compact ac-facet-browse-more' });
+		body.appendChild(toolbar);
+		body.appendChild(status);
+		body.appendChild(panel);
+		body.appendChild(moreWrap);
+		frag.appendChild(body);
 
-				ul.textContent = '';
-				if (!tracks.length) {
-					ul.appendChild(C.el('li', {
-						className: 'ac-track-list__empty',
-						text: t('audiocheck', 'No favorite tracks yet. Tap Favorite on a track to add it here.'),
-					}));
-					return;
-				}
+		function updateToolbar() {
+			toolbar.replaceChildren();
+			const search = C.el('input', {
+				type: 'search',
+				className: 'ac-input ac-collection-toolbar__search',
+				attrs: {
+					'aria-label': t('audiocheck', 'Search tracks…'),
+					placeholder: t('audiocheck', 'Search tracks…'),
+					autocomplete: 'off',
+					value: query,
+				},
+			});
+			search.addEventListener('input', () => {
+				clearTimeout(timer);
+				query = search.value.trim();
+				timer = setTimeout(() => loadTracks(true), 300);
+			});
+			toolbar.appendChild(search);
 
-				tracks.forEach((track) => {
-					const playIndex = playable.indexOf(track);
-					ul.appendChild(C.trackRow(track, () => {
-						if (playIndex >= 0) AudioCheckPlayer.playQueue(playable, playIndex);
-					}, {
-						onRemove: () => {
-							AudioCheckApi.put('/apps/audiocheck/api/tracks/{fileId}/favorite', { favorite: false }, { params: { fileId: track.fileId } })
-								.then(() => load())
-								.catch((e) => AudioCheckMessaging.toast(e.message, 'error'));
-						},
-						removeLabel: t('audiocheck', 'Remove from favorites'),
-					}));
-				});
-			}
+			const sortSel = C.el('select', {
+				className: 'ac-input ac-collection-toolbar__sort',
+				attrs: { 'aria-label': t('audiocheck', 'Sort by') },
+			});
+			[
+				{ v: 'title', l: t('audiocheck', 'Title') },
+				{ v: 'artist', l: t('audiocheck', 'Artist') },
+				{ v: 'added', l: t('audiocheck', 'Recently added') },
+				{ v: 'played', l: t('audiocheck', 'Recently played') },
+			].forEach((opt) => {
+				sortSel.appendChild(C.el('option', {
+					value: opt.v,
+					text: opt.l,
+					attrs: opt.v === sort ? { selected: true } : {},
+				}));
+			});
+			sortSel.addEventListener('change', () => {
+				sort = sortSel.value;
+				loadTracks(true);
+			});
+			toolbar.appendChild(sortSel);
+		}
 
-			function renderPlaylist(pl) {
-				hint.hidden = true;
-				titleEl.textContent = pl.name || t('audiocheck', 'Playlist');
-				actions.textContent = '';
-
-				const playable = (pl.items || []).filter((x) => !x.unavailable);
-				const playLabel = playable.length === 1
-					? t('audiocheck', 'Play')
-					: t('audiocheck', 'Play all');
-				const playAll = C.el('button', {
-					type: 'button',
-					className: 'ac-btn ac-btn--primary',
-					text: playLabel,
-					disabled: playable.length === 0,
-					onClick: () => AudioCheckPlayer.playQueue(playable, 0),
-				});
+		function renderHeaderActions() {
+			actions.textContent = '';
+			const playable = isFav
+				? playableCache
+				: (playlistData?.items || []).filter((x) => !x.unavailable);
+			const playLabel = playable.length === 1 ? t('audiocheck', 'Play') : t('audiocheck', 'Play all');
+			const playAll = C.el('button', {
+				type: 'button',
+				className: 'ac-btn ac-btn--primary',
+				text: playLabel,
+				disabled: playable.length === 0,
+				onClick: () => {
+					AudioCheckPlayer.playQueue(playable, 0);
+					AudioCheckRouter.navigate('now-playing', {}, true);
+				},
+			});
+			const back = C.el('button', {
+				type: 'button',
+				className: 'ac-btn',
+				text: t('audiocheck', 'Back to playlists'),
+				onClick: () => AudioCheckRouter.navigate('playlists', {}, true),
+			});
+			actions.appendChild(playAll);
+			if (!isFav && playlistData) {
+				const pl = playlistData;
 				const addBtn = C.el('button', {
 					type: 'button',
 					className: 'ac-btn',
@@ -450,66 +517,186 @@
 						});
 					},
 				});
-				const back = C.el('button', {
-					type: 'button',
-					className: 'ac-btn',
-					text: t('audiocheck', 'Back to playlists'),
-					onClick: () => AudioCheckRouter.navigate('playlists', {}, true),
-				});
+				actions.appendChild(addBtn);
+				actions.appendChild(pinBtn);
+				actions.appendChild(renameBtn);
+				actions.appendChild(deleteBtn);
+			}
+			actions.appendChild(back);
+		}
 
-				[playAll, addBtn, pinBtn, renameBtn, deleteBtn, back].forEach((b) => actions.appendChild(b));
-
-				ul.textContent = '';
-				if (!pl.items || !pl.items.length) {
-					ul.appendChild(C.el('li', { className: 'ac-track-list__empty', text: t('audiocheck', 'This playlist is empty.') }));
+		function loadFavorites(reset) {
+			if (reset) {
+				page = 1;
+				playableCache = [];
+				panel.replaceChildren();
+				panel.appendChild(C.el('ul', { className: 'ac-track-list', id: 'ac-playlist-detail-list' }));
+			}
+			const list = panel.querySelector('#ac-playlist-detail-list');
+			if (!list) return;
+			status.textContent = t('audiocheck', 'Loading…');
+			moreWrap.textContent = '';
+			const params = { favorite: '1', limit: PAGE_SIZE, page, sort };
+			if (query.length >= 2) params.q = query;
+			AudioCheckApi.get('/apps/audiocheck/api/tracks', params).then((data) => {
+				const items = data.items || [];
+				total = data.total != null ? data.total : items.length;
+				if (reset && !items.length) {
+					panel.replaceChildren();
+					panel.appendChild(C.emptyState(
+						t('audiocheck', 'No favorite tracks yet'),
+						query.length >= 2
+							? t('audiocheck', 'No matching tracks.')
+							: t('audiocheck', 'Star tracks in Now playing or Browse. Favorites also appear in the Files app.'),
+						{ icon: 'playlist' },
+					));
+					status.textContent = '';
+					renderHeaderActions();
 					return;
 				}
-
-				function reorder(index, delta) {
-					const items = pl.items.slice();
-					const target = index + delta;
-					if (target < 0 || target >= items.length) return;
-					const ids = items.map((it) => it.id);
-					const tmp = ids[index];
-					ids[index] = ids[target];
-					ids[target] = tmp;
-					AudioCheckApi.put('/apps/audiocheck/api/playlists/{id}/items/reorder', { itemIds: ids }, { params: { id: playlistId } })
-						.then(() => load())
-						.catch((e) => AudioCheckMessaging.toast(e.message, 'error'));
-				}
-
-				pl.items.forEach((track, i) => {
-					const playIndex = playable.indexOf(track);
-					ul.appendChild(C.trackRow(track, () => {
-						if (playIndex >= 0) AudioCheckPlayer.playQueue(playable, playIndex);
-					}, {
-						onRemove: () => {
-							AudioCheckApi.del('/apps/audiocheck/api/playlist-items/{id}', null, { params: { id: track.id } })
-								.then(() => load())
-								.catch((e) => AudioCheckMessaging.toast(e.message, 'error'));
-						},
-						removeLabel: t('audiocheck', 'Remove from playlist'),
-						onMoveUp: i > 0 ? () => reorder(i, -1) : null,
-						onMoveDown: i < pl.items.length - 1 ? () => reorder(i, 1) : null,
-						moveUpDisabled: i === 0,
-						moveDownDisabled: i === pl.items.length - 1,
+				UIL().appendTracksToList(list, items, playableCache, C, null, (track) => UIL().trackRowOptions(track, {
+					onRemove: () => {
+						AudioCheckApi.put('/apps/audiocheck/api/tracks/{fileId}/favorite', { favorite: false }, { params: { fileId: track.fileId } })
+							.then(() => load())
+							.catch((e) => AudioCheckMessaging.toast(e.message, 'error'));
+					},
+					removeLabel: t('audiocheck', 'Remove from favorites'),
+				}));
+				status.textContent = t('audiocheck', 'Showing {shown} of {total} tracks', {
+					shown: String(list.children.length),
+					total: String(total),
+				});
+				renderHeaderActions();
+				if (list.children.length < total) {
+					moreWrap.appendChild(C.el('button', {
+						type: 'button',
+						className: 'ac-btn ac-btn--primary',
+						text: t('audiocheck', 'Load more'),
+						onClick: () => { page += 1; loadFavorites(false); },
 					}));
-				});
-			}
-
-			function load() {
-				if (isFavorites(playlistId)) {
-					fetchFavoriteTracks()
-						.then((tracks) => renderFavoritesPlaylist(tracks))
-						.catch((e) => AudioCheckMessaging.toast(e.message, 'error'));
-					return;
 				}
-				AudioCheckApi.get('/apps/audiocheck/api/playlists/{id}', null, { params: { id: playlistId } })
-					.then((data) => renderPlaylist(data.playlist || {}))
-					.catch((e) => AudioCheckMessaging.toast(e.message, 'error'));
-			}
+			}).catch((e) => {
+				status.textContent = e.message || t('audiocheck', 'Request failed.');
+			});
+		}
 
-			load();
+		function loadUserPlaylist() {
+			status.textContent = t('audiocheck', 'Loading…');
+			moreWrap.textContent = '';
+			AudioCheckApi.get('/apps/audiocheck/api/playlists/{id}', null, { params: { id: playlistId } })
+				.then((data) => {
+					playlistData = data.playlist || {};
+					titleEl.textContent = playlistData.name || t('audiocheck', 'Playlist');
+					intro.textContent = '';
+					renderHeaderActions();
+
+					let items = playlistData.items || [];
+					if (query.length >= 2) {
+						const q = query.toLowerCase();
+						items = items.filter((tr) => {
+							const title = (tr.title || tr.fileName || '').toLowerCase();
+							const artist = (tr.artist || '').toLowerCase();
+							return title.includes(q) || artist.includes(q);
+						});
+					}
+					if (sort !== 'title') {
+						items = items.slice().sort((a, b) => {
+							if (sort === 'artist') return String(a.artist || '').localeCompare(String(b.artist || ''));
+							if (sort === 'added') return (b.addedAt || 0) - (a.addedAt || 0);
+							if (sort === 'played') return (b.lastPlayedAt || 0) - (a.lastPlayedAt || 0);
+							return String(a.title || a.fileName || '').localeCompare(String(b.title || b.fileName || ''));
+						});
+					}
+
+					panel.replaceChildren();
+					const list = C.el('ul', { className: 'ac-track-list' });
+					panel.appendChild(list);
+					if (!items.length) {
+						panel.replaceChildren();
+						panel.appendChild(C.emptyState(
+							t('audiocheck', 'This playlist is empty.'),
+							query.length >= 2
+								? t('audiocheck', 'No matching tracks.')
+								: t('audiocheck', 'Add tracks with the button above.'),
+							{ icon: 'playlist' },
+						));
+						status.textContent = '';
+						return;
+					}
+
+					const cache = [];
+					const allItems = playlistData.items || [];
+					UIL().appendTracksToList(list, items, cache, C, null, (track) => (
+						playlistRowOptionsForUserPlaylist(track, playlistId, allItems, () => load())
+					));
+					status.textContent = AudioCheckTime.tracksLabel(items.length);
+				})
+				.catch((e) => {
+					status.textContent = e.message || t('audiocheck', 'Request failed.');
+				});
+		}
+
+		function loadTracks(reset) {
+			if (isFav) loadFavorites(!!reset);
+			else loadUserPlaylist();
+		}
+
+		function load() {
+			updateToolbar();
+			loadTracks(true);
+		}
+
+		load();
+	}
+
+	AudioCheckRouter.register('playlists', {
+		render() {
+			const frag = document.createDocumentFragment();
+			const reload = () => AudioCheckRouter.navigate('playlists', {}, false);
+			const createBtn = C.el('button', {
+				type: 'button',
+				className: 'ac-btn ac-btn--primary',
+				text: t('audiocheck', 'New playlist'),
+				onClick: () => createPlaylistModal(reload),
+			});
+			frag.appendChild(C.pageHeader(
+				t('audiocheck', 'Playlists'),
+				t('audiocheck', 'Built-in Favorites and playlists you create.'),
+				createBtn,
+			));
+
+			const body = C.el('div', { className: 'ac-page-body ac-playlists-page ac-facet-browse-page' });
+			body.appendChild(C.el('div', {
+				className: 'ac-playlists-loading',
+				attrs: { role: 'status', 'aria-live': 'polite' },
+			}, [
+				C.el('span', { className: 'ac-skeleton ac-skeleton--title' }),
+				C.el('span', { className: 'ac-skeleton ac-skeleton--card' }),
+			]));
+			frag.appendChild(body);
+
+			Promise.all([
+				AudioCheckApi.get('/apps/audiocheck/api/playlists'),
+				fetchFavoriteCount().catch(() => 0),
+			]).then(([data, favCount]) => {
+				renderPlaylistsIndex(body, data.playlists || [], favCount);
+			}).catch((e) => {
+				body.textContent = '';
+				body.appendChild(C.emptyState(
+					t('audiocheck', 'Could not load playlists'),
+					e.message || t('audiocheck', 'Request failed.'),
+					{ icon: 'playlist' },
+				));
+			});
+
+			return frag;
+		},
+	});
+
+	AudioCheckRouter.register('playlist', {
+		render(params) {
+			const frag = document.createDocumentFragment();
+			renderPlaylistDetail(frag, params.playlistId);
 			return frag;
 		},
 	});
