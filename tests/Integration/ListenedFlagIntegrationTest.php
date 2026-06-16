@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\AudioCheck\Tests\Integration;
 
 use OCA\AudioCheck\Service\FileAccessService;
+use OCA\AudioCheck\Service\LibraryService;
 use OCA\AudioCheck\Service\PlaybackStateService;
 use OCP\Files\File;
 use OCP\IUserManager;
@@ -124,6 +125,28 @@ final class ListenedFlagIntegrationTest extends TestCase
 		$result = $library->setListenedBulk($user, $fileIds, true);
 		$this->assertSame(2, $result['updated']);
 		$this->assertSame(0, $result['skipped']);
+	}
+
+	public function testHideListenedExcludesMarkedTracksFromListTracks(): void
+	{
+		$user = $this->makeUser('hide-listened');
+		$heard = $this->makeFile($user, 'heard.mp3');
+		$fresh = $this->makeFile($user, 'fresh.mp3');
+		/** @var PlaybackStateService $playback */
+		$playback = \OC::$server->get(PlaybackStateService::class);
+		$playback->setListened($user, $heard, true);
+
+		/** @var \OCA\AudioCheck\Service\LibraryService $library */
+		$library = \OC::$server->get(\OCA\AudioCheck\Service\LibraryService::class);
+		$all = $library->listTracks($user, null, null, LibraryService::SORT_TITLE, 1, 50, false, null, null, null, null, null, false);
+		$hidden = $library->listTracks($user, null, null, LibraryService::SORT_TITLE, 1, 50, false, null, null, null, null, null, true);
+		$allIds = array_map(static fn (array $row): int => (int)$row['fileId'], $all['items']);
+		$hiddenIds = array_map(static fn (array $row): int => (int)$row['fileId'], $hidden['items']);
+
+		$this->assertContains($heard, $allIds);
+		$this->assertContains($fresh, $allIds);
+		$this->assertNotContains($heard, $hiddenIds, 'hideListened must exclude listened tracks');
+		$this->assertContains($fresh, $hiddenIds);
 	}
 
 	private function makeUser(string $suffix): string
