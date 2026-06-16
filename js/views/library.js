@@ -301,14 +301,26 @@
 			},
 		];
 		choices.forEach((choice) => {
+			const iconKind = choice.mod === 'auto' ? 'folder' : choice.mod;
 			const btn = C.el('button', {
 				type: 'button',
 				className: 'ac-library-add__card ac-library-add__card--' + choice.mod,
 				attrs: { 'data-ac-add-kind': choice.kind },
 				onClick: () => runAddFolder(handlers, choice.kind),
 			});
-			btn.appendChild(C.el('span', { className: 'ac-library-add__card-title', text: choice.title }));
-			btn.appendChild(C.el('span', { className: 'ac-library-add__card-desc', text: choice.desc }));
+			const head = C.el('div', { className: 'ac-library-add__card-head' });
+			head.appendChild(C.kindIcon(iconKind, 'ac-library-add__card-icon'));
+			const textWrap = C.el('div', { className: 'ac-library-add__card-text' });
+			textWrap.appendChild(C.el('span', { className: 'ac-library-add__card-title', text: choice.title }));
+			textWrap.appendChild(C.el('span', { className: 'ac-library-add__card-desc', text: choice.desc }));
+			head.appendChild(textWrap);
+			btn.appendChild(head);
+			const cta = C.el('span', { className: 'ac-library-add__card-cta' });
+			if (window.AudioCheckIcons && AudioCheckIcons.createSvg) {
+				cta.appendChild(AudioCheckIcons.createSvg('add'));
+			}
+			cta.appendChild(document.createTextNode(t('audiocheck', 'Choose folder in Files')));
+			btn.appendChild(cta);
 			grid.appendChild(btn);
 		});
 		host.appendChild(grid);
@@ -357,7 +369,9 @@
 				text: t('audiocheck', 'Your folder is saved. Tap Scan now if tracks do not appear after a moment.'),
 			}));
 		} else if (folderCount > 0 && trackCount > 0) {
-			const actions = C.el('div', { className: 'ac-toolbar ac-toolbar--compact ac-toolbar--wrap' });
+			const actions = C.el('div', {
+				className: 'ac-toolbar ac-toolbar--compact ac-toolbar--wrap ac-library-summary__actions',
+			});
 			actions.appendChild(C.el('button', {
 				type: 'button',
 				className: 'ac-btn ac-btn--primary',
@@ -440,19 +454,21 @@
 				const identity = C.el('div', { className: 'ac-library-card__identity' });
 				identity.appendChild(C.kindIcon(kindMod, 'ac-library-card__icon'));
 				const titles = C.el('div', { className: 'ac-library-card__titles' });
-				titles.appendChild(C.el('h3', {
+				const titleRow = C.el('div', { className: 'ac-library-card__title-row' });
+				titleRow.appendChild(C.el('h3', {
 					className: 'ac-library-card__name',
 					text: folderDisplayName(lib.folderPath),
 				}));
+				titleRow.appendChild(C.el('span', {
+					className: 'ac-library-card__kind ' + contentKindBadgeClass(lib.contentKind),
+					text: contentKindLabel(lib.contentKind),
+				}));
+				titles.appendChild(titleRow);
 				titles.appendChild(C.el('p', {
 					className: 'ac-library-card__path',
 					text: pathLabel,
 				}));
 				identity.appendChild(titles);
-				identity.appendChild(C.el('span', {
-					className: 'ac-library-card__kind ' + contentKindBadgeClass(lib.contentKind),
-					text: contentKindLabel(lib.contentKind),
-				}));
 				body.appendChild(identity);
 
 				const stats = C.el('dl', { className: 'ac-library-card__stats' });

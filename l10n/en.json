@@ -41,6 +41,7 @@
 		"Books and chapter folders (MP3, M4B, and more).": "Books and chapter folders (MP3, M4B, and more).",
 		"Let AudioCheck guess from file type, length, and genre.": "Let AudioCheck guess from file type, length, and genre.",
 		"Add a folder from Files": "Add a folder from Files",
+		"Choose folder in Files": "Choose folder in Files",
 		"{kind} folder added. Scanning your audio…": "{kind} folder added. Scanning your audio…",
 		"Use the buttons above to add a music or audiobook folder from Files.": "Use the buttons above to add a music or audiobook folder from Files.",
 		"Music folders": "Music folders",

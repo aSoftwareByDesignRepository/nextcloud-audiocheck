@@ -41,6 +41,7 @@
 		"Books and chapter folders (MP3, M4B, and more).": "Bücher und Kapitelordner (MP3, M4B und mehr).",
 		"Let AudioCheck guess from file type, length, and genre.": "AudioCheck erkennt anhand von Dateityp, Länge und Genre.",
 		"Add a folder from Files": "Ordner aus Dateien hinzufügen",
+		"Choose folder in Files": "Ordner in Dateien wählen",
 		"{kind} folder added. Scanning your audio…": "{kind}-Ordner hinzugefügt. Audio wird gescannt …",
 		"Use the buttons above to add a music or audiobook folder from Files.": "Nutze die Schaltflächen oben, um einen Musik- oder Hörbuchordner aus Dateien hinzuzufügen.",
 		"Music folders": "Musikordner",
