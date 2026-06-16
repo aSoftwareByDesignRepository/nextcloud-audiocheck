@@ -288,7 +288,7 @@
 					}
 					const list = panel.querySelector('#' + idPrefix + '-track-list');
 					if (!list) return;
-					status.textContent = '…';
+					status.textContent = t('audiocheck', 'Loading…');
 					moreWrap.textContent = '';
 					const params = { favorite: '1', limit: PAGE_SIZE, page, sort };
 					if (query.length >= 2) params.q = query;
@@ -421,7 +421,7 @@
 				function loadFacets(type) {
 					panel.replaceChildren();
 					moreWrap.textContent = '';
-					status.textContent = '…';
+					status.textContent = t('audiocheck', 'Loading…');
 					const host = C.el('div', { className: 'ac-media-folder-groups ac-facet-groups' });
 					panel.appendChild(host);
 

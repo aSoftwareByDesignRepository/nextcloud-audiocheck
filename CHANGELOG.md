@@ -2,6 +2,25 @@
 
 All notable changes to AudioCheck are documented in this file.
 
+## [1.2.1] — 2026-06-16
+
+### Fixed
+
+- **Queue destroyed on reload / app switch while playing.** When restoring a
+  queue that was playing, the browser's autoplay policy rejects `audio.play()`
+  with `NotAllowedError` on any fresh document (reload, returning from another
+  Nextcloud app, or a deep-link landing). The player misread that benign
+  rejection as a media failure, marked the track unavailable, skipped through
+  the rest, and then **cleared the durable server queue** — losing it on every
+  device. `loadTrack()` now distinguishes autoplay/abort rejections (keep the
+  track loaded and paused, ready to resume with one tap) from genuine media
+  errors. The cross-device queue is preserved and recoverable.
+- **Durable queue no longer discarded on a real playback error.** A track that
+  cannot be decoded in the current browser is treated as "unplayable here", not
+  "deleted by the user"; the curated queue stays recoverable on reload or on
+  another device. Only explicit user actions (clear queue / remove last item)
+  wipe the persisted queue.
+
 ## [1.2.0] — 2026-06-15
 
 ### Added

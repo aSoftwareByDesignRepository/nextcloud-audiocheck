@@ -247,7 +247,7 @@
 						status.textContent = t('audiocheck', 'Type at least two characters to search.');
 						return;
 					}
-					status.textContent = '…';
+					status.textContent = t('audiocheck', 'Loading…');
 					AudioCheckApi.get('/apps/audiocheck/api/tracks', { q, limit: 30 }).then((data) => {
 						if (mySeq !== seq) return;
 						ul.textContent = '';

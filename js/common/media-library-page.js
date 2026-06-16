@@ -219,7 +219,7 @@
 					}
 					const list = panel.querySelector('#' + idPrefix + '-track-list');
 					if (!list) return;
-					status.textContent = '…';
+					status.textContent = t('audiocheck', 'Loading…');
 					moreWrap.textContent = '';
 					const params = { kind: config.kind, limit: PAGE_SIZE, page, sort };
 					if (query.length >= 2) params.q = query;
@@ -312,7 +312,7 @@
 				function loadFolders() {
 					panel.replaceChildren();
 					moreWrap.textContent = '';
-					status.textContent = '…';
+					status.textContent = t('audiocheck', 'Loading…');
 					const host = C.el('div', { className: 'ac-media-folder-groups' });
 					panel.appendChild(host);
 
@@ -359,7 +359,7 @@
 					}
 					const grid = panel.querySelector('#' + idPrefix + '-album-grid');
 					if (!grid) return;
-					status.textContent = '…';
+					status.textContent = t('audiocheck', 'Loading…');
 					moreWrap.textContent = '';
 					const params = { kind: config.kind, limit: PAGE_SIZE, page, sort };
 					if (query.length >= 2) params.q = query;

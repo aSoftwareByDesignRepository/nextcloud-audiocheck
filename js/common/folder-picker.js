@@ -155,12 +155,12 @@
 					const callout = C.createElement('p', {
 						className: 'ac-callout ac-folder-picker-help__callout',
 						attrs: { role: 'note' },
-						text: t('audiocheck', 'You are adding a folder to scan — not picking a single song. The Nextcloud dialog uses a blue “Choose …” button at the bottom to confirm the folder.'),
+						text: t('audiocheck', 'You are adding a folder to scan — not picking a single song. Use the “Choose …” button at the bottom of the dialog to confirm the folder.'),
 					});
 					const steps = C.createElement('ol', { className: 'ac-steps' }, [
 						C.createElement('li', { text: t('audiocheck', 'Browse to the folder with your audio (double-click folder rows to open them).') }),
 						C.createElement('li', { text: t('audiocheck', 'Songs in the list only confirm you are in the right place — do not click them.') }),
-						C.createElement('li', { text: t('audiocheck', 'Click the blue “Choose …” button at the bottom (for example “Choose Music”). That selects the whole folder you are viewing.') }),
+						C.createElement('li', { text: t('audiocheck', 'Click the “Choose …” button at the bottom (for example “Choose Music”). That selects the whole folder you are viewing.') }),
 						C.createElement('li', { text: t('audiocheck', 'Shortcut: from the parent folder, single-click the folder you want, then click “Choose …”.') }),
 					]);
 					const note = C.createElement('p', {
@@ -202,10 +202,28 @@
 		if (!normalized || normalized === '/') {
 			return Promise.resolve({ fileId: null, pickedPath: '' });
 		}
-		return resolveFolderFileId(normalized).then((fileId) => ({
-			fileId,
-			pickedPath: normalized,
-		}));
+		const rel = normalized.replace(/^\/+/, '');
+		const tryPaths = [normalized, '/' + rel, rel];
+		let infoChain = Promise.resolve(null);
+		tryPaths.forEach((tryPath) => {
+			infoChain = infoChain.then((found) => {
+				if (found) return found;
+				return getFileInfoAsync(tryPath).catch(() => null);
+			});
+		});
+		return infoChain.then((info) => {
+			if (info && !isDirectoryInfo(info)) {
+				AudioCheckMessaging.toast(
+					t('audiocheck', 'That is a file, not a folder. Open the folder that contains it, then click the Choose … button at the bottom.'),
+					'error',
+				);
+				return { fileId: null, pickedPath: '' };
+			}
+			return resolveFolderFileId(normalized).then((fileId) => ({
+				fileId,
+				pickedPath: normalized,
+			}));
+		});
 	}
 
 	function openModernFolderPicker() {
@@ -260,7 +278,7 @@
 						resolvePickerSelection(path).then((selection) => {
 							if (!selection.fileId && !selection.pickedPath) {
 								AudioCheckMessaging.toast(
-									t('audiocheck', 'Could not resolve folder. Open the folder in the picker, then use the blue Choose … button at the bottom.'),
+									t('audiocheck', 'Could not resolve folder. Open the folder in the picker, then use the Choose … button at the bottom.'),
 									'error',
 								);
 							}

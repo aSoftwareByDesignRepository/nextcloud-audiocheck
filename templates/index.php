@@ -11,12 +11,14 @@ use OCA\AudioCheck\Service\IconCatalog;
 <div id="ac-view-root" class="ac-view-root" data-ac-view="<?php p($_['viewId'] ?? 'home'); ?>"
 	<?php if (!empty($_['playlistId'])): ?> data-ac-playlist-id="<?php p((string)$_['playlistId']); ?>"<?php endif; ?>>
 	<div class="ac-view-loading" role="status" aria-live="polite">
+		<span class="ac-sr-only"><?php p($l->t('Loading…')); ?></span>
 		<span class="ac-skeleton ac-skeleton--title"></span>
 		<span class="ac-skeleton ac-skeleton--card"></span>
 	</div>
 </div>
 
 <div id="ac-announcer" class="ac-sr-only" aria-live="polite" aria-atomic="true"></div>
+<div id="ac-toast-fallback" class="ac-toast-fallback" role="status" aria-live="polite" aria-atomic="true" hidden></div>
 
 	</main>
 
@@ -33,13 +35,13 @@ use OCA\AudioCheck\Service\IconCatalog;
 			</button>
 
 			<div class="ac-mini-player__transport" role="group" aria-label="<?php p($l->t('Playback')); ?>">
-				<button type="button" class="ac-btn ac-btn--icon" id="ac-mini-prev" aria-label="<?php p($l->t('Previous')); ?>">
+				<button type="button" class="ac-btn ac-transport-btn" id="ac-mini-prev" aria-label="<?php p($l->t('Previous')); ?>">
 					<?php print_unescaped(IconCatalog::render('previous')); ?>
 				</button>
-				<button type="button" class="ac-btn ac-btn--icon ac-btn--primary" id="ac-mini-play" aria-label="<?php p($l->t('Play')); ?>" aria-pressed="false">
+				<button type="button" class="ac-btn ac-transport-btn ac-transport-btn--primary" id="ac-mini-play" aria-label="<?php p($l->t('Play')); ?>" aria-pressed="false">
 					<?php print_unescaped(IconCatalog::render('play')); ?>
 				</button>
-				<button type="button" class="ac-btn ac-btn--icon" id="ac-mini-next" aria-label="<?php p($l->t('Next')); ?>">
+				<button type="button" class="ac-btn ac-transport-btn" id="ac-mini-next" aria-label="<?php p($l->t('Next')); ?>">
 					<?php print_unescaped(IconCatalog::render('next')); ?>
 				</button>
 			</div>
@@ -53,9 +55,9 @@ use OCA\AudioCheck\Service\IconCatalog;
 
 			<div class="ac-mini-player__side">
 				<div class="ac-mini-player__volume" id="ac-mini-volume" role="group" aria-label="<?php p($l->t('Volume')); ?>"></div>
-				<button type="button" class="ac-btn ac-btn--text ac-mini-player__open" id="ac-mini-expand" aria-label="<?php p($l->t('Open now playing')); ?>">
-					<span class="ac-mini-player__open-label"><?php p($l->t('Now playing')); ?></span>
-					<?php print_unescaped(IconCatalog::render('play', 'ac-mini-player__open-icon')); ?>
+				<button type="button" class="ac-btn ac-btn--icon ac-mini-player__open" id="ac-mini-expand" aria-label="<?php p($l->t('Open now playing')); ?>">
+					<span class="ac-sr-only"><?php p($l->t('Open now playing')); ?></span>
+					<?php print_unescaped(IconCatalog::render('chevron-up', 'ac-mini-player__open-icon')); ?>
 				</button>
 			</div>
 		</div>

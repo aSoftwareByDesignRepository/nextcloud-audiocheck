@@ -7,39 +7,7 @@
 		row.hidden = !AudioCheckPlayer.getCurrentTrack();
 	}
 
-	function initMobileNav() {
-		const content = document.getElementById('content');
-		const toggle = document.getElementById('ac-nav-toggle');
-		const nav = document.getElementById('app-navigation');
-		const backdrop = document.getElementById('ac-nav-backdrop');
-		if (!content || !toggle || !nav) return;
-
-		function setOpen(open) {
-			content.classList.toggle('ac-nav-open', open);
-			document.body.classList.toggle('ac-nav-open', open);
-			toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-			toggle.setAttribute('aria-label', open ? t('audiocheck', 'Close menu') : t('audiocheck', 'Open menu'));
-			if (backdrop) backdrop.hidden = !open;
-			if (open) {
-				const first = nav.querySelector('a');
-				if (first) first.focus();
-			}
-		}
-
-		toggle.addEventListener('click', () => setOpen(!content.classList.contains('ac-nav-open')));
-		backdrop?.addEventListener('click', () => setOpen(false));
-		nav.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => setOpen(false)));
-		document.addEventListener('keydown', (e) => {
-			if (e.key === 'Escape' && content.classList.contains('ac-nav-open')) {
-				setOpen(false);
-				toggle.focus();
-			}
-		});
-	}
-
 	document.addEventListener('DOMContentLoaded', () => {
-		initMobileNav();
-
 		if (!window.AudioCheckPlayer) {
 			console.error('[audiocheck] AudioCheckPlayer failed to load');
 			if (window.AudioCheckMessaging) {

@@ -11,7 +11,7 @@
 	function transportBtn(label, iconName, primary, onClick) {
 		const btn = C.el('button', {
 			type: 'button',
-			className: 'ac-btn ac-btn--icon ac-btn--icon-lg' + (primary ? ' ac-btn--primary' : ''),
+			className: 'ac-btn ac-transport-btn' + (primary ? ' ac-transport-btn--primary' : ''),
 			attrs: { 'aria-label': label },
 			onClick,
 		});
@@ -49,31 +49,31 @@
 			const frag = document.createDocumentFragment();
 			const body = C.el('div', { className: 'ac-page-body ac-now-playing__body' });
 
-			const playbackSection = C.el('section', {
-				className: 'ac-section ac-now-panel',
-				id: 'ac-playback-section',
-				attrs: { hidden: true },
-			});
-			playbackSection.appendChild(C.el('h2', { className: 'ac-section__title', text: t('audiocheck', 'Playback') }));
 			const controls = C.el('div', { className: 'ac-player-controls' });
-			const shuffleBtn = C.el('button', {
-				type: 'button',
-				className: 'ac-btn',
-				id: 'ac-shuffle-btn',
-				text: t('audiocheck', 'Shuffle off'),
-				onClick: () => AudioCheckPlayer.setShuffle(!AudioCheckPlayer.getShuffle()),
+			const playbackActions = C.el('div', {
+				className: 'ac-now-actions ac-playback-actions',
+				attrs: { role: 'group', 'aria-label': t('audiocheck', 'Playback and track actions') },
 			});
-			const repeatBtn = C.el('button', {
-				type: 'button',
-				className: 'ac-btn',
-				id: 'ac-repeat-btn',
-				text: repeatLabel(AudioCheckPlayer.getRepeatMode()),
-				onClick: () => AudioCheckPlayer.cycleRepeat(),
-			});
+			const shuffleBtn = nowActionBtn(
+				t('audiocheck', 'Shuffle off'),
+				'shuffle',
+				() => AudioCheckPlayer.setShuffle(!AudioCheckPlayer.getShuffle()),
+			);
+			shuffleBtn.id = 'ac-shuffle-btn';
+			const repeatBtn = nowActionBtn(
+				repeatLabel(AudioCheckPlayer.getRepeatMode()),
+				'repeat',
+				() => AudioCheckPlayer.cycleRepeat(),
+			);
+			repeatBtn.id = 'ac-repeat-btn';
+			const trackActions = C.el('div', { className: 'ac-playback-actions__track' });
+			playbackActions.appendChild(shuffleBtn);
+			playbackActions.appendChild(repeatBtn);
+			playbackActions.appendChild(trackActions);
+			controls.appendChild(playbackActions);
 			const speed = C.el('select', {
 				id: 'ac-speed-select',
 				className: 'ac-input ac-now-speed',
-				'aria-label': t('audiocheck', 'Speed'),
 			});
 			AudioCheckConstants.SPEED_PRESETS.forEach((s) => {
 				const o = document.createElement('option');
@@ -82,11 +82,25 @@
 				speed.appendChild(o);
 			});
 			speed.addEventListener('change', () => AudioCheckPlayer.setSpeed(parseInt(speed.value, 10)));
-			controls.appendChild(shuffleBtn);
-			controls.appendChild(repeatBtn);
-			controls.appendChild(speed);
+			const speedField = C.el('div', { className: 'ac-now-speed-field' });
+			speedField.appendChild(C.el('label', {
+				className: 'ac-now-speed-field__label',
+				attrs: { for: 'ac-speed-select' },
+				text: t('audiocheck', 'Speed'),
+			}));
+			speedField.appendChild(speed);
+			controls.appendChild(speedField);
 			controls.appendChild(C.volumeControl({ idPrefix: 'ac-now' }));
-			playbackSection.appendChild(controls);
+			const settingsSection = C.el('div', {
+				className: 'ac-now-card__settings',
+				attrs: { 'aria-labelledby': 'ac-now-settings-heading' },
+			});
+			settingsSection.appendChild(C.el('h3', {
+				id: 'ac-now-settings-heading',
+				className: 'ac-now-card__settings-title',
+				text: t('audiocheck', 'Playback'),
+			}));
+			settingsSection.appendChild(controls);
 
 			const queueSection = C.el('section', {
 				className: 'ac-section ac-now-panel ac-now-panel--queue',
@@ -104,13 +118,13 @@
 				className: 'ac-now-queue__meta',
 				attrs: { 'aria-live': 'polite' },
 			});
+			queueHead.appendChild(queueMeta);
 			const queueClear = C.el('button', {
 				type: 'button',
 				className: 'ac-btn ac-btn--text ac-now-queue__clear',
 				text: t('audiocheck', 'Clear queue'),
 				onClick: () => AudioCheckPlayer.clearQueue(),
 			});
-			queueHead.appendChild(queueMeta);
 			queueHead.appendChild(queueClear);
 			queueSection.appendChild(queueHead);
 			const queueUl = C.el('ul', { className: 'ac-track-list ac-now-queue', id: 'ac-queue-list' });
@@ -292,6 +306,55 @@
 				if (nextBtn) nextBtn.disabled = !AudioCheckPlayer.canGoNext();
 			}
 
+			function setNowActionLabel(btn, label) {
+				const labelEl = btn && btn.querySelector('.ac-btn__label');
+				if (labelEl) labelEl.textContent = label;
+			}
+
+			function paintPlaybackActions(track) {
+				if (!trackActions) return;
+				trackActions.textContent = '';
+				if (!track) return;
+				const favLabel = track.favorite ? t('audiocheck', 'Unfavorite') : t('audiocheck', 'Favorite');
+				const favBtn = nowActionBtn(
+					favLabel,
+					track.favorite ? 'heart-filled' : 'heart',
+					() => {
+						const fileId = AudioCheckApi.validFileId(track.fileId);
+						if (!fileId) return;
+						const next = !track.favorite;
+						favBtn.disabled = true;
+						AudioCheckApi.put('/apps/audiocheck/api/tracks/{fileId}/favorite', { favorite: next }, { params: { fileId } })
+							.then(() => {
+								track.favorite = next;
+								AudioCheckMessaging.toast(next
+									? t('audiocheck', 'Added to Favorites.')
+									: t('audiocheck', 'Removed from Favorites.'));
+								paintNow(true);
+							}).catch((e) => {
+								AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error');
+								favBtn.disabled = false;
+							});
+					},
+					{
+						variant: 'favorite',
+						active: !!track.favorite,
+						pressed: !!track.favorite,
+					},
+				);
+				const resetBtn = nowActionBtn(t('audiocheck', 'Reset progress'), 'rotate-ccw', () => {
+					const fileId = AudioCheckApi.validFileId(track.fileId);
+					if (!fileId) return;
+					resetBtn.disabled = true;
+					AudioCheckApi.del('/apps/audiocheck/api/progress/{fileId}', null, { params: { fileId } })
+						.then(() => AudioCheckMessaging.toast(t('audiocheck', 'Progress reset.')))
+						.catch((e) => AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error'))
+						.finally(() => { resetBtn.disabled = false; });
+				});
+				trackActions.appendChild(favBtn);
+				trackActions.appendChild(resetBtn);
+			}
+
 			function paintChapters() {
 				const track = AudioCheckPlayer.getCurrentTrack();
 				if (!track || chaptersSection.hidden) return;
@@ -340,7 +403,11 @@
 				renderedEmpty = false;
 				body.classList.add('ac-now-playing__body--active');
 
-				const hero = C.el('article', { className: 'ac-card ac-now-card ac-now-card--playing', id: 'ac-now-card' });
+				const hero = C.el('article', {
+					className: 'ac-card ac-now-card ac-now-card--playing',
+					id: 'ac-now-card',
+					attrs: { 'aria-labelledby': 'ac-now-title' },
+				});
 				const coverWrap = C.el('div', { className: 'ac-now-card__cover-wrap' });
 				const coverUrl = AudioCheckApi.coverUrl(track.fileId);
 				if (coverUrl) {
@@ -360,27 +427,31 @@
 				hero.appendChild(coverWrap);
 
 				const cardBody = C.el('div', { className: 'ac-now-card__body' });
-				cardBody.appendChild(C.el('h2', {
+				const meta = C.el('div', { className: 'ac-now-card__meta' });
+				meta.appendChild(C.el('h2', {
+					id: 'ac-now-title',
 					className: 'ac-now-card__title',
 					text: track.title || track.fileName || '',
 				}));
 				if (track.artist) {
-					cardBody.appendChild(C.el('p', { className: 'ac-now-card__artist', text: track.artist }));
+					meta.appendChild(C.el('p', { className: 'ac-now-card__artist', text: track.artist }));
 				}
 				if (track.album) {
-					cardBody.appendChild(C.el('p', { className: 'ac-now-card__album', text: track.album }));
+					meta.appendChild(C.el('p', { className: 'ac-now-card__album', text: track.album }));
 				}
 				if (track.browserPlayable === false) {
-					cardBody.appendChild(C.el('p', {
+					meta.appendChild(C.el('p', {
 						className: 'ac-badge ac-badge--warn',
 						attrs: { role: 'note' },
 						text: t('audiocheck', 'May not play in this browser'),
 					}));
 				}
+				cardBody.appendChild(meta);
 
+				const player = C.el('div', { className: 'ac-now-card__player' });
 				const transport = C.el('div', {
 					className: 'ac-now-transport',
-					attrs: { 'aria-label': t('audiocheck', 'Playback') },
+					attrs: { role: 'group' },
 				});
 				const prevBtn = transportBtn(t('audiocheck', 'Previous'), 'previous', false, () => AudioCheckPlayer.prev());
 				prevBtn.id = 'ac-now-prev';
@@ -391,7 +462,7 @@
 				transport.appendChild(prevBtn);
 				transport.appendChild(playBtn);
 				transport.appendChild(nextBtn);
-				cardBody.appendChild(transport);
+				player.appendChild(transport);
 
 				const seekWrap = C.el('div', { className: 'ac-now-seek' });
 				seekInput = C.el('input', {
@@ -415,61 +486,17 @@
 				timeRow.appendChild(durEl);
 				seekWrap.appendChild(seekInput);
 				seekWrap.appendChild(timeRow);
-				cardBody.appendChild(seekWrap);
+				player.appendChild(seekWrap);
+				cardBody.appendChild(player);
 
-				const actions = C.el('div', {
-					className: 'ac-now-actions',
-					attrs: { role: 'group', 'aria-label': t('audiocheck', 'Track actions') },
-				});
-				const favLabel = track.favorite ? t('audiocheck', 'Unfavorite') : t('audiocheck', 'Favorite');
-				const favBtn = nowActionBtn(
-					favLabel,
-					track.favorite ? 'heart-filled' : 'heart',
-					() => {
-						const fileId = AudioCheckApi.validFileId(track.fileId);
-						if (!fileId) return;
-						const next = !track.favorite;
-						favBtn.disabled = true;
-						AudioCheckApi.put('/apps/audiocheck/api/tracks/{fileId}/favorite', { favorite: next }, { params: { fileId } })
-							.then(() => {
-								track.favorite = next;
-								AudioCheckMessaging.toast(next
-									? t('audiocheck', 'Added to Favorites.')
-									: t('audiocheck', 'Removed from Favorites.'));
-								paintNow(true);
-							}).catch((e) => {
-								AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error');
-								favBtn.disabled = false;
-							});
-					},
-					{
-						variant: 'favorite',
-						active: !!track.favorite,
-						pressed: !!track.favorite,
-					},
-				);
-				const resetLabel = t('audiocheck', 'Reset progress');
-				const resetBtn = nowActionBtn(resetLabel, 'rotate-ccw', () => {
-					const fileId = AudioCheckApi.validFileId(track.fileId);
-					if (!fileId) return;
-					resetBtn.disabled = true;
-					AudioCheckApi.del('/apps/audiocheck/api/progress/{fileId}', null, { params: { fileId } })
-						.then(() => AudioCheckMessaging.toast(t('audiocheck', 'Progress reset.')))
-						.catch((e) => AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error'))
-						.finally(() => { resetBtn.disabled = false; });
-				});
-				actions.appendChild(favBtn);
-				actions.appendChild(resetBtn);
-				cardBody.appendChild(actions);
 				hero.appendChild(cardBody);
+				hero.appendChild(settingsSection);
 
 				const panels = C.el('div', { className: 'ac-now-playing__panels' });
 				body.appendChild(hero);
-				panels.appendChild(playbackSection);
 				panels.appendChild(queueSection);
 				panels.appendChild(chaptersSection);
 				body.appendChild(panels);
-				playbackSection.hidden = false;
 				queueSection.hidden = false;
 
 				chaptersUl.textContent = '';
@@ -498,6 +525,7 @@
 					}));
 				}
 
+				paintPlaybackActions(track);
 				paintSeek();
 				paintTransport();
 			}
@@ -546,10 +574,12 @@
 			function paintControls() {
 				const shuffleOn = AudioCheckPlayer.getShuffle();
 				const repeatMode = AudioCheckPlayer.getRepeatMode();
-				shuffleBtn.textContent = shuffleOn ? t('audiocheck', 'Shuffle on') : t('audiocheck', 'Shuffle off');
+				setNowActionLabel(shuffleBtn, shuffleOn ? t('audiocheck', 'Shuffle on') : t('audiocheck', 'Shuffle off'));
 				shuffleBtn.setAttribute('aria-pressed', shuffleOn ? 'true' : 'false');
-				repeatBtn.textContent = repeatLabel(repeatMode);
+				shuffleBtn.classList.toggle('ac-now-action--active', shuffleOn);
+				setNowActionLabel(repeatBtn, repeatLabel(repeatMode));
 				repeatBtn.setAttribute('aria-pressed', repeatMode !== AudioCheckConstants.REPEAT_OFF ? 'true' : 'false');
+				repeatBtn.classList.toggle('ac-now-action--active', repeatMode !== AudioCheckConstants.REPEAT_OFF);
 				const curSpeed = AudioCheckConstants.SPEED_PRESETS.includes(
 					Math.round((document.getElementById('ac-audio')?.playbackRate || 1) * 100)
 				) ? Math.round((document.getElementById('ac-audio')?.playbackRate || 1) * 100) : 100;

@@ -26,10 +26,18 @@
 		return 'auto';
 	}
 
+	function scanStatusKey(status) {
+		if (status === 'running') return t('audiocheck', 'Running');
+		if (status === 'queued') return t('audiocheck', 'Queued');
+		if (status === 'idle') return t('audiocheck', 'Idle');
+		if (status === 'failed' || status === 'error') return t('audiocheck', 'Failed');
+		return status || t('audiocheck', 'Unknown');
+	}
+
 	function scanStatusLabel(scan) {
-		if (!scan) return '…';
+		if (!scan) return t('audiocheck', 'Loading…');
 		let text = t('audiocheck', 'Status: {status} — {count} tracks indexed', {
-			status: scan.status,
+			status: scanStatusKey(scan.status),
 			count: scan.tracksTotal,
 		});
 		if (scan.lastError) {
@@ -336,7 +344,7 @@
 		const dd = C.el('dd', { className: 'ac-library-summary__value' });
 		dd.appendChild(C.el('span', {
 			className: scanBadgeClass(scan && scan.status),
-			text: scan ? scan.status : '…',
+			text: scan ? scanStatusKey(scan.status) : t('audiocheck', 'Loading…'),
 		}));
 		statusRow.appendChild(dd);
 		grid.appendChild(statusRow);
@@ -382,7 +390,7 @@
 				className: 'ac-library-summary ac-card',
 				attrs: { 'aria-live': 'polite' },
 			});
-			const status = C.el('p', { id: 'ac-scan-status', className: 'ac-scan-status', text: '…' });
+			const status = C.el('p', { id: 'ac-scan-status', className: 'ac-scan-status', text: t('audiocheck', 'Loading…') });
 			const scanHint = C.el('p', {
 				id: 'ac-scan-hint',
 				className: 'ac-field__hint ac-library-scan__hint',

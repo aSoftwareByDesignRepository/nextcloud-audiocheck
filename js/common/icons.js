@@ -6,20 +6,19 @@
 	/** Keep in sync with {@see OCA\AudioCheck\Service\IconCatalog}. */
 	const ICON_SHAPES = {
 		play: [
-			{ tag: 'circle', cx: '12', cy: '12', r: '10' },
-			{ tag: 'path', d: 'm10 8 6 4-6 4Z' },
+			{ tag: 'path', d: 'M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z' },
 		],
 		pause: [
-			{ tag: 'circle', cx: '12', cy: '12', r: '10' },
-			{ tag: 'path', d: 'M10 8v8M14 8v8' },
+			{ tag: 'rect', x: '14', y: '3', width: '5', height: '18', rx: '1' },
+			{ tag: 'rect', x: '5', y: '3', width: '5', height: '18', rx: '1' },
 		],
 		previous: [
-			{ tag: 'path', d: 'm12 8-6 4 6 4V8Z' },
-			{ tag: 'path', d: 'M6 8v8' },
+			{ tag: 'path', d: 'M17.971 4.285A2 2 0 0 1 21 6v12a2 2 0 0 1-3.029 1.715l-9.997-5.998a2 2 0 0 1-.003-3.432z' },
+			{ tag: 'path', d: 'M3 20V4' },
 		],
 		next: [
-			{ tag: 'path', d: 'm12 16V8l6 4-6 4Z' },
-			{ tag: 'path', d: 'M18 8v8' },
+			{ tag: 'path', d: 'M21 4v16' },
+			{ tag: 'path', d: 'M6.029 4.285A2 2 0 0 0 3 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z' },
 		],
 		'volume-high': [
 			{ tag: 'path', d: 'M11 5 6 9H2v6h4l5 4V5Z' },
@@ -38,7 +37,11 @@
 			{ tag: 'path', d: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01' },
 		],
 		shuffle: [
-			{ tag: 'path', d: 'm16 3 5 5-5 5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5' },
+			{ tag: 'path', d: 'm18 14 4 4-4 4' },
+			{ tag: 'path', d: 'm18 2 4 4-4 4' },
+			{ tag: 'path', d: 'M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22' },
+			{ tag: 'path', d: 'M2 6h1.972a4 4 0 0 1 3.6 2.2' },
+			{ tag: 'path', d: 'M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45' },
 		],
 		repeat: [
 			{ tag: 'path', d: 'm17 2 4 4-4 4M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v1a4 4 0 0 1-4 4H3' },
@@ -67,6 +70,9 @@
 			{ tag: 'path', d: 'M12 5v14' },
 			{ tag: 'path', d: 'm19 12-7 7-7-7' },
 		],
+		'chevron-up': [
+			{ tag: 'path', d: 'm6 15 6-6 6 6' },
+		],
 	};
 
 	function appendSvgShapes(svg, shapes) {
@@ -85,7 +91,7 @@
 		svg.setAttribute('viewBox', '0 0 24 24');
 		svg.setAttribute('fill', 'none');
 		svg.setAttribute('stroke', 'currentColor');
-		svg.setAttribute('stroke-width', '1.75');
+		svg.setAttribute('stroke-width', '2');
 		svg.setAttribute('stroke-linecap', 'round');
 		svg.setAttribute('stroke-linejoin', 'round');
 		svg.setAttribute('class', 'ac-icon');

@@ -109,7 +109,7 @@
 				const status = C.createElement('p', {
 					class: 'ac-field__hint',
 					attrs: { role: 'status', 'aria-live': 'polite' },
-					text: '…',
+					text: t('audiocheck', 'Loading…'),
 				});
 				const list = C.createElement('ul', { class: 'ac-playlist-pick-list' });
 				const wrap = C.createElement('div', {}, [status, list]);

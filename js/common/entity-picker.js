@@ -163,6 +163,7 @@
 
 		input.setAttribute('role', 'combobox');
 		input.setAttribute('aria-autocomplete', 'list');
+		input.setAttribute('aria-haspopup', 'listbox');
 		input.setAttribute('aria-expanded', 'false');
 		input.addEventListener('input', onInput);
 		input.addEventListener('keydown', onKeydown);

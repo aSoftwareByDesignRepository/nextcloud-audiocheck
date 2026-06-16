@@ -151,6 +151,7 @@ class PageController extends Controller
 			'common/player',
 			'common/media-library-page',
 			'common/facet-browse-page',
+			'common/mobile-nav',
 			'views/home',
 			'views/audiobooks',
 			'views/music',

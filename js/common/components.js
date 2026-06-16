@@ -152,12 +152,20 @@
 	function appendCoverImage(wrap, fileId) {
 		const url = AudioCheckApi.coverUrl(fileId);
 		if (url) {
-			wrap.appendChild(el('img', {
+			const img = el('img', {
 				className: 'ac-card__cover',
 				src: url,
 				alt: '',
 				loading: 'lazy',
-			}));
+			});
+			img.addEventListener('error', () => {
+				const placeholder = el('div', {
+					className: 'ac-card__cover ac-card__cover--placeholder',
+					attrs: { 'aria-hidden': 'true' },
+				});
+				img.replaceWith(placeholder);
+			});
+			wrap.appendChild(img);
 		} else {
 			wrap.appendChild(el('div', {
 				className: 'ac-card__cover ac-card__cover--placeholder',
@@ -448,7 +456,11 @@
 	function focusables(root) {
 		return Array.from(root.querySelectorAll(
 			'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-		)).filter((n) => n.offsetParent !== null);
+		)).filter((node) => {
+			if (node.closest('[hidden]')) return false;
+			const style = window.getComputedStyle(node);
+			return style.visibility !== 'hidden' && style.display !== 'none';
+		});
 	}
 
 	let openModalInstance = null;
@@ -463,6 +475,7 @@
 			cancelLabel: t('audiocheck', 'Cancel'),
 			onSubmit: null,
 			dialogClass: '',
+			danger: false,
 		}, options || {});
 
 		if (openModalInstance) openModalInstance.close(false);
@@ -506,7 +519,7 @@
 				}),
 				createElement('button', {
 					type: 'button',
-					className: 'ac-btn ac-btn--primary',
+					className: 'ac-btn' + (opts.danger ? ' ac-btn--danger' : ' ac-btn--primary'),
 					text: opts.primaryLabel,
 					on: {
 						click: async () => {
@@ -564,6 +577,7 @@
 				title: options.title,
 				primaryLabel: options.confirmLabel || t('audiocheck', 'Confirm'),
 				cancelLabel: options.cancelLabel || t('audiocheck', 'Cancel'),
+				danger: !!options.danger,
 				render() {
 					return createElement('p', { class: 'ac-confirm__message', text: options.message });
 				},

@@ -42,6 +42,9 @@
 	}
 
 	function navigate(viewId, params, push) {
+		if (window.AudioCheckMobileNav && typeof AudioCheckMobileNav.close === 'function') {
+			AudioCheckMobileNav.close();
+		}
 		const r = Object.entries(routes).find(([, v]) => v.view === viewId);
 		let path = appBase() + (r ? (typeof r[1].path === 'string' ? r[1].path : '/playlists/' + (params.playlistId ?? '')) : '/');
 		if (push !== false) history.pushState({ view: viewId, params }, '', path);

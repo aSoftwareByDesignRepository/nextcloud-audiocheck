@@ -745,7 +745,12 @@
 			}
 			updateMini(null);
 			notify();
-			clearSession();
+			// Stop local playback but deliberately keep the durable server queue.
+			// "Unavailable" here means "could not be played in THIS browser/session"
+			// (e.g. an unsupported codec), not that the user discarded it — so the
+			// curated queue must remain recoverable on reload or another device.
+			// Only explicit user actions (clearQueue / removing the last item) wipe
+			// the persisted queue.
 		}
 	}
 
@@ -773,13 +778,25 @@
 		}
 	}
 
+	function openNowPlaying() {
+		if (!window.AudioCheckRouter) return;
+		if (AudioCheckRouter.getCurrentView() === 'now-playing') return;
+		AudioCheckRouter.navigate('now-playing', {}, true);
+	}
+
 	function bindMiniNowOpen() {
 		const now = document.getElementById('ac-mini-now');
-		if (!now || now.dataset.acBound) return;
-		now.dataset.acBound = '1';
-		now.addEventListener('click', () => {
-			if (activeTrack()) AudioCheckRouter.navigate('now-playing', {}, true);
-		});
+		if (now && !now.dataset.acBound) {
+			now.dataset.acBound = '1';
+			now.addEventListener('click', () => {
+				if (activeTrack()) openNowPlaying();
+			});
+		}
+		const expand = document.getElementById('ac-mini-expand');
+		if (expand && !expand.dataset.acBound) {
+			expand.dataset.acBound = '1';
+			expand.addEventListener('click', openNowPlaying);
+		}
 	}
 
 	function bindAudio() {
@@ -828,7 +845,6 @@
 		miniSeek?.addEventListener('pointerdown', () => { seekDragging = true; });
 		miniSeek?.addEventListener('pointerup', () => { seekDragging = false; });
 		miniSeek?.addEventListener('pointercancel', () => { seekDragging = false; });
-		document.getElementById('ac-mini-expand')?.addEventListener('click', () => AudioCheckRouter.navigate('now-playing', {}, true));
 		document.addEventListener('keydown', (e) => {
 			if (shortcutsBlocked(e)) return;
 			const track = currentTrack();
@@ -899,7 +915,30 @@
 		a.playbackRate = speed / 100;
 		a.load();
 		if (shouldPlay) {
-			a.play().catch(() => handlePlaybackError(i));
+			const playPromise = a.play();
+			if (playPromise && typeof playPromise.catch === 'function') {
+				playPromise.catch((err) => {
+					const name = err && err.name;
+					// A newer load()/src change superseded this play() — harmless.
+					if (name === 'AbortError') return;
+					// Autoplay was blocked because the document has no user gesture
+					// yet (every reload, app switch, or deep-link landing triggers
+					// this). The track is fully loaded and valid, so we must NEVER
+					// treat it as a failure: keep it paused and ready so the queue is
+					// preserved and the user resumes with a single tap. Genuine media
+					// failures (decode/network/unsupported) still reach the user via
+					// the audio element's own 'error' event and handlePlaybackError.
+					if (name === 'NotAllowedError') {
+						if (index === i) {
+							updateMini(queue[i], { announce: false });
+							notify();
+							announce(t('audiocheck', 'Ready to resume — press play to continue.'));
+						}
+						return;
+					}
+					handlePlaybackError(i);
+				});
+			}
 		}
 		if (positionMs > 0) {
 			a.addEventListener('loadedmetadata', function onMeta() {
