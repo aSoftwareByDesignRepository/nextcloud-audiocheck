@@ -46,6 +46,10 @@ if (!class_exists(\Test\TestCase::class)) {
 	}
 }
 
+if (!class_exists(\Symfony\Component\Console\Command\Command::class, false)) {
+	eval('namespace Symfony\Component\Console\Command; class Command {}');
+}
+
 if ($base === null) {
 	if (!class_exists(\Doctrine\DBAL\ParameterType::class)) {
 		eval('namespace Doctrine\\DBAL; final class ParameterType { public const NULL = 0; public const INTEGER = 1; public const STRING = 2; public const LARGE_OBJECT = 3; }');
