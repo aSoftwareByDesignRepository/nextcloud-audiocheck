@@ -24,10 +24,10 @@ if ($base === null && !interface_exists('OC\Hooks\Emitter')) {
 
 if ($base !== null) {
 	require_once $base;
-}
-
-if ($base !== null && audiocheck_phpunit_requests_integration_suite()) {
-	require __DIR__ . '/assert-nextcloud-upgraded.php';
+	$integrationBootstrap = dirname(__DIR__, 3) . '/scripts/phpunit-integration-bootstrap.php';
+	if (is_file($integrationBootstrap)) {
+		require_once $integrationBootstrap;
+	}
 }
 
 /** @var \Composer\Autoload\ClassLoader $loader */
@@ -62,20 +62,4 @@ if ($base === null) {
 	if (!class_exists(\Doctrine\DBAL\Query\Expression\ExpressionBuilder::class)) {
 		eval('namespace Doctrine\\DBAL\\Query\\Expression; final class ExpressionBuilder { public const EQ = \'=\'; public const NEQ = \'<>\'; public const LT = \'<\'; public const LTE = \'<=\'; public const GT = \'>\'; public const GTE = \'>=\'; }');
 	}
-}
-
-/**
- * True when PHPUnit is running the integration suite or an Integration test path.
- */
-function audiocheck_phpunit_requests_integration_suite(): bool
-{
-	$argv = $_SERVER['argv'] ?? [];
-	foreach ($argv as $arg) {
-		if ($arg === 'integration'
-			|| str_contains($arg, 'tests/Integration')
-			|| str_contains($arg, 'Tests\\Integration')) {
-			return true;
-		}
-	}
-	return false;
 }
