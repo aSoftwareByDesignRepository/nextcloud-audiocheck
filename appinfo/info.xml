@@ -12,17 +12,23 @@
 	<description><![CDATA[
 # AudioCheck — your audio library inside Nextcloud
 
-Your MP3s, M4B audiobooks, and lectures already live in Files. AudioCheck indexes the folders you choose, streams with live permission checks, and keeps a **persistent player** while you browse the rest of Nextcloud.
+Your MP3, MP4, M4A, M4B, and other audio files already live in Files. AudioCheck indexes the folders you choose, streams with live permission checks, and keeps a **persistent player** while you browse the rest of Nextcloud.
 
 ## Why people install it
 
-- **Multi-file audiobooks** — play every `.mp3` in a book as one queue; resume survives reload, new tabs, and other devices
+- **Multi-file audiobooks** — play every chapter file in a book as one queue; resume is stored on your server per account
 - **Music library** — tracks, albums, folders, search, and sort
 - **Continue listening** — home shelf, dashboard widget, and saved progress per file
 - **Playlists & Favorites** — build lists from collections; star tracks in Now playing or Browse
-- **Chapters & speed** — chapter jumps on `.m4b`; 0.5×–4.0× speed for audiobooks
-- **Security by design** — single file-access gate; uniform 404 for inaccessible files; no outbound HTTP
-- **Accessible & responsive** — dark-friendly UI, keyboard shortcuts, WCAG 2.1 AA foundations
+- **Chapters & speed** — chapter jumps on M4B; 0.5×–4.0× speed for audiobooks
+- **Security by design** — single file-access gate; uniform 404 for inaccessible files; playback streams only from your Nextcloud files
+- **Accessible & responsive** — keyboard shortcuts, clear sections, focus-friendly controls, and a layout that works on phones and desktops
+
+## Supported formats
+
+**Indexed and streamed:** MP3, MP4/M4A/M4B (including podcasts tagged as video/mp4), OGG, Opus, FLAC, WAV, AAC, and other common `audio/*` types.
+
+**Browser playback** depends on your browser: MP3, M4A, M4B, AAC, OGG, Opus, and WAV usually work; FLAC and some others may need a different browser.
 
 ## Get started in three steps
 
@@ -45,17 +51,23 @@ Your MP3s, M4B audiobooks, and lectures already live in Files. AudioCheck indexe
 	<description lang="de"><![CDATA[
 # AudioCheck — deine Audiothek in Nextcloud
 
-Deine MP3s, M4B-Hörbücher und Vorträge liegen bereits in Dateien. AudioCheck indexiert die von dir gewählten Ordner, streamt mit Live-Berechtigungsprüfung und hält einen **dauerhaften Player**, während du den Rest von Nextcloud nutzt.
+Deine MP3-, MP4-, M4A-, M4B- und weiteren Audiodateien liegen bereits in Dateien. AudioCheck indexiert die von dir gewählten Ordner, streamt mit Live-Berechtigungsprüfung und hält einen **dauerhaften Player**, während du den Rest von Nextcloud nutzt.
 
 ## Darum lohnt sich die Installation
 
-- **Mehrteilige Hörbücher** — alle `.mp3` eines Buches als eine Warteschlange; Fortsetzen über Reload, neue Tabs und Geräte hinweg
+- **Mehrteilige Hörbücher** — alle Kapiteldateien eines Buches als eine Warteschlange; Fortschritt wird pro Konto auf dem Server gespeichert
 - **Musikbibliothek** — Titel, Alben, Ordner, Suche und Sortierung
 - **Weiterhören** — Startseite, Dashboard-Widget und gespeicherter Fortschritt pro Datei
 - **Playlists & Favoriten** — Listen aus Sammlungen; Sterne in Aktuelle Wiedergabe oder Durchsuchen
-- **Kapitel & Geschwindigkeit** — Kapitelsprünge bei `.m4b`; 0,5×–4,0× für Hörbücher
-- **Sicherheit** — zentraler Dateizugriff; einheitliche 404 bei fehlenden Rechten; kein ausgehendes HTTP
-- **Barrierefrei & responsiv** — dunkles UI, Tastaturkürzel, Grundlagen nach WCAG 2.1 AA
+- **Kapitel & Geschwindigkeit** — Kapitelsprünge bei M4B; 0,5×–4,0× für Hörbücher
+- **Sicherheit** — zentraler Dateizugriff; einheitliche 404 bei fehlenden Rechten; Wiedergabe nur aus deinen Nextcloud-Dateien
+- **Barrierefrei & responsiv** — Tastaturkürzel, klare Bereiche, fokusfreundliche Steuerung und Layout für Handy und Desktop
+
+## Unterstützte Formate
+
+**Indexiert und gestreamt:** MP3, MP4/M4A/M4B (auch Podcasts mit video/mp4), OGG, Opus, FLAC, WAV, AAC und weitere gängige `audio/*`-Typen.
+
+**Browser-Wiedergabe** hängt vom Browser ab: MP3, M4A, M4B, AAC, OGG, Opus und WAV funktionieren meist; FLAC und manche andere Formate benötigen ggf. einen anderen Browser.
 
 ## In drei Schritten starten
 
@@ -75,7 +87,7 @@ Deine MP3s, M4B-Hörbücher und Vorträge liegen bereits in Dateien. AudioCheck 
 - PHP 8.2–8.5
 - MySQL oder PostgreSQL
 	]]></description>
-	<version>1.2.1</version>
+	<version>1.2.2</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Alexander Mäule</author>
 	<namespace>AudioCheck</namespace>
@@ -90,27 +102,13 @@ Deine MP3s, M4B-Hörbücher und Vorträge liegen bereits in Dateien. AudioCheck 
 		<database>mysql</database>
 		<database>pgsql</database>
 	</dependencies>
-	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/refs/heads/main/screenshots/audiocheck-screenshot-01.png">
-		https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/refs/heads/main/screenshots/audiocheck-screenshot-01.png
-	</screenshot>
-	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/refs/heads/main/screenshots/audiocheck-screenshot-02.png">
-		https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/refs/heads/main/screenshots/audiocheck-screenshot-02.png
-	</screenshot>
-	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/refs/heads/main/screenshots/audiocheck-screenshot-03.png">
-		https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/refs/heads/main/screenshots/audiocheck-screenshot-03.png
-	</screenshot>
-	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/refs/heads/main/screenshots/audiocheck-screenshot-04.png">
-		https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/refs/heads/main/screenshots/audiocheck-screenshot-04.png
-	</screenshot>
-	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/refs/heads/main/screenshots/audiocheck-screenshot-05.png">
-		https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/refs/heads/main/screenshots/audiocheck-screenshot-05.png
-	</screenshot>
-	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/refs/heads/main/screenshots/audiocheck-screenshot-06.png">
-		https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/refs/heads/main/screenshots/audiocheck-screenshot-06.png
-	</screenshot>
-	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/refs/heads/main/screenshots/audiocheck-screenshot-07.png">
-		https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/refs/heads/main/screenshots/audiocheck-screenshot-07.png
-	</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-01.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-01.png</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-02.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-02.png</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-03.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-03.png</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-04.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-04.png</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-05.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-05.png</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-06.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-06.png</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-07.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-07.png</screenshot>
 	<settings>
 		<admin>OCA\AudioCheck\Settings\AdminSettings</admin>
 	</settings>

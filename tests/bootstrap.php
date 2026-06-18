@@ -3,11 +3,18 @@
 declare(strict_types=1);
 
 $nextcloudRoot = getenv('NEXTCLOUD_ROOT') ?: '';
-$base = null;
+$candidates = [];
 if ($nextcloudRoot !== '') {
-	$candidate = rtrim($nextcloudRoot, '/\\') . '/lib/base.php';
+	$candidates[] = rtrim($nextcloudRoot, '/\\') . '/lib/base.php';
+}
+$candidates[] = __DIR__ . '/../../lib/base.php';
+$candidates[] = __DIR__ . '/../../../lib/base.php';
+
+$base = null;
+foreach ($candidates as $candidate) {
 	if (is_file($candidate)) {
 		$base = $candidate;
+		break;
 	}
 }
 
@@ -17,6 +24,10 @@ if ($base === null && !interface_exists('OC\Hooks\Emitter')) {
 
 if ($base !== null) {
 	require_once $base;
+}
+
+if ($base !== null && audiocheck_phpunit_requests_integration_suite()) {
+	require __DIR__ . '/assert-nextcloud-upgraded.php';
 }
 
 /** @var \Composer\Autoload\ClassLoader $loader */
@@ -51,4 +62,20 @@ if ($base === null) {
 	if (!class_exists(\Doctrine\DBAL\Query\Expression\ExpressionBuilder::class)) {
 		eval('namespace Doctrine\\DBAL\\Query\\Expression; final class ExpressionBuilder { public const EQ = \'=\'; public const NEQ = \'<>\'; public const LT = \'<\'; public const LTE = \'<=\'; public const GT = \'>\'; public const GTE = \'>=\'; }');
 	}
+}
+
+/**
+ * True when PHPUnit is running the integration suite or an Integration test path.
+ */
+function audiocheck_phpunit_requests_integration_suite(): bool
+{
+	$argv = $_SERVER['argv'] ?? [];
+	foreach ($argv as $arg) {
+		if ($arg === 'integration'
+			|| str_contains($arg, 'tests/Integration')
+			|| str_contains($arg, 'Tests\\Integration')) {
+			return true;
+		}
+	}
+	return false;
 }

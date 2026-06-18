@@ -407,7 +407,7 @@
 		"Library folders": "Bibliotheksordner",
 		"Add or remove folders to scan in the Library section.": "Ordner zum Scannen im Bereich Bibliothek hinzufügen oder entfernen.",
 		"Supported formats": "Unterstützte Formate",
-		"Usually plays in the browser: MP3, M4A, M4B, AAC, OGG, Opus, WAV. FLAC, WMA, and AIFF may need another app or browser.": "Spielt im Browser meist: MP3, M4A, M4B, AAC, OGG, Opus, WAV. FLAC, WMA und AIFF benötigen ggf. eine andere App oder einen anderen Browser.",
+		"Usually plays in the browser: MP3, MP4, M4A, M4B, AAC, OGG, Opus, WAV. FLAC, WMA, and AIFF may need another app or browser.": "Spielt im Browser meist: MP3, MP4, M4A, M4B, AAC, OGG, Opus, WAV. FLAC, WMA und AIFF benötigen ggf. eine andere App oder einen anderen Browser.",
 		"Play {title}": "{title} abspielen",
 		"Duration unknown": "Dauer unbekannt",
 		"Duration {time}": "Dauer {time}",

@@ -39,6 +39,21 @@ class FileAccessService
 		'audio/x-ms-wma',
 	];
 
+	/** @var list<string> File extensions scanned when MIME detection is incomplete (includes MP4 podcasts tagged as video/mp4). */
+	public const AUDIO_CONTAINER_EXTENSIONS = [
+		'mp3',
+		'mp4',
+		'm4a',
+		'm4b',
+		'flac',
+		'ogg',
+		'opus',
+		'wav',
+		'aac',
+		'wma',
+		'aiff',
+	];
+
 	/**
 	 * Mimes commonly playable in modern desktop/mobile browsers without transcoding.
 	 * Other allowed audio types may still stream but are labelled in the UI (§13.7).
@@ -99,7 +114,7 @@ class FileAccessService
 			throw new NotFoundException();
 		}
 
-		if ($requireAudioMime && !$this->isAllowedAudioMime($file->getMimeType())) {
+		if ($requireAudioMime && !$this->isAllowedAudioMime($file->getMimeType(), $file->getName())) {
 			throw new NotFoundException();
 		}
 
@@ -282,13 +297,30 @@ class FileAccessService
 		}
 	}
 
-	public function isAllowedAudioMime(string $mime): bool
+	public function isAllowedAudioMime(string $mime, ?string $filename = null): bool
 	{
 		$mime = strtolower(trim($mime));
 		if (in_array($mime, self::ALLOWED_AUDIO_MIMES, true)) {
 			return true;
 		}
+		if ($mime === 'video/mp4' && $this->isAudioContainerFilename($filename)) {
+			return true;
+		}
 		return str_starts_with($mime, 'audio/');
+	}
+
+	public function isAllowedAudioFile(File $file): bool
+	{
+		return $this->isAllowedAudioMime($file->getMimeType(), $file->getName());
+	}
+
+	private function isAudioContainerFilename(?string $filename): bool
+	{
+		if ($filename === null || $filename === '') {
+			return false;
+		}
+		$ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+		return in_array($ext, ['mp4', 'm4a', 'm4b'], true);
 	}
 
 	public function isAllowedCoverMime(string $mime): bool
@@ -296,10 +328,13 @@ class FileAccessService
 		return in_array(strtolower(trim($mime)), self::COVER_IMAGE_MIMES, true);
 	}
 
-	public function isLikelyBrowserPlayable(string $mime): bool
+	public function isLikelyBrowserPlayable(string $mime, ?string $filename = null): bool
 	{
 		$mime = strtolower(trim($mime));
 		if (in_array($mime, self::BROWSER_WELL_SUPPORTED_MIMES, true)) {
+			return true;
+		}
+		if ($mime === 'video/mp4' && ($filename === null || $this->isAudioContainerFilename($filename))) {
 			return true;
 		}
 		return false;
@@ -314,27 +349,31 @@ class FileAccessService
 	{
 		$files = [];
 		if ($recursive) {
+			$seen = [];
 			try {
 				foreach ($folder->searchByMime('audio/%') as $node) {
-					if ($node instanceof File && $node->isReadable() && $this->isAllowedAudioMime($node->getMimeType())) {
+					if ($node instanceof File && $node->isReadable() && $this->isAllowedAudioFile($node)) {
+						$seen[$node->getId()] = true;
 						$files[] = $node;
 					}
 				}
 			} catch (\Throwable) {
 				$files = [];
+				$seen = [];
 			}
-			if ($files === []) {
-				$extensions = ['mp3', 'm4a', 'm4b', 'flac', 'ogg', 'opus', 'wav', 'aac', 'wma', 'aiff'];
-				foreach ($extensions as $ext) {
-					try {
-						foreach ($folder->searchRaw('*.{' . $ext . '}') as $node) {
-							if ($node instanceof File && $node->isReadable() && $this->isAllowedAudioMime($node->getMimeType())) {
+			foreach (self::AUDIO_CONTAINER_EXTENSIONS as $ext) {
+				try {
+					foreach ($folder->searchRaw('*.{' . $ext . '}') as $node) {
+						if ($node instanceof File && $node->isReadable() && $this->isAllowedAudioFile($node)) {
+							$id = $node->getId();
+							if (!isset($seen[$id])) {
+								$seen[$id] = true;
 								$files[] = $node;
 							}
 						}
-					} catch (\Throwable) {
-						continue;
 					}
+				} catch (\Throwable) {
+					continue;
 				}
 			}
 			if ($files === []) {
@@ -342,7 +381,7 @@ class FileAccessService
 			}
 		} else {
 			foreach ($folder->getDirectoryListing() as $node) {
-				if ($node instanceof File && $node->isReadable() && $this->isAllowedAudioMime($node->getMimeType())) {
+				if ($node instanceof File && $node->isReadable() && $this->isAllowedAudioFile($node)) {
 					$files[] = $node;
 				}
 			}
@@ -357,7 +396,7 @@ class FileAccessService
 	{
 		$files = [];
 		foreach ($folder->getDirectoryListing() as $node) {
-			if ($node instanceof File && $node->isReadable() && $this->isAllowedAudioMime($node->getMimeType())) {
+			if ($node instanceof File && $node->isReadable() && $this->isAllowedAudioFile($node)) {
 				$files[] = $node;
 				continue;
 			}

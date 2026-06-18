@@ -7,6 +7,7 @@ namespace OCA\AudioCheck\Tests\Integration;
 use OCA\AudioCheck\Service\FileAccessService;
 use OCA\AudioCheck\Service\LibraryService;
 use OCA\AudioCheck\Service\PlaybackStateService;
+use OCA\AudioCheck\Service\ScanService;
 use OCP\Files\File;
 use OCP\IUserManager;
 use Test\TestCase;
@@ -176,8 +177,16 @@ final class ListenedFlagIntegrationTest extends TestCase
 		/** @var File $file */
 		$file = $folder->newFile($name);
 		$file->putContent($this->minimalMp3Bytes());
+		$this->indexAudioFile($user, $file);
 
 		return (int)$file->getId();
+	}
+
+	private function indexAudioFile(string $user, File $file): void
+	{
+		/** @var ScanService $scan */
+		$scan = \OC::$server->get(ScanService::class);
+		$scan->handleNodeEvent($user, $file, 'written');
 	}
 
 	/** @return non-empty-string */

@@ -1096,7 +1096,7 @@ class LibraryService
 			'kind' => 'music',
 			'durationMs' => 0,
 			'mimetype' => $file->getMimeType(),
-			'browserPlayable' => $this->isBrowserPlayableMime($file->getMimeType()),
+			'browserPlayable' => $this->fileAccess->isLikelyBrowserPlayable($file->getMimeType(), $file->getName()),
 			'hasChapters' => false,
 			'coverState' => 'none',
 			'addedAt' => 0,

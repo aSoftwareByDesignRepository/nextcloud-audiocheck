@@ -2,6 +2,21 @@
 
 All notable changes to AudioCheck are documented in this file.
 
+## [1.2.2] — 2026-06-18
+
+### Fixed
+
+- **App Store screenshots** — screenshot URLs in `info.xml` are now single-line (whitespace in the URL text prevented the store from loading images).
+- **MP4 podcasts missed during scan** — recursive library scans only searched `*.mp4` when no `audio/*` files were found; MP4/M4A/M4B files tagged as `video/mp4` are now always merged into scan results.
+
+### Added
+
+- **MP4 audio container support** — `.mp4`, `.m4a`, and `.m4b` files tagged as `video/mp4` are accepted at the file gate, indexed, and offered in the Files app (extension-filtered for `video/mp4`).
+
+### Changed
+
+- **App Store copy (EN + DE)** — accurate format list, clarified server-side resume, removed unverifiable WCAG certification wording; accessibility described as design goals.
+
 ## [1.2.1] — 2026-06-16
 
 ### Fixed

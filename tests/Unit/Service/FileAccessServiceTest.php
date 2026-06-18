@@ -44,7 +44,26 @@ final class FileAccessServiceTest extends TestCase
 		$root = $this->createMock(IRootFolder::class);
 		$svc = new FileAccessService($root, $this->createMock(IEncryptionManager::class), $this->createMock(IConfig::class));
 		$this->assertTrue($svc->isAllowedAudioMime('audio/mpeg'));
+		$this->assertTrue($svc->isAllowedAudioMime('audio/mp3')); // audio/* prefix
+		$this->assertTrue($svc->isAllowedAudioMime('video/mp4', 'podcast.mp4'));
+		$this->assertTrue($svc->isAllowedAudioMime('video/mp4', 'chapter.m4a'));
 		$this->assertFalse($svc->isAllowedAudioMime('video/mp4'));
+		$this->assertFalse($svc->isAllowedAudioMime('video/mp4', 'movie.mov'));
+		$this->assertFalse($svc->isAllowedAudioMime('video/quicktime'));
+	}
+
+	public function testResolveReadableFileAcceptsMp4AudioContainer(): void
+	{
+		$file = $this->createMock(File::class);
+		$file->method('isReadable')->willReturn(true);
+		$file->method('getMimeType')->willReturn('video/mp4');
+		$file->method('getName')->willReturn('audiobook.mp4');
+		$folder = $this->createMock(Folder::class);
+		$folder->method('getById')->willReturn([$file]);
+		$root = $this->createMock(IRootFolder::class);
+		$root->method('getUserFolder')->willReturn($folder);
+		$svc = new FileAccessService($root, $this->createMock(IEncryptionManager::class), $this->createMock(IConfig::class));
+		$this->assertSame($file, $svc->resolveReadableFile('alice', 7));
 	}
 
 	public function testBrowserPlayableClassification(): void
@@ -53,6 +72,8 @@ final class FileAccessServiceTest extends TestCase
 		$svc = new FileAccessService($root, $this->createMock(IEncryptionManager::class), $this->createMock(IConfig::class));
 		$this->assertTrue($svc->isLikelyBrowserPlayable('audio/mpeg'));
 		$this->assertTrue($svc->isLikelyBrowserPlayable('audio/mp4'));
+		$this->assertTrue($svc->isLikelyBrowserPlayable('video/mp4', 'podcast.mp4'));
+		$this->assertFalse($svc->isLikelyBrowserPlayable('video/mp4', 'movie.mov'));
 		$this->assertFalse($svc->isLikelyBrowserPlayable('audio/flac'));
 		$this->assertFalse($svc->isLikelyBrowserPlayable('audio/x-ms-wma'));
 		$this->assertFalse($svc->isLikelyBrowserPlayable('audio/aiff'));

@@ -22,6 +22,13 @@
 		'audio/webm',
 	];
 
+	const AUDIO_CONTAINER_EXTENSIONS = ['mp4', 'm4a', 'm4b'];
+
+	function isAudioContainerFilename(filename) {
+		const ext = (String(filename || '').split('.').pop() || '').toLowerCase();
+		return AUDIO_CONTAINER_EXTENSIONS.includes(ext);
+	}
+
 	function openInAudioCheck(query) {
 		window.location = OC.generateUrl('/apps/audiocheck/') + '?' + query;
 	}
@@ -42,6 +49,23 @@
 					if (fileId) openInAudioCheck('fileId=' + encodeURIComponent(fileId));
 				},
 			});
+		});
+
+		OCA.Files.fileActions.registerAction({
+			name: 'playInAudioCheckMp4',
+			displayName: t('audiocheck', 'Play in AudioCheck'),
+			mime: 'video/mp4',
+			permissions: OC.PERMISSION_READ,
+			order: -50,
+			icon: function () { return OC.imagePath('audiocheck', 'app.svg'); },
+			enabled: (filename) => isAudioContainerFilename(filename),
+			actionHandler: (filename, context) => {
+				if (!isAudioContainerFilename(filename)) {
+					return;
+				}
+				const fileId = context.$file.attr('data-id');
+				if (fileId) openInAudioCheck('fileId=' + encodeURIComponent(fileId));
+			},
 		});
 
 		OCA.Files.fileActions.registerAction({

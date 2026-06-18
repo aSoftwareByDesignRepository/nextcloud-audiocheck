@@ -81,7 +81,8 @@ final class FileAccessSecurityMatrixTest extends TestCase
 	{
 		$file = $this->createMock(File::class);
 		$file->method('isReadable')->willReturn(true);
-		$file->method('getMimeType')->willReturn('video/mp4');
+		$file->method('getMimeType')->willReturn('video/quicktime');
+		$file->method('getName')->willReturn('clip.mov');
 		$svc = $this->service($this->userFolderReturning('alice', [7 => [$file]]));
 		$this->expectException(NotFoundException::class);
 		$svc->resolveReadableFile('alice', 7);

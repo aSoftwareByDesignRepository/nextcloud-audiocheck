@@ -160,7 +160,7 @@ class ScanService
 					if (!($node instanceof File)) {
 						continue;
 					}
-					if (!$this->fileAccess->isAllowedAudioMime($node->getMimeType())) {
+					if (!$this->fileAccess->isAllowedAudioFile($node)) {
 						continue;
 					}
 					$this->upsertTrack(
@@ -215,7 +215,7 @@ class ScanService
 			$qb->executeStatement();
 			return;
 		}
-		if ($node instanceof File && $this->fileAccess->isAllowedAudioMime($node->getMimeType())) {
+		if ($node instanceof File && $this->fileAccess->isAllowedAudioFile($node)) {
 			$now = $this->timeFactory->getTime();
 			$library = $this->resolveLibraryForFile($userId, $node);
 			$libraryId = $library !== null ? (int)($library['id'] ?? 0) : null;

@@ -26,6 +26,7 @@ final class AppAccessGateIntegrationTest extends TestCase
 
 	private ?string $prevRestriction = null;
 	private ?string $prevAllowedUsers = null;
+	private ?string $prevAllowedGroups = null;
 
 	protected function setUp(): void
 	{
@@ -36,6 +37,7 @@ final class AppAccessGateIntegrationTest extends TestCase
 		$config = \OC::$server->get(IConfig::class);
 		$this->prevRestriction = $config->getAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_RESTRICTION, '0');
 		$this->prevAllowedUsers = $config->getAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_ALLOWED_USER_IDS, '[]');
+		$this->prevAllowedGroups = $config->getAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_ALLOWED_GROUP_IDS, '[]');
 
 		/** @var IUserManager $userManager */
 		$userManager = \OC::$server->get(IUserManager::class);
@@ -58,6 +60,9 @@ final class AppAccessGateIntegrationTest extends TestCase
 		}
 		if ($this->prevAllowedUsers !== null) {
 			$config->setAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_ALLOWED_USER_IDS, $this->prevAllowedUsers);
+		}
+		if ($this->prevAllowedGroups !== null) {
+			$config->setAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_ALLOWED_GROUP_IDS, $this->prevAllowedGroups);
 		}
 		/** @var IUserManager $userManager */
 		$userManager = \OC::$server->get(IUserManager::class);
@@ -82,6 +87,7 @@ final class AppAccessGateIntegrationTest extends TestCase
 		$config = \OC::$server->get(IConfig::class);
 		$config->setAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_RESTRICTION, '1');
 		$config->setAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_ALLOWED_USER_IDS, json_encode([self::ALLOWED], JSON_THROW_ON_ERROR));
+		$config->setAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_ALLOWED_GROUP_IDS, '[]');
 
 		/** @var IUserSession $session */
 		$session = \OC::$server->get(IUserSession::class);
@@ -118,6 +124,7 @@ final class AppAccessGateIntegrationTest extends TestCase
 		$config = \OC::$server->get(IConfig::class);
 		$config->setAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_RESTRICTION, '1');
 		$config->setAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_ALLOWED_USER_IDS, json_encode([self::ALLOWED], JSON_THROW_ON_ERROR));
+		$config->setAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_ALLOWED_GROUP_IDS, '[]');
 
 		/** @var IUserSession $session */
 		$session = \OC::$server->get(IUserSession::class);
