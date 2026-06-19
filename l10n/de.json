@@ -112,7 +112,7 @@
 		"of": "von",
 		"This file may not play in your browser.": "Diese Datei wird in deinem Browser möglicherweise nicht abgespielt.",
 		"May not play in this browser": "Wird in diesem Browser möglicherweise nicht abgespielt",
-		"Background cron is not enabled on this server. Use Scan now to refresh your library, or ask an administrator to enable system cron in Nextcloud settings.": "Hintergrund-Cron ist auf diesem Server nicht aktiv. Nutze „Jetzt scannen“, um die Bibliothek zu aktualisieren, oder bitte eine Administration, System-Cron in den Nextcloud-Einstellungen zu aktivieren.",
+		"This server uses AJAX background jobs instead of system cron. Scans continue while you use AudioCheck; for faster indexing, ask an administrator to enable system cron in Nextcloud settings.": "Dieser Server nutzt AJAX-Hintergrundjobs statt System-Cron. Scans laufen weiter, solange du AudioCheck verwendest; für schnellere Indizierung kann eine Administration System-Cron in den Nextcloud-Einstellungen aktivieren.",
 		"No audio found yet": "Noch keine Audiodateien gefunden",
 		"Add a folder in Library and scan to build your collection.": "Füge in der Bibliothek einen Ordner hinzu und scanne, um deine Sammlung aufzubauen.",
 		"Open Library": "Bibliothek öffnen",

@@ -18,5 +18,8 @@ final class ScanServiceBatchingTest extends TestCase
 		$this->assertStringContainsString("'scanGen'", $source);
 		$this->assertStringContainsString('backgroundCron', $source);
 		$this->assertStringContainsString('usesSystemCron', $source);
+		$this->assertStringContainsString('runAjaxCronScanBatch', $source);
+		$this->assertStringContainsString('isStaleRunning', $source);
+		$this->assertStringContainsString('STALE_RUNNING_SECONDS', $source);
 	}
 }

@@ -48,6 +48,7 @@ return [
 		['name' => 'api#updateLibrary', 'url' => '/api/libraries/{id}', 'verb' => 'PUT'],
 		['name' => 'api#removeLibrary', 'url' => '/api/libraries/{id}', 'verb' => 'DELETE'],
 		['name' => 'api#scanStatus', 'url' => '/api/scan', 'verb' => 'GET'],
+		['name' => 'api#scanAjaxCronTick', 'url' => '/api/scan/ajax-cron', 'verb' => 'GET'],
 		['name' => 'api#triggerScan', 'url' => '/api/scan', 'verb' => 'POST'],
 		['name' => 'api#getPrefs', 'url' => '/api/prefs', 'verb' => 'GET'],
 		['name' => 'api#savePrefs', 'url' => '/api/prefs', 'verb' => 'PUT'],

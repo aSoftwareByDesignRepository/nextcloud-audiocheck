@@ -2,6 +2,18 @@
 
 All notable changes to AudioCheck are documented in this file.
 
+## [1.2.4] — 2026-06-19
+
+### Added
+
+- **AJAX cron scan ticks** — when Nextcloud uses AJAX/webcron instead of system cron, queued library scans advance via `/api/scan/ajax-cron` while you stay in AudioCheck (library polling and app-wide heartbeat). “Scan now” still runs an initial in-process batch; remaining batches no longer stall until a full server cron run.
+- **Stale scan lock recovery** — abandoned `running` scan rows older than 10 minutes are treated as resumable so large libraries cannot deadlock after a crash.
+
+### Changed
+
+- **Library cron callout** — explains that scans continue while using AudioCheck on AJAX cron hosts (system cron remains recommended for large libraries).
+- **AJAX scan tick rate limit** — 120 requests per minute per user on `/api/scan/ajax-cron`.
+
 ## [1.2.3] — 2026-06-19
 
 ### Changed

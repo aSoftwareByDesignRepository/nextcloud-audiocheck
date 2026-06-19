@@ -24,6 +24,7 @@ final class ApiCsrfGateTest extends TestCase
 		'getPlaylist',
 		'listLibraries',
 		'scanStatus',
+		'scanAjaxCronTick',
 		'getPrefs',
 		'searchUsers',
 		'searchGroups',

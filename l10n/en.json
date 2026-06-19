@@ -112,7 +112,7 @@
 		"of": "of",
 		"This file may not play in your browser.": "This file may not play in your browser.",
 		"May not play in this browser": "May not play in this browser",
-		"Background cron is not enabled on this server. Use Scan now to refresh your library, or ask an administrator to enable system cron in Nextcloud settings.": "Background cron is not enabled on this server. Use Scan now to refresh your library, or ask an administrator to enable system cron in Nextcloud settings.",
+		"This server uses AJAX background jobs instead of system cron. Scans continue while you use AudioCheck; for faster indexing, ask an administrator to enable system cron in Nextcloud settings.": "This server uses AJAX background jobs instead of system cron. Scans continue while you use AudioCheck; for faster indexing, ask an administrator to enable system cron in Nextcloud settings.",
 		"No audio found yet": "No audio found yet",
 		"Add a folder in Library and scan to build your collection.": "Add a folder in Library and scan to build your collection.",
 		"Open Library": "Open Library",

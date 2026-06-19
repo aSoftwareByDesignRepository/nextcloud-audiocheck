@@ -25,6 +25,9 @@ class ScanService
 	/** Files indexed per background job tick (resume via ac_scan_state.cursor). */
 	public const SCAN_BATCH_SIZE = 250;
 
+	/** Treat abandoned RUNNING rows as resumable (crash / timeout mid-batch). */
+	private const STALE_RUNNING_SECONDS = 600;
+
 	public function __construct(
 		private IDBConnection $db,
 		private FileAccessService $fileAccess,
@@ -72,6 +75,27 @@ class ScanService
 		} while ($status['status'] !== self::STATUS_IDLE && $this->timeFactory->getTime() < $deadline);
 	}
 
+	/**
+	 * Advance one queued scan batch when Nextcloud uses AJAX/webcron (poor man's cron).
+	 */
+	public function runAjaxCronScanBatch(string $userId): void
+	{
+		if ($userId === '' || $this->usesSystemCron()) {
+			return;
+		}
+		$status = $this->getStatus($userId);
+		if ($status['status'] === self::STATUS_IDLE) {
+			return;
+		}
+		if ($status['status'] === self::STATUS_RUNNING && !$this->isStaleRunning($userId)) {
+			return;
+		}
+		if ($status['status'] !== self::STATUS_QUEUED && $status['status'] !== self::STATUS_RUNNING) {
+			return;
+		}
+		$this->scanUser($userId);
+	}
+
 	public function getStatus(string $userId): array
 	{
 		$row = $this->getScanRow($userId);
@@ -98,6 +122,20 @@ class ScanService
 		return $this->config->getAppValue('core', 'backgroundjobs_mode', 'ajax') === 'cron';
 	}
 
+	/** @param array<string, mixed>|null $row */
+	private function isStaleRunning(string $userId, ?array $row = null): bool
+	{
+		$row ??= $this->getScanRow($userId);
+		if ($row === null || (string)($row['status'] ?? '') !== self::STATUS_RUNNING) {
+			return false;
+		}
+		$updatedAt = (int)($row['updated_at'] ?? 0);
+		if ($updatedAt < 1) {
+			return true;
+		}
+		return ($this->timeFactory->getTime() - $updatedAt) >= self::STALE_RUNNING_SECONDS;
+	}
+
 	public function scanUser(string $userId): void
 	{
 		if ($userId === '') {
@@ -106,7 +144,7 @@ class ScanService
 
 		$scanRow = $this->getScanRow($userId);
 		$currentStatus = $scanRow !== null ? (string)$scanRow['status'] : self::STATUS_IDLE;
-		if ($currentStatus === self::STATUS_RUNNING) {
+		if ($currentStatus === self::STATUS_RUNNING && !$this->isStaleRunning($userId, $scanRow)) {
 			return;
 		}
 

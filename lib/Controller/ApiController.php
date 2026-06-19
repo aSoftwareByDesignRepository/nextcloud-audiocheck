@@ -363,6 +363,17 @@ class ApiController extends Controller
 	}
 
 	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function scanAjaxCronTick(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$this->rateLimit->assertAllowed($userId, 'scan_ajax_cron', 120, 60);
+			$this->scan->runAjaxCronScanBatch($userId);
+			return ['scan' => $this->scan->getStatus($userId)];
+		});
+	}
+
+	#[NoAdminRequired]
 	public function triggerScan(): JSONResponse
 	{
 		return $this->safe(function (string $userId): array {

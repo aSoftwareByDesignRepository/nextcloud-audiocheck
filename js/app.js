@@ -7,6 +7,26 @@
 		row.hidden = !AudioCheckPlayer.getCurrentTrack();
 	}
 
+	function watchAjaxScanCron() {
+		if (!window.AudioCheckApi || typeof AudioCheckApi.fetchScanStatus !== 'function') return;
+		let timer = null;
+		const poll = () => {
+			AudioCheckApi.fetchScanStatus(null).then((scan) => {
+				if (!scan || !AudioCheckApi.scanNeedsAjaxCronTick(scan)) {
+					if (timer) {
+						window.clearInterval(timer);
+						timer = null;
+					}
+					return;
+				}
+				if (!timer) {
+					timer = window.setInterval(poll, 5000);
+				}
+			}).catch(() => {});
+		};
+		poll();
+	}
+
 	document.addEventListener('DOMContentLoaded', () => {
 		if (!window.AudioCheckPlayer) {
 			console.error('[audiocheck] AudioCheckPlayer failed to load');
@@ -97,5 +117,7 @@
 		AudioCheckApi.get('/apps/audiocheck/api/prefs').then((r) => {
 			applyPrefs(r.prefs || {});
 		}).catch(() => applyPrefs({}));
+
+		watchAjaxScanCron();
 	});
 })();

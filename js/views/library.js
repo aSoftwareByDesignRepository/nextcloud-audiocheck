@@ -209,11 +209,12 @@
 	function pollScanUntilIdle(onUpdate, onDone, alive) {
 		let attempts = 0;
 		const maxAttempts = 90;
+		let lastScan = null;
 		const tick = () => {
 			if (alive && !alive()) return;
-			AudioCheckApi.get('/apps/audiocheck/api/scan').then((r) => {
+			AudioCheckApi.fetchScanStatus(lastScan).then((scan) => {
 				if (alive && !alive()) return;
-				const scan = r.scan;
+				lastScan = scan;
 				if (typeof onUpdate === 'function') onUpdate(scan);
 				if (isScanning(scan)) {
 					if (attempts++ < maxAttempts) {
@@ -677,12 +678,12 @@
 				}
 
 				Promise.all([
-					AudioCheckApi.get('/apps/audiocheck/api/scan'),
+					AudioCheckApi.fetchScanStatus(lastScan),
 					AudioCheckApi.get('/apps/audiocheck/api/libraries'),
-				]).then(([scanRes, libRes]) => {
+				]).then(([scan, libRes]) => {
 					if (!alive() || gen !== refreshGen) return;
 					loadError = null;
-					lastScan = scanRes.scan;
+					lastScan = scan;
 					lastLibraries = libRes.libraries || [];
 					renderFolders(lastLibraries);
 					applyState();
@@ -744,7 +745,7 @@
 			cronCallout = C.el('p', {
 				className: 'ac-callout ac-callout--info',
 				attrs: { role: 'status', hidden: true },
-				text: t('audiocheck', 'Background cron is not enabled on this server. Use Scan now to refresh your library, or ask an administrator to enable system cron in Nextcloud settings.'),
+				text: t('audiocheck', 'This server uses AJAX background jobs instead of system cron. Scans continue while you use AudioCheck; for faster indexing, ask an administrator to enable system cron in Nextcloud settings.'),
 			});
 			foldersCard.appendChild(cronCallout);
 

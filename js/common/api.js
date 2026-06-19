@@ -72,7 +72,27 @@
 		return data;
 	}
 
+	function scanNeedsAjaxCronTick(scan) {
+		return !!scan && scan.backgroundCron === false
+			&& (scan.status === 'queued' || scan.status === 'running');
+	}
+
 	window.AudioCheckApi = {
+		scanNeedsAjaxCronTick,
+		runAjaxScanTick(scan) {
+			if (!scanNeedsAjaxCronTick(scan)) return Promise.resolve(null);
+			return request('/apps/audiocheck/api/scan/ajax-cron').then((r) => r.scan || null).catch(() => null);
+		},
+		fetchScanStatus(scanHint) {
+			const load = () => this.get('/apps/audiocheck/api/scan').then((r) => r.scan);
+			if (scanNeedsAjaxCronTick(scanHint)) {
+				return this.runAjaxScanTick(scanHint).then((ticked) => ticked || load());
+			}
+			return load().then((scan) => {
+				if (!scanNeedsAjaxCronTick(scan)) return scan;
+				return this.runAjaxScanTick(scan).then((ticked) => ticked || scan);
+			});
+		},
 		get: (path, params, options) => request(path, Object.assign({}, options || {}, { method: 'GET', params: mergeParams(params, options) })),
 		post: (path, body, options) => request(path, Object.assign({}, options || {}, { method: 'POST', body, params: mergeParams(null, options) })),
 		put: (path, body, options) => request(path, Object.assign({}, options || {}, { method: 'PUT', body, params: mergeParams(null, options) })),
