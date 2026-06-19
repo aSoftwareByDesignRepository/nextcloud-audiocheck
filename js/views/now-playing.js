@@ -199,6 +199,7 @@
 						fileId: item.fileId,
 						title: item.title,
 						artist: item.artist,
+						browserPlayable: item.browserPlayable,
 						progressPercent: item.durationMs > 0
 							? Math.min(100, Math.round((item.positionMs / item.durationMs) * 100))
 							: 0,
@@ -476,11 +477,7 @@
 					meta.appendChild(C.el('p', { className: 'ac-now-card__album', text: track.album }));
 				}
 				if (track.browserPlayable === false) {
-					meta.appendChild(C.el('p', {
-						className: 'ac-badge ac-badge--warn',
-						attrs: { role: 'note' },
-						text: t('audiocheck', 'May not play in this browser'),
-					}));
+					meta.appendChild(C.browserCompatNote());
 				}
 				if (track.listened || track.finished) {
 					meta.appendChild(C.el('p', {

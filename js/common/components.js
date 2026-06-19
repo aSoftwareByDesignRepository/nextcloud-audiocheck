@@ -174,10 +174,24 @@
 		}
 	}
 
+	function browserCompatNote() {
+		const label = t('audiocheck', 'May not play in this browser');
+		const note = el('span', {
+			className: 'ac-compat-note',
+			attrs: { role: 'note', title: label, 'aria-label': label },
+		});
+		if (window.AudioCheckIcons) {
+			note.appendChild(AudioCheckIcons.createSvg('alert-triangle'));
+		}
+		note.appendChild(el('span', { className: 'ac-compat-note__text', text: label }));
+		return note;
+	}
+
 	window.AudioCheckComponents = {
 		el,
 		createElement,
 		kindIcon,
+		browserCompatNote,
 		pageHeader(title, help, actions) {
 			const header = el('header', {
 				className: 'ac-page-header' + (actions ? ' ac-page-header--with-actions' : ''),
@@ -262,11 +276,7 @@
 				}));
 			}
 			if (item.browserPlayable === false) {
-				card.appendChild(el('p', {
-					className: 'ac-badge ac-badge--warn',
-					attrs: { role: 'note' },
-					text: t('audiocheck', 'May not play in this browser'),
-				}));
+				card.appendChild(browserCompatNote());
 			}
 			return card;
 		},
@@ -330,11 +340,7 @@
 				}));
 			}
 			if (track.browserPlayable === false) {
-				meta.appendChild(el('span', {
-					className: 'ac-badge ac-badge--warn',
-					attrs: { role: 'note' },
-					text: t('audiocheck', 'May not play in this browser'),
-				}));
+				meta.appendChild(browserCompatNote());
 			}
 			if (track.unavailable) {
 				meta.appendChild(el('span', {

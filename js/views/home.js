@@ -54,6 +54,7 @@
 						fileId: item.fileId,
 						title: item.title,
 						artist: item.artist,
+						browserPlayable: item.browserPlayable,
 						progressPercent: item.durationMs > 0
 							? Math.min(100, Math.round((item.positionMs / item.durationMs) * 100))
 							: 0,
@@ -88,6 +89,7 @@
 						title: tr.title,
 						subtitle: tr.artist,
 						coverFileId: tr.fileId,
+						browserPlayable: tr.browserPlayable,
 						listened: !!(tr.listened || tr.finished),
 					}, () => playTracks(recent.items, i))));
 					wrap.appendChild(C.section(t('audiocheck', 'Recently added'), g));

@@ -13,6 +13,17 @@ All notable changes to AudioCheck are documented in this file.
 
 - **Library cron callout** — explains that scans continue while using AudioCheck on AJAX cron hosts (system cron remains recommended for large libraries).
 - **AJAX scan tick rate limit** — 120 requests per minute per user on `/api/scan/ajax-cron`.
+- **Mobile shell scroll model** — only `.ac-main` scrolls; the mini player stays pinned with no dead zone below it (viewport-height flex shell at all breakpoints).
+- **Mini player (mobile/tablet)** — track + expand on one row, transport then seek; volume in mini player from ≥1024px only (full controls in Now Playing below that).
+- **Track lists (mobile)** — two-row layout with readable title clamp, ghost secondary actions, and compact codec warning icon instead of oversized badges.
+
+### Fixed
+
+- **Codec compatibility warning** — replaced full-width “May not play” pills (which overlapped rows on phones) with an accessible compact icon + label; removed erroneous `text-transform: capitalize` on badges.
+- **Heading and form contrast** — beat Nextcloud core faded `h2` rules; search/sort inputs use theme-safe backgrounds on every NC theme.
+- **Music/Audiobooks tab chips** — selected state styling on facet browse tabs matches Browse tabs for clear section navigation.
+- **Toast placement** — fallback toasts respect live mini-player height via `--ac-player-clearance`.
+- **`browserPlayable` on cards** — continue-listening and recently-added cards on Home and Now Playing show the same warning as track rows when applicable.
 
 ## [1.2.3] — 2026-06-19
 

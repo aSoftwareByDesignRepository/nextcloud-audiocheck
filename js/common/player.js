@@ -557,6 +557,7 @@
 			}
 		}
 		updateTransport();
+		syncPlayerClearance();
 		if (!options.announce) return;
 		announce(t('audiocheck', 'Now playing: {title} by {artist}', {
 			title: track.title || track.fileName || '',
@@ -782,6 +783,24 @@
 		if (!window.AudioCheckRouter) return;
 		if (AudioCheckRouter.getCurrentView() === 'now-playing') return;
 		AudioCheckRouter.navigate('now-playing', {}, true);
+	}
+
+	function syncPlayerClearance() {
+		const player = document.getElementById('ac-mini-player');
+		if (!player) return;
+		document.documentElement.style.setProperty('--ac-player-clearance', player.offsetHeight + 'px');
+	}
+
+	function bindPlayerClearance() {
+		const player = document.getElementById('ac-mini-player');
+		if (!player || player.dataset.acClearanceBound) return;
+		player.dataset.acClearanceBound = '1';
+		syncPlayerClearance();
+		if (typeof ResizeObserver !== 'undefined') {
+			new ResizeObserver(() => syncPlayerClearance()).observe(player);
+		} else {
+			window.addEventListener('resize', syncPlayerClearance);
+		}
 	}
 
 	function bindMiniNowOpen() {
@@ -1129,6 +1148,7 @@
 		init() {
 			bindAudio();
 			bindMiniNowOpen();
+			bindPlayerClearance();
 			initMiniVolume();
 			applyDefaultVolume();
 			if (bootstrapRestoring && !activeTrack()) {
