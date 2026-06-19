@@ -54,13 +54,15 @@ verify-signature-manifest:
 
 sign-release:
 	@test -f $(archive_path) || (echo "Error: Run 'make release' first"; exit 1)
-	@$(ready2publish_sign) "$(SIGN_KEY)" "$(SIGN_CRT)" "$(archive_path)"
-
-release-signed: release sign-release verify-signature-manifest
+	@test -f $(ready2publish_sign) || (echo "Error: Missing $(ready2publish_sign)"; exit 1)
+	@APPSTORE_SIGNING_KEY="$(SIGN_KEY)" APPSTORE_SIGNING_CERT="$(SIGN_CRT)" bash "$(ready2publish_sign)" $(app_name) $(archive_path)
 
 sign-tarball:
 	@test -n "$(TARBALL)" || (echo "Usage: make sign-tarball TARBALL=build/release/audiocheck-x.y.z.tar.gz"; exit 1)
-	@$(ready2publish_sign) "$(SIGN_KEY)" "$(SIGN_CRT)" "$(TARBALL)"
+	@test -f $(ready2publish_sign) || (echo "Error: Missing $(ready2publish_sign)"; exit 1)
+	@APPSTORE_SIGNING_KEY="$(SIGN_KEY)" APPSTORE_SIGNING_CERT="$(SIGN_CRT)" bash "$(ready2publish_sign)" $(app_name) "$(TARBALL)"
+
+release-signed: release sign-release verify-signature-manifest
 
 clean:
 	@rm -rf $(build_dir) .phpunit.result.cache test-results
