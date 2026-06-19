@@ -2,6 +2,12 @@
 
 All notable changes to AudioCheck are documented in this file.
 
+## [1.2.3] — 2026-06-19
+
+### Changed
+
+- **Responsive layout (mobile-first CSS)** — refactored `css/app.css` from scattered `max-width` overrides to a mobile-first cascade with `min-width` escalations for tablet and desktop. Modals, forms, page headers, collection toolbars, library cards, now-playing, and mini-player tiers stack cleanly from 320px upward while the paired 1023/1024px navigation split preserves the sticky sidebar and desktop mini-player at ≥1024px.
+
 ## [1.2.2] — 2026-06-18
 
 ### Fixed
