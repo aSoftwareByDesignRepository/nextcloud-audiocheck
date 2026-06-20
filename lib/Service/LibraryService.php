@@ -491,16 +491,123 @@ class LibraryService
 		return ['items' => $items, 'total' => $total, 'page' => $page, 'limit' => $limit];
 	}
 
-	public function getCollection(string $userId, string $key): array
+	/**
+	 * @return array<string, mixed>
+	 */
+	public function getCollection(string $userId, string $key, int $page = 1, int $limit = 0): array
 	{
 		$decoded = $this->decodeCollectionKey($key);
+		$page = max(1, $page);
+		if ($limit < 0) {
+			$limit = 0;
+		} elseif ($limit > 0) {
+			$limit = min(100, $limit);
+		}
+
+		$total = $this->countCollectionTracks($userId, $decoded);
+		if ($total === 0) {
+			throw new NotFoundException();
+		}
+
+		$listenedCount = $this->queryCollectionListenedCount($userId, $decoded);
+		$tracks = $this->queryCollectionTracks($userId, $decoded, $page, $limit);
+		$this->applyListenedFlags($userId, $tracks);
+
+		$collection = [
+			'key' => $key,
+			'title' => $decoded['album'],
+			'subtitle' => $decoded['albumArtist'],
+			'kind' => $decoded['kind'],
+			'tracks' => $tracks,
+			'trackCount' => $total,
+			'listenedCount' => $listenedCount,
+			'fullyListened' => $total > 0 && $listenedCount >= $total,
+		];
+		if ($limit > 0) {
+			$collection['page'] = $page;
+			$collection['limit'] = $limit;
+		}
+
+		return $collection;
+	}
+
+	/**
+	 * @param array{album:string,albumArtist:string,kind:string} $decoded
+	 */
+	private function countCollectionTracks(string $userId, array $decoded): int
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->selectAlias($qb->func()->count('t.id'), 'c')
+			->from('ac_tracks', 't')
+			->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'));
+		$this->applyCollectionTrackFilters($qb, $userId, $decoded);
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+
+		return (int)($row['c'] ?? 0);
+	}
+
+	/**
+	 * @param array{album:string,albumArtist:string,kind:string} $decoded
+	 */
+	private function queryCollectionListenedCount(string $userId, array $decoded): int
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->selectAlias(
+			$qb->createFunction('SUM(CASE WHEN COALESCE(ps.listened, 0) = 1 THEN 1 ELSE 0 END)'),
+			'listened_count',
+		)
+			->from('ac_tracks', 't')
+			->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'))
+			->leftJoin('t', 'ac_play_state', 'ps', $qb->expr()->andX(
+				$qb->expr()->eq('ps.user_id', $qb->createNamedParameter($userId)),
+				$qb->expr()->eq('ps.file_id', 't.file_id'),
+			));
+		$this->applyCollectionTrackFilters($qb, $userId, $decoded);
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+
+		return (int)($row['listened_count'] ?? 0);
+	}
+
+	/**
+	 * @param array{album:string,albumArtist:string,kind:string} $decoded
+	 * @return list<array<string,mixed>>
+	 */
+	private function queryCollectionTracks(string $userId, array $decoded, int $page, int $limit): array
+	{
 		$albumExpr = $this->effectiveAlbumSql();
 		$albumArtistExpr = $this->effectiveAlbumArtistSql();
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('t.file_id', 't.file_name', 't.added_at', 'm.title', 'm.artist', 'm.album', 'm.album_artist', 'm.kind', 'm.duration_ms', 'm.mimetype', 'm.track_no', 'm.disc_no', 'm.has_chapters', 'm.cover_state')
 			->from('ac_tracks', 't')
-			->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'))
-			->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
+			->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'));
+		$this->applyCollectionTrackFilters($qb, $userId, $decoded);
+		$qb->orderBy('m.disc_no', 'ASC')->addOrderBy('m.track_no', 'ASC')->addOrderBy('t.file_name', 'ASC');
+		if ($limit > 0) {
+			$offset = ($page - 1) * $limit;
+			$qb->setMaxResults($limit)->setFirstResult($offset);
+		}
+		$result = $qb->executeQuery();
+		$tracks = [];
+		while ($row = $result->fetch()) {
+			$tracks[] = $this->formatTrackForUser($userId, $row);
+		}
+		$result->closeCursor();
+
+		return $tracks;
+	}
+
+	/**
+	 * @param array{album:string,albumArtist:string,kind:string} $decoded
+	 */
+	private function applyCollectionTrackFilters(\OCP\DB\QueryBuilder\IQueryBuilder $qb, string $userId, array $decoded): void
+	{
+		$albumExpr = $this->effectiveAlbumSql();
+		$albumArtistExpr = $this->effectiveAlbumArtistSql();
+		$qb->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
 			->andWhere($qb->expr()->eq($qb->createFunction($albumExpr), $qb->createNamedParameter($decoded['album'])))
 			->andWhere($qb->expr()->eq('m.kind', $qb->createNamedParameter($decoded['kind'])));
 		if ($decoded['albumArtist'] !== '') {
@@ -508,24 +615,25 @@ class LibraryService
 		} else {
 			$qb->andWhere($qb->expr()->eq($qb->createFunction($albumArtistExpr), $qb->createNamedParameter('')));
 		}
-		$qb->orderBy('m.disc_no', 'ASC')->addOrderBy('m.track_no', 'ASC')->addOrderBy('t.file_name', 'ASC');
+	}
+
+	/** @return list<int> */
+	private function listCollectionFileIds(string $userId, string $key): array
+	{
+		$decoded = $this->decodeCollectionKey($key);
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('t.file_id')
+			->from('ac_tracks', 't')
+			->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'));
+		$this->applyCollectionTrackFilters($qb, $userId, $decoded);
 		$result = $qb->executeQuery();
-		$tracks = [];
+		$fileIds = [];
 		while ($row = $result->fetch()) {
-			$tracks[] = $this->formatTrackForUser($userId, $row);
+			$fileIds[] = (int)$row['file_id'];
 		}
 		$result->closeCursor();
-		if ($tracks === []) {
-			throw new NotFoundException();
-		}
-		$this->applyListenedFlags($userId, $tracks);
-		return $this->enrichCollectionListenedStats([
-			'key' => $key,
-			'title' => $decoded['album'],
-			'subtitle' => $decoded['albumArtist'],
-			'kind' => $decoded['kind'],
-			'tracks' => $tracks,
-		]);
+
+		return $fileIds;
 	}
 
 	/**
@@ -535,13 +643,12 @@ class LibraryService
 	 */
 	public function setCollectionListened(string $userId, string $key, bool $listened): array
 	{
-		$collection = $this->getCollection($userId, $key);
-		$fileIds = array_map(
-			static fn (array $track): int => (int)($track['fileId'] ?? 0),
-			$collection['tracks'] ?? [],
-		);
+		$fileIds = $this->listCollectionFileIds($userId, $key);
+		if ($fileIds === []) {
+			throw new NotFoundException();
+		}
 		$result = $this->setListenedForFileIds($userId, $fileIds, $listened);
-		$refreshed = $this->getCollection($userId, $key);
+		$refreshed = $this->getCollection($userId, $key, 1, 0);
 
 		return [
 			'collection' => $refreshed,
@@ -720,15 +827,22 @@ class LibraryService
 	}
 
 	/**
-	 * @return array{items:list<array<string,mixed>>,total:int}
+	 * @return array{items:list<array<string,mixed>>,total:int,page?:int,limit?:int}
 	 */
-	public function listFacets(string $userId, string $type, ?string $q, ?string $kind = null): array
+	public function listFacets(string $userId, string $type, ?string $q, ?string $kind = null, int $page = 1, int $limit = 0): array
 	{
+		$page = max(1, $page);
+		if ($limit < 0) {
+			$limit = 0;
+		} elseif ($limit > 0) {
+			$limit = min(100, $limit);
+		}
+
 		if ($type === 'favorites') {
-			return $this->listFavoriteFacet($userId);
+			return $this->paginateFacetItems($this->listFavoriteFacet($userId), $page, $limit);
 		}
 		if ($type === 'tags') {
-			return $this->listTagFacets($userId, $q);
+			return $this->paginateFacetItems($this->listTagFacets($userId, $q), $page, $limit);
 		}
 
 		$column = match ($type) {
@@ -808,11 +922,32 @@ class LibraryService
 				$folderItems[] = ['name' => $name, 'count' => $count];
 			}
 			usort($folderItems, static fn ($a, $b) => strcmp($a['name'], $b['name']));
-			return ['items' => $folderItems, 'total' => count($folderItems)];
+			return $this->paginateFacetItems(['items' => $folderItems, 'total' => count($folderItems)], $page, $limit);
 		}
 
 		usort($items, static fn ($a, $b) => strcasecmp($a['name'], $b['name']));
-		return ['items' => $items, 'total' => count($items)];
+		return $this->paginateFacetItems(['items' => $items, 'total' => count($items)], $page, $limit);
+	}
+
+	/**
+	 * @param array{items:list<array<string,mixed>>,total:int} $payload
+	 * @return array{items:list<array<string,mixed>>,total:int,page?:int,limit?:int}
+	 */
+	private function paginateFacetItems(array $payload, int $page, int $limit): array
+	{
+		$items = $payload['items'];
+		$total = (int)($payload['total'] ?? count($items));
+		if ($limit <= 0) {
+			return ['items' => $items, 'total' => $total];
+		}
+		$offset = ($page - 1) * $limit;
+
+		return [
+			'items' => array_slice($items, $offset, $limit),
+			'total' => $total,
+			'page' => $page,
+			'limit' => $limit,
+		];
 	}
 
 	public function collectionKey(string $album, string $albumArtist, string $kind): string

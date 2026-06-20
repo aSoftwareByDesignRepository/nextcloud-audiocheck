@@ -148,14 +148,54 @@
 		opts.host.appendChild(details);
 
 		let loaded = false;
+		let trackPage = 1;
+		let trackTotal = opts.count || 0;
+		const TRACK_PAGE_SIZE = 48;
+
+		function appendPage(data) {
+			const tracks = data.items || [];
+			trackTotal = data.total != null ? data.total : tracks.length;
+			appendTracksToList(list, tracks, cache, C, opts.displayMeta, opts.rowOptionsForTrack);
+			const countEl = details.querySelector('.ac-media-folder-group__count');
+			if (countEl && trackTotal > 0) {
+				countEl.textContent = AudioCheckTime.tracksLabel(trackTotal);
+			}
+			const existingMore = list.querySelector('.ac-facet-group__load-more');
+			if (existingMore) existingMore.remove();
+			if (trackTotal > cache.length) {
+				const li = C.el('li', { className: 'ac-track-list__empty ac-facet-group__load-more' });
+				const btn = C.el('button', {
+					type: 'button',
+					className: 'ac-btn ac-btn--secondary',
+					text: t('audiocheck', 'Load more'),
+					onClick: () => {
+						btn.disabled = true;
+						trackPage += 1;
+						opts.loadTracks(trackPage).then((next) => {
+							appendPage(next);
+						}).catch((e) => {
+							AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error');
+						}).finally(() => {
+							btn.disabled = false;
+						});
+					},
+				});
+				li.appendChild(btn);
+				list.appendChild(li);
+			}
+		}
+
 		function loadList() {
-			if (loaded) return;
-			loaded = true;
-			list.appendChild(C.el('li', {
-				className: 'ac-track-list__empty',
-				text: t('audiocheck', 'Loading…'),
-			}));
-			opts.loadTracks().then((data) => {
+			if (loaded && trackPage === 1) return;
+			if (!loaded) {
+				loaded = true;
+				trackPage = 1;
+				list.appendChild(C.el('li', {
+					className: 'ac-track-list__empty',
+					text: t('audiocheck', 'Loading…'),
+				}));
+			}
+			opts.loadTracks(trackPage).then((data) => {
 				list.textContent = '';
 				const tracks = data.items || [];
 				if (!tracks.length) {
@@ -165,18 +205,7 @@
 					}));
 					return;
 				}
-				appendTracksToList(list, tracks, cache, C, opts.displayMeta, opts.rowOptionsForTrack);
-				const trackTotal = data.total != null ? data.total : tracks.length;
-				const countEl = details.querySelector('.ac-media-folder-group__count');
-				if (countEl && trackTotal > 0) {
-					countEl.textContent = AudioCheckTime.tracksLabel(trackTotal);
-				}
-				if (trackTotal > tracks.length) {
-					list.appendChild(C.el('li', {
-						className: 'ac-track-list__empty ac-facet-group__truncated',
-						text: t('audiocheck', 'Showing first {count} tracks.', { count: String(tracks.length) }),
-					}));
-				}
+				appendPage(data);
 			}).catch((e) => {
 				list.textContent = '';
 				list.appendChild(C.el('li', {

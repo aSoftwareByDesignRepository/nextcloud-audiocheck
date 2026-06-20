@@ -119,7 +119,16 @@ class ApiController extends Controller
 	public function getCollection(string $key): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($key): array {
-			return ['collection' => $this->library->getCollection($userId, $key)];
+			$params = $this->request->getParams();
+
+			return [
+				'collection' => $this->library->getCollection(
+					$userId,
+					$key,
+					(int)($params['page'] ?? 1),
+					(int)($params['limit'] ?? 0),
+				),
+			];
 		});
 	}
 
@@ -128,10 +137,19 @@ class ApiController extends Controller
 	public function listFacets(string $type): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($type): array {
-			$q = $this->request->getParam('q');
-			$kind = $this->request->getParam('kind');
+			$params = $this->request->getParams();
+			$q = $params['q'] ?? null;
+			$kind = $params['kind'] ?? null;
 			$kindFilter = is_string($kind) && in_array($kind, ['music', 'audiobook'], true) ? $kind : null;
-			return $this->library->listFacets($userId, $type, is_string($q) ? $q : null, $kindFilter);
+
+			return $this->library->listFacets(
+				$userId,
+				$type,
+				is_string($q) ? $q : null,
+				$kindFilter,
+				(int)($params['page'] ?? 1),
+				(int)($params['limit'] ?? 0),
+			);
 		});
 	}
 

@@ -5,6 +5,7 @@
 	const PA = () => window.AudioCheckPlaylistActions;
 	const UIL = () => window.AudioCheckTrackListUi;
 	const PAGE_SIZE = 48;
+	const FACET_LIST_PAGE_SIZE = 48;
 	const FACET_TRACK_LIMIT = 500;
 	const PLAY_ALL_PAGE_SIZE = 100;
 	const PLAY_ALL_MAX_TRACKS = 500;
@@ -261,7 +262,12 @@
 				function renderFacetGroup(type, item, host, startOpen) {
 					const label = facetGroupLabel(type, item);
 					const count = item.count || 0;
-					const params = () => ({ ...facetTrackParams(type, item), sort, limit: UIL().FACET_TRACK_LIMIT });
+					const trackParams = (pageNum) => ({
+						...facetTrackParams(type, item),
+						sort,
+						page: pageNum || 1,
+						limit: PAGE_SIZE,
+					});
 
 					UIL().renderExpandableTrackGroup({
 						C,
@@ -270,11 +276,19 @@
 						host,
 						startOpen,
 						displayMeta: trackDisplayMeta,
-						loadTracks: () => AudioCheckApi.get('/apps/audiocheck/api/tracks', params()),
+						loadTracks: (pageNum) => AudioCheckApi.get('/apps/audiocheck/api/tracks', trackParams(pageNum)),
 						playAllTracks: async () => {
-							const data = await AudioCheckApi.get('/apps/audiocheck/api/tracks', params());
-							const tracks = data.items || [];
-							const totalTracks = data.total != null ? data.total : tracks.length;
+							const tracks = [];
+							let pageNum = 1;
+							let totalTracks = Infinity;
+							while (tracks.length < totalTracks && tracks.length < PLAY_ALL_MAX_TRACKS) {
+								const data = await AudioCheckApi.get('/apps/audiocheck/api/tracks', trackParams(pageNum));
+								const batch = data.items || [];
+								totalTracks = data.total != null ? data.total : batch.length;
+								tracks.push(...batch);
+								if (batch.length === 0 || tracks.length >= totalTracks) break;
+								pageNum += 1;
+							}
 							if (totalTracks > tracks.length) {
 								AudioCheckMessaging.toast(
 									t('audiocheck', 'Playing first {count} tracks.', { count: String(tracks.length) }),
@@ -333,20 +347,26 @@
 					});
 				}
 
-				function loadFacets(type) {
-					panel.replaceChildren();
-					moreWrap.textContent = '';
+				function loadFacets(type, reset) {
+					if (reset) {
+						page = 1;
+						panel.replaceChildren();
+						moreWrap.textContent = '';
+						const host = C.el('div', { className: 'ac-media-folder-groups ac-facet-groups' });
+						panel.appendChild(host);
+					}
+					const host = panel.querySelector('.ac-facet-groups');
+					if (!host) return;
 					status.textContent = t('audiocheck', 'Loading…');
-					const host = C.el('div', { className: 'ac-media-folder-groups ac-facet-groups' });
-					panel.appendChild(host);
 
-					const params = { type };
+					const params = { type, page, limit: FACET_LIST_PAGE_SIZE };
 					if (query.length >= 2 && type !== 'folders') {
 						params.q = query;
 					}
 
 					AudioCheckApi.get('/apps/audiocheck/api/facets/{type}', null, { params }).then((data) => {
 						let items = (data.items || []).slice();
+						total = data.total != null ? data.total : items.length;
 						if (type === 'folders') {
 							const q = query.toLowerCase();
 							if (q.length >= 2) {
@@ -354,7 +374,7 @@
 									|| (item.name || '').toLowerCase().includes(q));
 							}
 						}
-						if (!items.length) {
+						if (reset && !items.length && page === 1) {
 							const copy = config.emptyCopy[type] || {};
 							showEmpty(type, query.length >= 2
 								? noMatchMessage(type)
@@ -364,18 +384,33 @@
 							} : undefined);
 							return;
 						}
-						const openAll = items.length === 1;
+						const openAll = reset && page === 1 && items.length === 1 && total === 1;
 						items.forEach((item) => renderFacetGroup(type, item, host, openAll));
-						const trackTotal = items.reduce((sum, item) => sum + (item.count || 0), 0);
-						if (items.length === 1) {
+						const shownGroups = host.children.length;
+						const trackTotal = Array.from(host.children).reduce((sum, node) => {
+							const countEl = node.querySelector('.ac-media-folder-group__count');
+							const text = countEl ? countEl.textContent : '';
+							const match = text && text.match(/(\d+)/);
+							return sum + (match ? parseInt(match[1], 10) : 0);
+						}, 0);
+						if (shownGroups === 1 && host.children.length === 1) {
 							status.textContent = t('audiocheck', '{folder} — {count} tracks', {
 								folder: facetGroupLabel(type, items[0]),
-								count: String(trackTotal),
+								count: String(items[0].count || trackTotal),
 							});
 						} else {
-							status.textContent = t('audiocheck', '{count} items', { count: String(items.length) })
-								+ ' — '
-								+ AudioCheckTime.tracksLabel(trackTotal);
+							status.textContent = t('audiocheck', 'Showing {shown} of {total} items', {
+								shown: String(shownGroups),
+								total: String(total),
+							});
+						}
+						if (shownGroups < total) {
+							moreWrap.appendChild(C.el('button', {
+								type: 'button',
+								className: 'ac-btn ac-btn--primary',
+								text: t('audiocheck', 'Load more'),
+								onClick: () => { page += 1; loadFacets(type, false); },
+							}));
 						}
 					}).catch((e) => {
 						status.textContent = e.message || t('audiocheck', 'Request failed.');
@@ -395,7 +430,7 @@
 					if (type === 'favorites') {
 						loadFavorites(!!reset);
 					} else {
-						loadFacets(type);
+						loadFacets(type, !!reset);
 					}
 				}
 

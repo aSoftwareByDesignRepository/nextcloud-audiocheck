@@ -45,7 +45,8 @@
 	function collectionMetaLine(playable, allTracks, meta) {
 		const parts = [];
 		if (meta && meta.kind) parts.push(collectionKindLabel(meta.kind));
-		parts.push(AudioCheckTime.tracksLabel((allTracks || []).length));
+		const count = meta && meta.trackCount != null ? meta.trackCount : (allTracks || []).length;
+		parts.push(AudioCheckTime.tracksLabel(count));
 		const totalMs = AudioCheckTime.sumDurationMs(playable);
 		if (totalMs > 0) {
 			parts.push(AudioCheckTime.formatDuration(totalMs));
@@ -312,7 +313,14 @@
 					attrs: { role: 'status' },
 					text: collectionMetaLine(tracks, all, meta),
 				}));
-				const listenedCounts = collectionListenedCounts(all);
+				const trackCount = meta && meta.trackCount != null ? meta.trackCount : all.length;
+				const listenedCounts = meta && meta.listenedCount != null
+					? {
+						listened: Number(meta.listenedCount),
+						total: trackCount,
+						fullyListened: !!meta.fullyListened,
+					}
+					: collectionListenedCounts(all);
 				let listenedStatusEl = null;
 				if (collectionKey && listenedCounts.total > 0) {
 					listenedStatusEl = C.createElement('p', {
@@ -393,15 +401,18 @@
 					trackSection.appendChild(C.createElement('h3', {
 						id: 'ac-collection-tracks-heading',
 						className: 'ac-section__title ac-collection-detail__tracks-title',
-						text: t('audiocheck', 'Tracks ({count})', { count: String(all.length) }),
+						text: t('audiocheck', 'Tracks ({count})', { count: String(trackCount) }),
 					}));
 					const ul = C.createElement('ul', { className: 'ac-track-list ac-track-list--collection' });
-					if (!all.length) {
-						ul.appendChild(C.createElement('li', {
-							class: 'ac-track-list__empty',
-							text: t('audiocheck', 'Nothing here yet'),
-						}));
-					} else {
+					function renderTrackRows() {
+						ul.textContent = '';
+						if (!all.length) {
+							ul.appendChild(C.createElement('li', {
+								class: 'ac-track-list__empty',
+								text: t('audiocheck', 'Nothing here yet'),
+							}));
+							return;
+						}
 						all.forEach((track) => {
 							const playable = tracks.indexOf(track);
 							const rowOpts = window.AudioCheckTrackListUi
@@ -418,7 +429,31 @@
 							}, rowOpts));
 						});
 					}
+					renderTrackRows();
 					trackSection.appendChild(ul);
+					if (meta && typeof meta.loadMoreTracks === 'function' && all.length < trackCount) {
+						const loadMoreWrap = C.createElement('div', { className: 'ac-collection-detail__load-more' });
+						const loadMoreBtn = actionButton(
+							t('audiocheck', 'Load more'),
+							'chevron-down',
+							'ac-btn--secondary',
+							() => {
+								loadMoreBtn.disabled = true;
+								Promise.resolve(meta.loadMoreTracks()).then((updated) => {
+									all.splice(0, all.length, ...(updated || []));
+									tracks.splice(0, tracks.length);
+									all.filter((tr) => tr && !tr.unavailable).forEach((tr) => tracks.push(tr));
+									renderTrackRows();
+								}).catch((e) => {
+									AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error');
+								}).finally(() => {
+									loadMoreBtn.disabled = false;
+								});
+							},
+						);
+						loadMoreWrap.appendChild(loadMoreBtn);
+						trackSection.appendChild(loadMoreWrap);
+					}
 					root.appendChild(trackSection);
 				}
 
@@ -452,11 +487,39 @@
 	}
 
 	function openCollectionDetail(collectionKey, titleHint) {
-		AudioCheckApi.get('/apps/audiocheck/api/collections/{key}', null, { params: { key: collectionKey } }).then((data) => {
-			const col = data.collection || {};
-			openTracksSheet(col.title || titleHint || t('audiocheck', 'Collection'), col.tracks || [], collectionKey, {
+		const COLLECTION_PAGE_SIZE = 48;
+		let page = 1;
+		let collectionMeta = null;
+		let allLoadedTracks = [];
+
+		function fetchPage() {
+			return AudioCheckApi.get('/apps/audiocheck/api/collections/{key}', null, {
+				params: { key: collectionKey, page, limit: COLLECTION_PAGE_SIZE },
+			}).then((data) => {
+				const col = data.collection || {};
+				if (!collectionMeta) {
+					collectionMeta = col;
+				}
+				const batch = col.tracks || [];
+				allLoadedTracks = allLoadedTracks.concat(batch);
+				return col;
+			});
+		}
+
+		fetchPage().then((col) => {
+			const trackCount = col.trackCount != null ? col.trackCount : allLoadedTracks.length;
+			openTracksSheet(col.title || titleHint || t('audiocheck', 'Collection'), allLoadedTracks, collectionKey, {
 				subtitle: col.subtitle || '',
 				kind: col.kind || '',
+				trackCount,
+				listenedCount: col.listenedCount,
+				fullyListened: col.fullyListened,
+				loadMoreTracks: trackCount > allLoadedTracks.length
+					? () => {
+						page += 1;
+						return fetchPage().then(() => allLoadedTracks.slice());
+					}
+					: null,
 			});
 		}).catch((e) => AudioCheckMessaging.toast(e.message, 'error'));
 	}

@@ -5,6 +5,7 @@
 	const PA = () => window.AudioCheckPlaylistActions;
 	const UIL = () => window.AudioCheckTrackListUi;
 	const PAGE_SIZE = 48;
+	const FACET_LIST_PAGE_SIZE = 48;
 	const PLAY_ALL_PAGE_SIZE = 100;
 	const PLAY_ALL_MAX_TRACKS = 500;
 
@@ -246,10 +247,11 @@
 					const folderPath = item.name || '';
 					const count = item.count || 0;
 					const label = displayFolderLabel(folderPath);
-					const trackParams = () => ({
+					const trackParams = (pageNum) => ({
 						folder: folderPath,
 						kind: config.kind,
-						limit: UIL().FACET_TRACK_LIMIT,
+						limit: PAGE_SIZE,
+						page: pageNum || 1,
 						sort,
 					});
 
@@ -260,11 +262,19 @@
 						host,
 						startOpen,
 						displayMeta: trackDisplayMeta,
-						loadTracks: () => AudioCheckApi.get('/apps/audiocheck/api/tracks', trackParams()),
+						loadTracks: (pageNum) => AudioCheckApi.get('/apps/audiocheck/api/tracks', trackParams(pageNum)),
 						playAllTracks: async () => {
-							const data = await AudioCheckApi.get('/apps/audiocheck/api/tracks', trackParams());
-							const tracks = data.items || [];
-							const totalTracks = data.total != null ? data.total : tracks.length;
+							const tracks = [];
+							let pageNum = 1;
+							let totalTracks = Infinity;
+							while (tracks.length < totalTracks && tracks.length < PLAY_ALL_MAX_TRACKS) {
+								const data = await AudioCheckApi.get('/apps/audiocheck/api/tracks', trackParams(pageNum));
+								const batch = data.items || [];
+								totalTracks = data.total != null ? data.total : batch.length;
+								tracks.push(...batch);
+								if (batch.length === 0 || tracks.length >= totalTracks) break;
+								pageNum += 1;
+							}
 							if (totalTracks > tracks.length) {
 								AudioCheckMessaging.toast(
 									t('audiocheck', 'Playing first {count} tracks.', { count: String(tracks.length) }),
@@ -281,23 +291,29 @@
 					});
 				}
 
-				function loadFolders() {
-					panel.replaceChildren();
-					moreWrap.textContent = '';
+				function loadFolders(reset) {
+					if (reset) {
+						page = 1;
+						panel.replaceChildren();
+						moreWrap.textContent = '';
+						const host = C.el('div', { className: 'ac-media-folder-groups ac-facet-groups' });
+						panel.appendChild(host);
+					}
+					const host = panel.querySelector('.ac-facet-groups');
+					if (!host) return;
 					status.textContent = t('audiocheck', 'Loading…');
-					const host = C.el('div', { className: 'ac-media-folder-groups ac-facet-groups' });
-					panel.appendChild(host);
 
 					AudioCheckApi.get('/apps/audiocheck/api/facets/{type}', null, {
-						params: { type: 'folders', kind: config.kind },
+						params: { type: 'folders', kind: config.kind, page, limit: FACET_LIST_PAGE_SIZE },
 					}).then((data) => {
 						const items = (data.items || []).slice();
+						const facetTotal = data.total != null ? data.total : items.length;
 						const q = query.toLowerCase();
 						const filtered = q.length >= 2
 							? items.filter((item) => displayFolderLabel(item.name).toLowerCase().includes(q)
 								|| (item.name || '').toLowerCase().includes(q))
 							: items;
-						if (!filtered.length) {
+						if (reset && page === 1 && !filtered.length) {
 							showEmpty(query.length >= 2
 								? t('audiocheck', 'No matching folders.')
 								: config.emptyFolders, 'folder', {
@@ -306,18 +322,21 @@
 							});
 							return;
 						}
-						const openAll = filtered.length === 1;
+						const openAll = reset && page === 1 && filtered.length === 1 && facetTotal === 1;
 						filtered.forEach((item) => renderFolderGroup(item, host, openAll));
-						const trackTotal = filtered.reduce((sum, item) => sum + (item.count || 0), 0);
-						status.textContent = filtered.length === 1
-							? t('audiocheck', '{folder} — {count} tracks', {
-								folder: displayFolderLabel(filtered[0].name),
-								count: String(trackTotal),
-							})
-							: t('audiocheck', '{folders} folders — {count} tracks', {
-								folders: String(filtered.length),
-								count: String(trackTotal),
-							});
+						const shown = host.children.length;
+						status.textContent = t('audiocheck', 'Showing {shown} of {total} folders', {
+							shown: String(shown),
+							total: String(facetTotal),
+						});
+						if (shown < facetTotal) {
+							moreWrap.appendChild(C.el('button', {
+								type: 'button',
+								className: 'ac-btn ac-btn--primary',
+								text: t('audiocheck', 'Load more'),
+								onClick: () => { page += 1; loadFolders(false); },
+							}));
+						}
 					}).catch((e) => {
 						status.textContent = e.message || t('audiocheck', 'Request failed.');
 					});
@@ -380,7 +399,7 @@
 					updateToolbar(type);
 					if (reset) page = 1;
 					if (type === 'tracks') loadTracks(!!reset);
-					else if (type === 'folders') loadFolders();
+					else if (type === 'folders') loadFolders(!!reset);
 					else loadAlbums(!!reset);
 				}
 
