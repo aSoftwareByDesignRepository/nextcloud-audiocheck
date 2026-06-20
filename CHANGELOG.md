@@ -2,6 +2,14 @@
 
 All notable changes to AudioCheck are documented in this file.
 
+## [1.2.5] — 2026-06-20
+
+### Added
+
+- **Paginated library APIs** — collection, facet, and playlist track endpoints accept `page` and `limit` so large libraries stay responsive in the web app and mobile clients.
+- **Load more in the web UI** — Browse collections/facets, Music/Audiobooks browse, and Playlists use server-side pagination with **Load more** instead of loading entire track lists at once.
+- **Play now / shuffle on full lists** — playlist actions fetch all pages before queuing so **Play now** and **Shuffle play** cover the complete list (with the existing 2000-track cap).
+
 ## [1.2.4] — 2026-06-19
 
 ### Added

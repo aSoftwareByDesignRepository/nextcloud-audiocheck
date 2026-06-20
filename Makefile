@@ -62,7 +62,8 @@ sign-tarball:
 	@test -f $(ready2publish_sign) || (echo "Error: Missing $(ready2publish_sign)"; exit 1)
 	@APPSTORE_SIGNING_KEY="$(SIGN_KEY)" APPSTORE_SIGNING_CERT="$(SIGN_CRT)" bash "$(ready2publish_sign)" $(app_name) "$(TARBALL)"
 
-release-signed: release sign-release verify-signature-manifest
+release-signed: release verify-release
+	@echo "Release archive ready at $(archive_path). Run 'make sign-tarball' for App Store signature."
 
 clean:
 	@rm -rf $(build_dir) .phpunit.result.cache test-results
