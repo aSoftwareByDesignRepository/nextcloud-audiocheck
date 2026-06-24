@@ -55,16 +55,31 @@
 		if (!root) return;
 		currentView = viewId;
 		root.dataset.acView = viewId;
+		const appContent = document.getElementById('app-content');
+		if (appContent) appContent.dataset.acView = viewId;
+		if (window.AudioCheckPageChrome) {
+			AudioCheckPageChrome.clearActions();
+			AudioCheckPageChrome.update(viewId, params.pageChrome || null);
+		}
 		root.textContent = '';
 		const view = views[viewId];
 		if (view && typeof view.render === 'function') {
 			root.appendChild(view.render(params));
 		}
 		document.querySelectorAll('.ac-nav__link').forEach((a) => {
-			const href = a.getAttribute('href') || '';
-			a.classList.toggle('ac-nav__link--active', href.endsWith(routes[viewId]?.path) || (viewId === 'playlist' && href.includes('/playlists')));
-			a.toggleAttribute('aria-current', a.classList.contains('ac-nav__link--active') ? 'page' : false);
+			const li = a.closest('[data-ac-nav-id]');
+			const navId = li ? li.getAttribute('data-ac-nav-id') : '';
+			let active = navId === viewId;
+			if (viewId === 'playlist' && navId === 'playlists') active = true;
+			a.classList.toggle('ac-nav__link--active', active);
+			a.classList.toggle('is-active', active);
+			a.classList.toggle('active', active);
+			a.toggleAttribute('aria-current', active ? 'page' : false);
 		});
+		document.dispatchEvent(new CustomEvent('audiocheck-view-change', {
+			bubbles: true,
+			detail: { viewId },
+		}));
 	}
 
 	window.AudioCheckRouter = {

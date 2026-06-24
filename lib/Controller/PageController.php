@@ -125,7 +125,8 @@ class PageController extends Controller
 			'pageTitle' => $title,
 			'pageHelp' => $help,
 			'isAppAdmin' => $this->access->isAppAdmin($userId),
-			'navigation' => $this->buildNavigation($viewId),
+			'navigationGroups' => $this->buildNavigationGroups($viewId),
+			'viewMeta' => $this->buildViewMeta(),
 			'appLogoUrl' => $this->urlGenerator->imagePath(Application::APP_ID, 'app.svg'),
 			'urls' => $this->buildUrls(),
 			'speedPresets' => PlaybackStateService::SPEED_PRESETS,
@@ -144,10 +145,18 @@ class PageController extends Controller
 			'common/api',
 			'common/icons',
 			'common/components',
+			'common/track-list-ui',
 			'common/entity-picker',
 			'common/folder-picker',
+			'common/queue-merge',
+			'common/queue-playback-mode',
+			'common/global-search',
+			'common/global-search-ui',
 			'common/playlist-actions',
-			'common/track-list-ui',
+			'common/playback-start',
+			'common/library-page-ui',
+			'common/sleep-timer',
+			'common/page-chrome',
 			'common/router',
 			'common/player',
 			'common/media-library-page',
@@ -169,39 +178,76 @@ class PageController extends Controller
 	}
 
 	/** @return list<array<string, mixed>> */
-	private function buildNavigation(string $activeView): array
+	private function buildNavigationGroups(string $activeView): array
 	{
 		$userId = $this->access->currentUserId();
-		$items = [
-			['id' => 'home', 'label' => $this->l10n->t('Home'), 'route' => 'audiocheck.page.index', 'icon' => 'home'],
-			['id' => 'audiobooks', 'label' => $this->l10n->t('Audiobooks'), 'route' => 'audiocheck.page.audiobooks', 'icon' => 'audiobook'],
-			['id' => 'music', 'label' => $this->l10n->t('Music'), 'route' => 'audiocheck.page.music', 'icon' => 'music'],
-			['id' => 'playlists', 'label' => $this->l10n->t('Playlists'), 'route' => 'audiocheck.page.playlists', 'icon' => 'playlist'],
-			['id' => 'browse', 'label' => $this->l10n->t('Browse'), 'route' => 'audiocheck.page.browse', 'icon' => 'browse'],
-			['id' => 'now-playing', 'label' => $this->l10n->t('Now playing'), 'route' => 'audiocheck.page.nowPlaying', 'icon' => 'play'],
-			['id' => 'library', 'label' => $this->l10n->t('Library'), 'route' => 'audiocheck.page.library', 'icon' => 'folder'],
-			['id' => 'settings', 'label' => $this->l10n->t('Settings'), 'route' => 'audiocheck.page.settings', 'icon' => 'settings'],
+		$listen = [
+			['id' => 'home', 'label' => $this->l10n->t('Home'), 'hint' => $this->l10n->t('Continue listening and shelves'), 'route' => 'audiocheck.page.index', 'icon' => 'home'],
+			['id' => 'audiobooks', 'label' => $this->l10n->t('Audiobooks'), 'hint' => $this->l10n->t('Books and long-form audio'), 'route' => 'audiocheck.page.audiobooks', 'icon' => 'audiobook'],
+			['id' => 'music', 'label' => $this->l10n->t('Music'), 'hint' => $this->l10n->t('Albums, artists, and tracks'), 'route' => 'audiocheck.page.music', 'icon' => 'music'],
+			['id' => 'playlists', 'label' => $this->l10n->t('Playlists'), 'hint' => $this->l10n->t('Favorites and your lists'), 'route' => 'audiocheck.page.playlists', 'icon' => 'playlist'],
+			['id' => 'browse', 'label' => $this->l10n->t('Browse'), 'hint' => $this->l10n->t('Artists, genres, folders, tags'), 'route' => 'audiocheck.page.browse', 'icon' => 'browse'],
+			['id' => 'now-playing', 'label' => $this->l10n->t('Now playing'), 'hint' => $this->l10n->t('Full player, queue, chapters'), 'route' => 'audiocheck.page.nowPlaying', 'icon' => 'play'],
+		];
+		$library = [
+			['id' => 'library', 'label' => $this->l10n->t('Library'), 'hint' => $this->l10n->t('Folders to scan and status'), 'route' => 'audiocheck.page.library', 'icon' => 'folder'],
+		];
+		$account = [
+			['id' => 'settings', 'label' => $this->l10n->t('Settings'), 'hint' => $this->l10n->t('Playback and scan preferences'), 'route' => 'audiocheck.page.settings', 'icon' => 'settings'],
 		];
 		if ($this->access->isAppAdmin($userId)) {
-			$items[] = ['id' => 'app-settings', 'label' => $this->l10n->t('App settings'), 'route' => 'audiocheck.page.appSettings', 'icon' => 'admin-settings'];
+			$account[] = ['id' => 'app-settings', 'label' => $this->l10n->t('App settings'), 'hint' => $this->l10n->t('Access policy and defaults'), 'route' => 'audiocheck.page.appSettings', 'icon' => 'admin-settings'];
 		}
+		$groups = [
+			['title' => $this->l10n->t('Listen'), 'items' => $this->mapNavItems($listen, $activeView)],
+			['title' => $this->l10n->t('Library'), 'items' => $this->mapNavItems($library, $activeView)],
+			['title' => $this->l10n->t('Account'), 'items' => $this->mapNavItems($account, $activeView)],
+		];
+		return $groups;
+	}
+
+	/**
+	 * @param list<array<string, string>> $items
+	 * @return list<array<string, mixed>>
+	 */
+	private function mapNavItems(array $items, string $activeView): array
+	{
 		$out = [];
 		foreach ($items as $item) {
 			$out[] = [
 				'id' => $item['id'],
 				'label' => $item['label'],
+				'hint' => $item['hint'] ?? '',
 				'url' => $this->urlGenerator->linkToRoute($item['route']),
 				'icon' => $item['icon'],
-				'active' => $item['id'] === $activeView,
+				'active' => $item['id'] === $activeView || ($activeView === 'playlist' && $item['id'] === 'playlists'),
 			];
 		}
 		return $out;
+	}
+
+	/** @return array<string, array{title: string, help: string, icon: string}> */
+	private function buildViewMeta(): array
+	{
+		return [
+			'home' => ['title' => $this->l10n->t('Home'), 'help' => $this->l10n->t('Continue listening and discover your audio library.'), 'icon' => 'home'],
+			'audiobooks' => ['title' => $this->l10n->t('Audiobooks'), 'help' => $this->l10n->t('Browse audiobook titles, folders, and books.'), 'icon' => 'audiobook'],
+			'music' => ['title' => $this->l10n->t('Music'), 'help' => $this->l10n->t('Browse tracks, folders, and albums.'), 'icon' => 'music'],
+			'playlists' => ['title' => $this->l10n->t('Playlists'), 'help' => $this->l10n->t('Built-in Favorites and playlists you create.'), 'icon' => 'playlist'],
+			'playlist' => ['title' => $this->l10n->t('Playlist'), 'help' => $this->l10n->t('View and play playlist tracks.'), 'icon' => 'playlist'],
+			'browse' => ['title' => $this->l10n->t('Browse'), 'help' => $this->l10n->t('Explore artists, genres, folders, and favorites.'), 'icon' => 'browse'],
+			'now-playing' => ['title' => $this->l10n->t('Now playing'), 'help' => $this->l10n->t('Full player, queue, and chapters.'), 'icon' => 'play'],
+			'library' => ['title' => $this->l10n->t('Library'), 'help' => $this->l10n->t('Choose folders to scan, then index your audio.'), 'icon' => 'folder'],
+			'settings' => ['title' => $this->l10n->t('Settings'), 'help' => $this->l10n->t('Personal playback and scan preferences.'), 'icon' => 'settings'],
+			'app-settings' => ['title' => $this->l10n->t('App settings'), 'help' => $this->l10n->t('Access policy and defaults for AudioCheck.'), 'icon' => 'admin-settings'],
+		];
 	}
 
 	/** @return array<string, string> */
 	private function buildUrls(): array
 	{
 		return [
+			'home' => $this->urlGenerator->linkToRoute('audiocheck.page.index'),
 			'apiTracks' => $this->urlGenerator->linkToRoute('audiocheck.api.listTracks'),
 			'apiCollections' => $this->urlGenerator->linkToRoute('audiocheck.api.listCollections'),
 			'apiProgress' => $this->urlGenerator->linkToRoute('audiocheck.api.getProgress'),

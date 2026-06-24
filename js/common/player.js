@@ -125,6 +125,64 @@
 	const QUEUE_ENDPOINT = '/apps/audiocheck/api/queue';
 	let serverPersistTimer = null;
 	let lastServerSig = '';
+	let queuePlaybackPolicy = AudioCheckQueuePlaybackMode.DEFAULT_PLAYBACK_POLICY;
+	const progressCache = {};
+
+	function currentFileIds() {
+		return queue.map((tr) => AudioCheckApi.validFileId(tr && tr.fileId)).filter(Boolean);
+	}
+
+	function rememberProgressEntry(entry) {
+		if (!entry || !entry.fileId) return;
+		progressCache[entry.fileId] = entry;
+		if (entry.updatedAt) progressMeta[entry.fileId] = entry.updatedAt;
+	}
+
+	function fetchTrackProgress(fileId) {
+		const cached = progressCache[fileId];
+		if (cached) return Promise.resolve(cached);
+		return AudioCheckApi.get('/apps/audiocheck/api/progress', { fileId }).then((data) => {
+			const entry = data.progress || null;
+			if (entry) rememberProgressEntry(entry);
+			return entry;
+		}).catch(() => null);
+	}
+
+	function resolveTrackStartMs(trackIndex) {
+		const track = queue[trackIndex];
+		if (!track || !isPlayable(track)) return Promise.resolve(0);
+		const mode = AudioCheckQueuePlaybackMode.effectiveStartMode(queuePlaybackPolicy, trackIndex);
+		if (mode === 'sequential') return Promise.resolve(0);
+		const prefs = window.AudioCheckUserPrefs || {};
+		if (prefs.resumeOnOpen === false) return Promise.resolve(0);
+		return fetchTrackProgress(track.fileId).then((entry) => {
+			if (!entry || entry.finished) return 0;
+			return Math.max(0, Number(entry.positionMs) || 0);
+		});
+	}
+
+	function applyQueuePatch(patch, tracksById) {
+		const prevIds = currentFileIds();
+		const prevPolicy = queuePlaybackPolicy;
+		const priorById = {};
+		queue.forEach((tr) => {
+			const id = AudioCheckApi.validFileId(tr && tr.fileId);
+			if (id) priorById[id] = tr;
+		});
+		if (tracksById) {
+			Object.keys(tracksById).forEach((id) => { priorById[id] = tracksById[id]; });
+		}
+		queuePlaybackPolicy = AudioCheckQueuePlaybackMode.policyAfterQueueEdit(prevPolicy, prevIds, patch.fileIds);
+		queue.length = 0;
+		patch.fileIds.forEach((fileId) => {
+			queue.push(priorById[fileId] || { fileId, title: '', unavailable: false });
+		});
+		index = patch.fileIds.length === 0 ? -1 : Math.max(0, Math.min(patch.currentIndex, patch.fileIds.length - 1));
+		if (shuffle) rebuildShuffleOrder();
+		schedulePersistSession();
+		notify();
+		return !!patch.truncated;
+	}
 
 	function buildServerQueuePayload() {
 		const fileIds = [];
@@ -580,7 +638,7 @@
 
 	function rememberProgress(progress) {
 		if (progress && progress.fileId) {
-			progressMeta[progress.fileId] = progress.updatedAt || 0;
+			rememberProgressEntry(progress);
 		}
 	}
 
@@ -825,6 +883,17 @@
 		a.addEventListener('timeupdate', () => {
 			updateMiniSeek();
 			updateMediaSessionPosition();
+			const track = currentTrack();
+			const ST = window.AudioCheckSleepTimer;
+			if (ST && track) {
+				if (ST.checkDurationExpiry()) {
+					a.pause();
+					announce(t('audiocheck', 'Sleep timer ended — playback paused'));
+				} else if (ST.checkChapterBoundary(track.fileId, Math.floor(a.currentTime * 1000))) {
+					a.pause();
+					announce(t('audiocheck', 'Sleep timer ended — playback paused'));
+				}
+			}
 			notify();
 		});
 		a.addEventListener('volumechange', () => {
@@ -844,6 +913,13 @@
 		});
 		a.addEventListener('ended', () => {
 			saveProgress(true, true);
+			const ST = window.AudioCheckSleepTimer;
+			if (ST && ST.consumeTrackEndStop()) {
+				a.pause();
+				announce(t('audiocheck', 'Sleep timer ended — playback paused'));
+				notify();
+				return;
+			}
 			if (repeatMode === AudioCheckConstants.REPEAT_ONE) { a.currentTime = 0; a.play(); return; }
 			next();
 		});
@@ -924,71 +1000,72 @@
 		if (!track) return;
 		if (!isPlayable(track)) {
 			const ni = nextIndex(i);
-			if (ni >= 0 && ni !== i) loadTrack(ni, positionMs, autoplay);
+			if (ni >= 0 && ni !== i) loadTrack(ni, undefined, autoplay);
 			return;
 		}
 		index = i;
 		const a = audio();
 		const shouldPlay = autoplay !== false;
-		a.src = AudioCheckApi.streamUrl(track.fileId);
-		a.playbackRate = speed / 100;
-		a.load();
-		if (shouldPlay) {
-			const playPromise = a.play();
-			if (playPromise && typeof playPromise.catch === 'function') {
-				playPromise.catch((err) => {
-					const name = err && err.name;
-					// A newer load()/src change superseded this play() — harmless.
-					if (name === 'AbortError') return;
-					// Autoplay was blocked because the document has no user gesture
-					// yet (every reload, app switch, or deep-link landing triggers
-					// this). The track is fully loaded and valid, so we must NEVER
-					// treat it as a failure: keep it paused and ready so the queue is
-					// preserved and the user resumes with a single tap. Genuine media
-					// failures (decode/network/unsupported) still reach the user via
-					// the audio element's own 'error' event and handlePlaybackError.
-					if (name === 'NotAllowedError') {
-						if (index === i) {
-							updateMini(queue[i], { announce: false });
-							notify();
-							announce(t('audiocheck', 'Ready to resume — press play to continue.'));
+
+		function beginPlayback(seekMs) {
+			a.src = AudioCheckApi.streamUrl(track.fileId);
+			a.playbackRate = speed / 100;
+			a.load();
+			if (shouldPlay) {
+				const playPromise = a.play();
+				if (playPromise && typeof playPromise.catch === 'function') {
+					playPromise.catch((err) => {
+						const name = err && err.name;
+						if (name === 'AbortError') return;
+						if (name === 'NotAllowedError') {
+							if (index === i) {
+								updateMini(queue[i], { announce: false });
+								notify();
+								announce(t('audiocheck', 'Ready to resume — press play to continue.'));
+							}
+							return;
 						}
-						return;
-					}
-					handlePlaybackError(i);
+						handlePlaybackError(i);
+					});
+				}
+			}
+			if (seekMs > 0) {
+				a.addEventListener('loadedmetadata', function onMeta() {
+					a.removeEventListener('loadedmetadata', onMeta);
+					a.currentTime = seekMs / 1000;
 				});
 			}
-		}
-		if (positionMs > 0) {
-			a.addEventListener('loadedmetadata', function onMeta() {
-				a.removeEventListener('loadedmetadata', onMeta);
-				a.currentTime = positionMs / 1000;
-			});
-		}
-		if (!track.chapters) {
-			AudioCheckApi.get('/apps/audiocheck/api/playable/{fileId}', null, { params: { fileId: track.fileId } }).then((r) => {
-				if (r.track) {
-					queue[i] = Object.assign({}, track, r.track);
-					notify();
-				}
-			}).catch(() => {});
-		}
-		updateMini(track);
-		if ('mediaSession' in navigator) {
-			const artwork = [];
-			const coverSrc = AudioCheckApi.coverUrl(track.fileId);
-			if (coverSrc) {
-				artwork.push({ src: coverSrc, sizes: '256x256', type: 'image/jpeg' });
+			if (!track.chapters) {
+				AudioCheckApi.get('/apps/audiocheck/api/playable/{fileId}', null, { params: { fileId: track.fileId } }).then((r) => {
+					if (r.track) {
+						queue[i] = Object.assign({}, track, r.track);
+						notify();
+					}
+				}).catch(() => {});
 			}
-			navigator.mediaSession.metadata = new MediaMetadata({
-				title: track.title || track.fileName,
-				artist: track.artist || '',
-				album: track.album || '',
-				artwork,
-			});
+			updateMini(track);
+			if ('mediaSession' in navigator) {
+				const artwork = [];
+				const coverSrc = AudioCheckApi.coverUrl(track.fileId);
+				if (coverSrc) {
+					artwork.push({ src: coverSrc, sizes: '256x256', type: 'image/jpeg' });
+				}
+				navigator.mediaSession.metadata = new MediaMetadata({
+					title: track.title || track.fileName,
+					artist: track.artist || '',
+					album: track.album || '',
+					artwork,
+				});
+			}
+			notify();
+			schedulePersistSession();
 		}
-		notify();
-		schedulePersistSession();
+
+		if (arguments.length >= 2 && positionMs !== undefined) {
+			beginPlayback(Number(positionMs) || 0);
+			return;
+		}
+		resolveTrackStartMs(i).then((seekMs) => beginPlayback(seekMs));
 	}
 
 	function toggle() {
@@ -1021,8 +1098,22 @@
 	}
 
 	window.AudioCheckPlayer = {
-		playQueue(tracks, startIndex, positionMs, autoplay) {
+		playQueue(tracks, startIndex, positionMs, autoplay, playbackOptions) {
 			bindAudio();
+			const opts = playbackOptions || {};
+			if (opts.playbackPolicy) {
+				queuePlaybackPolicy = opts.playbackPolicy;
+			} else if (tracks.length > 1 && opts.playbackMode) {
+				const start = startIndex || 0;
+				queuePlaybackPolicy = AudioCheckQueuePlaybackMode.resolvePlaybackPolicyForQueueStart({
+					fileCount: tracks.length,
+					explicitMode: opts.playbackMode,
+					currentIndex: start,
+					resumeAnchorIndex: opts.resumeAnchorIndex != null ? opts.resumeAnchorIndex : null,
+				});
+			} else if (tracks.length <= 1) {
+				queuePlaybackPolicy = AudioCheckQueuePlaybackMode.DEFAULT_PLAYBACK_POLICY;
+			}
 			queue.length = 0;
 			tracks.forEach((tr) => queue.push(tr));
 			if (shuffle) rebuildShuffleOrder();
@@ -1047,26 +1138,59 @@
 				persistServerQueue({ force: true });
 			}
 		},
+		playQueueFromHere(tracks, startIndex, positionMs) {
+			const idx = typeof startIndex === 'number' && startIndex >= 0 ? startIndex : 0;
+			const policy = AudioCheckQueuePlaybackMode.resolvePlaybackPolicyForQueueStart({
+				fileCount: tracks.length,
+				explicitMode: 'resume',
+				currentIndex: idx,
+				resumeAnchorIndex: tracks.length > 1 ? idx : null,
+			});
+			this.playQueue(tracks, idx, positionMs, true, { playbackPolicy: policy });
+		},
 		enqueue(track) {
 			if (!isPlayable(track)) return false;
-			queue.push(track);
-			if (shuffle) rebuildShuffleOrder();
-			if (index < 0) loadTrack(queue.length - 1);
-			else notify();
-			schedulePersistSession();
+			const prevIds = currentFileIds();
+			if (prevIds.includes(track.fileId)) return false;
+			const patch = AudioCheckQueueMerge.queueAddTracks(prevIds, index < 0 ? 0 : index, [track.fileId]);
+			const truncated = applyQueuePatch(patch, { [track.fileId]: track });
+			if (truncated) {
+				AudioCheckMessaging.toast(t('audiocheck', 'Queue is full — some tracks were not added.'), 'warning');
+			}
+			if (index < 0 && queue.length) loadTrack(0);
 			return true;
 		},
 		enqueueAll(tracks) {
-			const existing = new Set(queue.map((tr) => tr.fileId));
+			const existing = new Set(currentFileIds());
 			const toAdd = (tracks || []).filter((tr) => isPlayable(tr) && !existing.has(tr.fileId));
 			if (!toAdd.length) return 0;
 			const shouldStart = index < 0;
-			toAdd.forEach((tr) => queue.push(tr));
-			if (shuffle) rebuildShuffleOrder();
-			if (shouldStart) loadTrack(0);
-			else notify();
-			schedulePersistSession();
+			const prevIds = currentFileIds();
+			const patch = AudioCheckQueueMerge.queueAddTracks(prevIds, index < 0 ? 0 : index, toAdd.map((tr) => tr.fileId));
+			const byId = {};
+			toAdd.forEach((tr) => { byId[tr.fileId] = tr; });
+			const truncated = applyQueuePatch(patch, byId);
+			if (truncated) {
+				AudioCheckMessaging.toast(t('audiocheck', 'Queue is full — some tracks were not added.'), 'warning');
+			}
+			if (shouldStart && queue.length) loadTrack(0);
 			return toAdd.length;
+		},
+		playNext(trackOrTracks) {
+			const incoming = Array.isArray(trackOrTracks) ? trackOrTracks : [trackOrTracks];
+			const playable = incoming.filter((tr) => tr && isPlayable(tr));
+			if (!playable.length) return false;
+			const prevIds = currentFileIds();
+			const cur = index < 0 ? 0 : index;
+			const patch = AudioCheckQueueMerge.queuePlayNext(prevIds, cur, playable.map((tr) => tr.fileId));
+			const byId = {};
+			playable.forEach((tr) => { byId[tr.fileId] = tr; });
+			const truncated = applyQueuePatch(patch, byId);
+			if (truncated) {
+				AudioCheckMessaging.toast(t('audiocheck', 'Queue is full — some tracks were not added.'), 'warning');
+			}
+			AudioCheckMessaging.toast(t('audiocheck', 'Queued to play next'));
+			return true;
 		},
 		removeAt(i) {
 			if (i < 0 || i >= queue.length) return;
@@ -1125,6 +1249,15 @@
 			volumeUis.add(ui);
 			syncVolumeUi(ui);
 			return () => volumeUis.delete(ui);
+		},
+		getQueuePlaybackPolicy() { return Object.assign({}, queuePlaybackPolicy); },
+		setQueuePlaybackPolicy(policy) {
+			if (!policy || !policy.mode) return;
+			queuePlaybackPolicy = {
+				mode: policy.mode === 'sequential' ? 'sequential' : 'resume',
+				resumeAnchorIndex: policy.resumeAnchorIndex != null ? policy.resumeAnchorIndex : null,
+			};
+			notify();
 		},
 		setRepeat(mode) { repeatMode = mode; schedulePersistSession(); notify(); },
 		setShuffle(on) { shuffle = on; if (shuffle) rebuildShuffleOrder(); schedulePersistSession(); notify(); },

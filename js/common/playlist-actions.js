@@ -12,14 +12,22 @@
 		return a;
 	}
 
-	function startPlayback(tracks, index, closeModal) {
+	function startPlayback(tracks, index, closeModal, playbackOptions) {
 		if (!tracks.length) return;
 		const idx = typeof index === 'number' && index >= 0 ? index : 0;
-		AudioCheckPlayer.playQueue(tracks, idx);
-		if (typeof closeModal === 'function') closeModal(true);
-		if (window.AudioCheckRouter) {
-			AudioCheckRouter.navigate('now-playing', {}, true);
+		const opts = playbackOptions || {};
+		if (window.AudioCheckPlaybackStart) {
+			AudioCheckPlaybackStart.startCollectionPlayback(tracks, Object.assign({ startIndex: idx }, opts));
+		} else {
+			AudioCheckPlayer.playQueue(tracks, idx);
+			if (window.AudioCheckRouter) AudioCheckRouter.navigate('now-playing', {}, true);
 		}
+		if (typeof closeModal === 'function') closeModal(true);
+	}
+
+	function shuffleAndPlay(tracks, closeModal) {
+		AudioCheckPlayer.setShuffle(true);
+		startPlayback(tracks, 0, closeModal, { playbackMode: 'sequential', shuffle: true });
 	}
 
 	function addAllToQueue(tracks, closeModal) {
@@ -348,20 +356,63 @@
 						+ (tracks.length === 1 ? ' ac-collection-detail__actions--single' : ''),
 					attrs: { role: 'group', 'aria-label': labels.actionsAria },
 				});
-				actions.appendChild(actionButton(
-					labels.play, 'play', 'ac-btn--primary',
-					() => startPlayback(tracks, 0, closeModal),
-					{ disabled: !hasPlayable, autofocus: true },
-				));
-				if (tracks.length > 1) {
-					actions.appendChild(actionButton(
-						t('audiocheck', 'Shuffle play'), 'shuffle', null,
-						() => {
-							AudioCheckPlayer.setShuffle(true);
-							startPlayback(shuffleArray(tracks), 0, closeModal);
-						},
-						{ disabled: !hasPlayable },
-					));
+
+				function mountPlaybackActions(showResumeChoice, continueItems) {
+					actions.textContent = '';
+					const PS = window.AudioCheckPlaybackStart;
+					if (tracks.length > 1 && PS) {
+						const fileIds = tracks.map((tr) => tr.fileId);
+						const resumeIndex = showResumeChoice
+							? PS.findResumeQueueIndex(fileIds, continueItems)
+							: 0;
+						actions.appendChild(PS.renderPlaybackStartActions({
+							trackCount: tracks.length,
+							showResumeChoice,
+							disabled: !hasPlayable,
+							onPlayFromStart: () => startPlayback(tracks, 0, closeModal, { playbackMode: 'sequential' }),
+							onContinue: showResumeChoice
+								? () => {
+									const anchorItem = (continueItems || []).find((item) => {
+										return item.fileId === fileIds[resumeIndex];
+									});
+									const positionMs = anchorItem && !anchorItem.finished
+										? Math.max(0, anchorItem.positionMs || 0)
+										: 0;
+									startPlayback(tracks, resumeIndex, closeModal, {
+										playbackMode: 'resume',
+										resumeAnchorIndex: resumeIndex,
+										positionMs,
+									});
+								}
+								: undefined,
+							onShuffle: tracks.length > 1
+								? () => shuffleAndPlay(tracks, closeModal)
+								: undefined,
+						}));
+					} else {
+						actions.appendChild(actionButton(
+							labels.play, 'play', 'ac-btn--primary',
+							() => startPlayback(tracks, 0, closeModal),
+							{ disabled: !hasPlayable, autofocus: true },
+						));
+						if (tracks.length > 1) {
+							actions.appendChild(actionButton(
+								t('audiocheck', 'Shuffle play'), 'shuffle', null,
+								() => shuffleAndPlay(tracks, closeModal),
+								{ disabled: !hasPlayable },
+							));
+						}
+					}
+				}
+
+				if (tracks.length > 1 && window.AudioCheckPlaybackStart) {
+					AudioCheckPlaybackStart.fetchContinueItems().then((continueItems) => {
+						const fileIds = tracks.map((tr) => tr.fileId);
+						const showResumeChoice = AudioCheckPlaybackStart.hasResumableProgress(fileIds, continueItems);
+						mountPlaybackActions(showResumeChoice, continueItems);
+					}).catch(() => mountPlaybackActions(false, []));
+				} else {
+					mountPlaybackActions(false, []);
 				}
 				actions.appendChild(actionButton(
 					labels.addQueue, 'queue', null,
@@ -394,15 +445,6 @@
 				root.appendChild(actions);
 
 				if (showTrackList) {
-					const trackSection = C.createElement('section', {
-						className: 'ac-collection-detail__tracks',
-						attrs: { 'aria-labelledby': 'ac-collection-tracks-heading' },
-					});
-					trackSection.appendChild(C.createElement('h3', {
-						id: 'ac-collection-tracks-heading',
-						className: 'ac-section__title ac-collection-detail__tracks-title',
-						text: t('audiocheck', 'Tracks ({count})', { count: String(trackCount) }),
-					}));
 					const ul = C.createElement('ul', { className: 'ac-track-list ac-track-list--collection' });
 					function renderTrackRows() {
 						ul.textContent = '';
@@ -425,12 +467,27 @@
 									onEnqueue: track.unavailable ? null : () => enqueueTrack(track),
 								};
 							ul.appendChild(C.trackRow(track, () => {
-								if (playable >= 0) startPlayback(tracks, playable, closeModal);
+								if (playable >= 0) {
+									if (tracks.length > 1 && typeof AudioCheckPlayer.playQueueFromHere === 'function') {
+										AudioCheckPlayer.playQueueFromHere(tracks, playable);
+										if (typeof closeModal === 'function') closeModal(true);
+										if (window.AudioCheckRouter) AudioCheckRouter.navigate('now-playing', {}, true);
+									} else {
+										startPlayback(tracks, playable, closeModal);
+									}
+								}
 							}, rowOpts));
 						});
 					}
 					renderTrackRows();
-					trackSection.appendChild(ul);
+					const trackSection = C.sectionCard(
+						t('audiocheck', 'Tracks ({count})', { count: String(trackCount) }),
+						null,
+						ul,
+						null,
+						'ac-collection-tracks-heading',
+					);
+					trackSection.classList.add('ac-collection-detail__tracks');
 					if (meta && typeof meta.loadMoreTracks === 'function' && all.length < trackCount) {
 						const loadMoreWrap = C.createElement('div', { className: 'ac-collection-detail__load-more' });
 						const loadMoreBtn = actionButton(
@@ -680,7 +737,7 @@
 
 		wrap.appendChild(meta);
 		wrap.appendChild(markBtn);
-		bodyWrap.insertBefore(wrap, bodyWrap.firstChild);
+		bodyWrap.appendChild(wrap);
 		loadStats().catch(() => {});
 		return { refresh: loadStats };
 	}

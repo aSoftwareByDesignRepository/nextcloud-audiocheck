@@ -18,9 +18,10 @@ use OCA\AudioCheck\Service\IconCatalog;
 </div>
 
 <div id="ac-announcer" class="ac-sr-only" aria-live="polite" aria-atomic="true"></div>
-<div id="ac-toast-fallback" class="ac-toast-fallback" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+<div id="ac-toasts" class="ac-toasts" aria-live="polite"></div>
 
 	</main>
+	</div>
 
 	<footer id="ac-mini-player" class="ac-mini-player" role="region" aria-label="<?php p($l->t('Mini player')); ?>">
 		<audio id="ac-audio" preload="metadata" playsinline></audio>
@@ -62,7 +63,6 @@ use OCA\AudioCheck\Service\IconCatalog;
 			</div>
 		</div>
 	</footer>
-</div>
 </div>
 
 <?php include __DIR__ . '/common/page-end.php'; ?>

@@ -35,9 +35,19 @@
 			}
 			return;
 		}
+		if (!window.AudioCheckTrackListUi) {
+			console.error('[audiocheck] AudioCheckTrackListUi failed to load');
+			if (window.AudioCheckMessaging) {
+				AudioCheckMessaging.toast(t('audiocheck', 'Track list failed to load. Reload the page.'), 'error');
+			}
+			return;
+		}
 
 		const root = document.getElementById('ac-view-root');
 		if (root) AudioCheckRouter.init(root);
+		if (window.AudioCheckPageChrome) {
+			AudioCheckPageChrome.bindPlayerScope();
+		}
 		syncNowPlayingNav();
 		if (window.AudioCheckPlayer && typeof AudioCheckPlayer.subscribe === 'function') {
 			AudioCheckPlayer.subscribe(syncNowPlayingNav);

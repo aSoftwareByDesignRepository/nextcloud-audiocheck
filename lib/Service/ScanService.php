@@ -7,6 +7,7 @@ namespace OCA\AudioCheck\Service;
 use OCA\AudioCheck\AppInfo\Application;
 use OCA\AudioCheck\Exception\NotFoundException;
 use OCA\AudioCheck\Exception\ValidationException;
+use OCA\AudioCheck\Util\SearchTextNormalizer;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJobList;
 use OCP\Files\File;
@@ -364,6 +365,7 @@ class ScanService
 				->set('meta_id', $qb->createNamedParameter($metaId, $metaId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT))
 				->set('rel_path', $qb->createNamedParameter($relPath))
 				->set('file_name', $qb->createNamedParameter($file->getName()))
+				->set('file_name_norm', $qb->createNamedParameter(SearchTextNormalizer::normalize($file->getName())))
 				->set('mtime', $qb->createNamedParameter($file->getMTime(), \PDO::PARAM_INT))
 				->set('size', $qb->createNamedParameter($file->getSize(), \PDO::PARAM_INT))
 				->set('etag', $qb->createNamedParameter($file->getEtag()))
@@ -382,6 +384,7 @@ class ScanService
 				'meta_id' => $qb->createNamedParameter($metaId, $metaId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
 				'rel_path' => $qb->createNamedParameter($relPath),
 				'file_name' => $qb->createNamedParameter($file->getName()),
+				'file_name_norm' => $qb->createNamedParameter(SearchTextNormalizer::normalize($file->getName())),
 				'mtime' => $qb->createNamedParameter($file->getMTime(), \PDO::PARAM_INT),
 				'size' => $qb->createNamedParameter($file->getSize(), \PDO::PARAM_INT),
 				'etag' => $qb->createNamedParameter($file->getEtag()),

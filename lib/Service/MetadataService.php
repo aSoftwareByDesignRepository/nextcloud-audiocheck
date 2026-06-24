@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\AudioCheck\Service;
 
 use OCA\AudioCheck\AppInfo\Application;
+use OCA\AudioCheck\Util\SearchTextNormalizer;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\Files\File;
 use OCP\IDBConnection;
@@ -353,6 +354,12 @@ class MetadataService
 				'album_artist' => $qb->createNamedParameter($data['album_artist']),
 				'genre' => $qb->createNamedParameter($data['genre']),
 				'series' => $qb->createNamedParameter($data['series'] ?? null),
+				'title_norm' => $qb->createNamedParameter(SearchTextNormalizer::normalize($data['title'] ?? null)),
+				'artist_norm' => $qb->createNamedParameter(SearchTextNormalizer::normalize($data['artist'] ?? null)),
+				'album_norm' => $qb->createNamedParameter(SearchTextNormalizer::normalize($data['album'] ?? null)),
+				'album_artist_norm' => $qb->createNamedParameter(SearchTextNormalizer::normalize($data['album_artist'] ?? null)),
+				'genre_norm' => $qb->createNamedParameter(SearchTextNormalizer::normalize($data['genre'] ?? null)),
+				'series_norm' => $qb->createNamedParameter(SearchTextNormalizer::normalize($data['series'] ?? null)),
 				'track_no' => $qb->createNamedParameter($data['track_no'], $data['track_no'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
 				'disc_no' => $qb->createNamedParameter($data['disc_no'], $data['disc_no'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
 				'release_year' => $qb->createNamedParameter($data['release_year'], $data['release_year'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
@@ -383,6 +390,12 @@ class MetadataService
 			->set('album_artist', $qb->createNamedParameter($data['album_artist']))
 			->set('genre', $qb->createNamedParameter($data['genre']))
 			->set('series', $qb->createNamedParameter($data['series'] ?? null))
+			->set('title_norm', $qb->createNamedParameter(SearchTextNormalizer::normalize($data['title'] ?? null)))
+			->set('artist_norm', $qb->createNamedParameter(SearchTextNormalizer::normalize($data['artist'] ?? null)))
+			->set('album_norm', $qb->createNamedParameter(SearchTextNormalizer::normalize($data['album'] ?? null)))
+			->set('album_artist_norm', $qb->createNamedParameter(SearchTextNormalizer::normalize($data['album_artist'] ?? null)))
+			->set('genre_norm', $qb->createNamedParameter(SearchTextNormalizer::normalize($data['genre'] ?? null)))
+			->set('series_norm', $qb->createNamedParameter(SearchTextNormalizer::normalize($data['series'] ?? null)))
 			->set('track_no', $qb->createNamedParameter($data['track_no'], $data['track_no'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT))
 			->set('disc_no', $qb->createNamedParameter($data['disc_no'], $data['disc_no'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT))
 			->set('release_year', $qb->createNamedParameter($data['release_year'], $data['release_year'] === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT))

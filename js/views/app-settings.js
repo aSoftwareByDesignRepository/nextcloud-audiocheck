@@ -54,10 +54,7 @@
 	AudioCheckRouter.register('app-settings', {
 		render() {
 			const frag = document.createDocumentFragment();
-			frag.appendChild(C.pageHeader(
-				t('audiocheck', 'App settings'),
-				t('audiocheck', 'Access policy and defaults for AudioCheck.'),
-			));
+			const body = C.el('div', { className: 'ac-page-body ac-app-settings-page' });
 
 			const state = {
 				allowedUsers: [],
@@ -68,13 +65,13 @@
 				maxMetaTempMb: 256,
 			};
 
-			const form = C.createElement('form', { class: 'ac-card ac-form', attrs: { 'data-ac-policy-form': '' } });
+			const form = C.createElement('form', { attrs: { 'data-ac-policy-form': '' } });
 
 			const accessFs = C.createElement('fieldset', { class: 'ac-fieldset' });
-			accessFs.appendChild(C.createElement('legend', { class: 'ac-fieldset__legend', text: t('audiocheck', 'Who may open the app') }));
+			accessFs.appendChild(C.createElement('legend', { class: 'ac-fieldset__legend', text: t('audiocheck', 'Access list') }));
 			accessFs.appendChild(C.createElement('p', {
 				class: 'ac-callout ac-callout--info',
-				text: t('audiocheck', 'This list controls who can open AudioCheck. Server administrators and app administrators always keep access.'),
+				text: t('audiocheck', 'When restriction is enabled, only listed users and groups can open the app. Administrators always keep access.'),
 			}));
 
 			const restrictWrap = C.createElement('label', { class: 'ac-field ac-field--boolean' });
@@ -108,10 +105,14 @@
 			);
 			accessFs.appendChild(groupsChipsHost);
 			accessFs.appendChild(groupsField);
-			form.appendChild(accessFs);
+			form.appendChild(C.sectionCard(
+				t('audiocheck', 'Who may open the app'),
+				t('audiocheck', 'Control which users and groups can use AudioCheck. Server and app administrators always keep access.'),
+				accessFs,
+			));
 
 			const adminFs = C.createElement('fieldset', { class: 'ac-fieldset' });
-			adminFs.appendChild(C.createElement('legend', { class: 'ac-fieldset__legend', text: t('audiocheck', 'App administrators') }));
+			adminFs.appendChild(C.createElement('legend', { class: 'ac-fieldset__legend', text: t('audiocheck', 'Delegated admins') }));
 			const adminsChipsHost = C.createElement('div');
 			const adminsField = entityField(
 				'ac-app-admin-label',
@@ -124,10 +125,14 @@
 			);
 			adminFs.appendChild(adminsChipsHost);
 			adminFs.appendChild(adminsField);
-			form.appendChild(adminFs);
+			form.appendChild(C.sectionCard(
+				t('audiocheck', 'App administrators'),
+				t('audiocheck', 'Delegated admins can change policy here. They still only play their own files.'),
+				adminFs,
+			));
 
 			const defaultsFs = C.createElement('fieldset', { class: 'ac-fieldset' });
-			defaultsFs.appendChild(C.createElement('legend', { class: 'ac-fieldset__legend', text: t('audiocheck', 'Defaults') }));
+			defaultsFs.appendChild(C.createElement('legend', { class: 'ac-fieldset__legend', text: t('audiocheck', 'New user defaults') }));
 			const folderRow = C.createElement('div', { class: 'ac-form-row' });
 			folderRow.appendChild(C.createElement('label', { attrs: { for: 'ac-default-folder' }, text: t('audiocheck', 'Default library folder path') }));
 			const folderInput = C.createElement('input', {
@@ -155,7 +160,11 @@
 			});
 			mbRow.appendChild(mbInput);
 			defaultsFs.appendChild(mbRow);
-			form.appendChild(defaultsFs);
+			form.appendChild(C.sectionCard(
+				t('audiocheck', 'Defaults'),
+				t('audiocheck', 'Suggested library folder and metadata extraction limits for new users.'),
+				defaultsFs,
+			));
 
 			const actions = C.createElement('div', { class: 'ac-form-actions' });
 			actions.appendChild(C.createElement('button', {
@@ -164,7 +173,8 @@
 				text: t('audiocheck', 'Save policy'),
 			}));
 			form.appendChild(actions);
-			frag.appendChild(form);
+			body.appendChild(form);
+			frag.appendChild(body);
 
 			function renderChips() {
 				usersChipsHost.replaceChildren(chipList(state.allowedUsers, (id) => {

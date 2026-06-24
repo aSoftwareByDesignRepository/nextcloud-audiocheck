@@ -47,8 +47,22 @@ function walk(dir) {
 		else if (e.name.endsWith('.js')) check(full);
 	}
 }
+function checkExportShorthands(content, file) {
+	const exportMatch = content.match(/window\.AudioCheck\w+\s*=\s*\{([\s\S]*?)\n\t\};/);
+	if (!exportMatch) return;
+	const block = exportMatch[1];
+	const names = [...block.matchAll(/^\t\t([A-Za-z_$][\w$]*),$/gm)].map((m) => m[1]);
+	names.forEach((name) => {
+		const defined = new RegExp(`function\\s+${name}\\s*\\(|const\\s+${name}\\s*=`).test(content);
+		if (!defined) {
+			errors.push(`${file}: export "${name}" is not defined in this file`);
+		}
+	});
+}
+
 function check(file) {
-	const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+	const content = fs.readFileSync(file, 'utf8');
+	const lines = content.split(/\r?\n/);
 	lines.forEach((line, i) => {
 		const s = line.replace(/\/\/.*$/, '');
 		FORBIDDEN.forEach((r) => {
@@ -56,6 +70,7 @@ function check(file) {
 		});
 	});
 	checkDuplicateObjectShorthand(lines, file);
+	if (file.endsWith('track-list-ui.js')) checkExportShorthands(content, file);
 }
 walk(JS_DIR);
 if (errors.length) {

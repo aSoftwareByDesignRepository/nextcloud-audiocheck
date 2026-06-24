@@ -2,6 +2,29 @@
 
 All notable changes to AudioCheck are documented in this file.
 
+## [1.2.6] — 2026-06-24
+
+### Added
+
+- **Global search** — shell search filters Home, Browse, Music, Audiobooks, and Playlists with debounced query sync.
+- **Sleep timer** — duration, end-of-chapter, and end-of-track stops on Now playing.
+- **Playback start choice** — Play all / collection actions offer start from beginning vs continue when saved progress exists.
+- **Accent-insensitive search** — normalized shadow columns (`*_norm`) and migration backfill library search across web and mobile.
+
+### Changed
+
+- **App shell** — persistent page chrome (breadcrumb, icon header, scope strip, grouped nav hints) aligned with BudgetCheck and MobilityCheck across all routes.
+- **Section cards** — Settings, App settings, Library, Browse, Music/Audiobooks, Playlists, and collection detail use shared `sectionCard` / `collapsibleSectionCard` layout.
+- **Track lists (mobile)** — library browse rows render as bordered cards at ≤767px; collection detail tracks match the same pattern.
+- **Playlist detail actions** — secondary header actions collapse into a **More actions** menu on narrow viewports; **Play** stays visible.
+- **Messaging** — polite/assertive live regions and toast stack for status feedback.
+
+### Fixed
+
+- **Browse page** — removed duplicate inline page header after shell migration.
+- **Play all** — header action only on Tracks (Music/Audiobooks) and Favorites (Browse) tabs.
+- **Integration test runner** — `run-docker-tests.sh` resolves the Nextcloud root correctly from the app directory.
+
 ## [1.2.5] — 2026-06-20
 
 ### Added
