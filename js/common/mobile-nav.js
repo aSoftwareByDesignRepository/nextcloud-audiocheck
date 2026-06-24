@@ -71,7 +71,8 @@
 			contentRoot.insertBefore(backdrop, appContent);
 		}
 
-		const shell = document.querySelector('#app-content.ac-app > .ac-app__shell');
+		const shell = document.querySelector('#app-content.ac-app > #app-content-wrapper.ac-shell')
+			|| document.querySelector('#app-content.ac-app > .ac-shell');
 		const openLabel = toggle.getAttribute('data-aria-label-open')
 			|| translate('Open menu', 'Open menu');
 		const closeLabel = toggle.getAttribute('data-aria-label-close')

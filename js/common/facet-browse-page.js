@@ -3,7 +3,11 @@
 
 	const C = AudioCheckComponents;
 	const PA = () => window.AudioCheckPlaylistActions;
-	const UIL = () => window.AudioCheckTrackListUi;
+	const UIL = () => (window.AudioCheckRequireTrackListUi
+		? AudioCheckRequireTrackListUi()
+		: window.AudioCheckTrackListUi);
+	const GS = () => window.AudioCheckGlobalSearch;
+	const LPU = () => window.AudioCheckLibraryPageUi;
 	const PAGE_SIZE = 48;
 	const FACET_LIST_PAGE_SIZE = 48;
 	const FACET_TRACK_LIMIT = 500;
@@ -77,6 +81,11 @@
 	 * @param {Record<string,{title:string,message:string,icon?:string,ctaLabel?:string}>} config.emptyCopy
 	 * @param {string} [config.idPrefix]
 	 */
+	function searchQuery() {
+		const g = GS();
+		return g ? g.apiQueryParam(g.getDebouncedQuery()) : '';
+	}
+
 	function registerFacetBrowsePage(config) {
 		const idPrefix = config.idPrefix || ('ac-' + config.viewId);
 
@@ -87,25 +96,25 @@
 
 				let activeTab = config.tabs[0].id;
 				let sort = 'title';
-				let query = '';
+				let hideListened = false;
 				let page = 1;
 				let total = 0;
-				let timer = null;
 				let tabButtons = [];
 				let panel = null;
 				let toolbar = null;
 				let leadEl = null;
 				let status = null;
 				let moreWrap = null;
+				let searchHintEl = null;
 				let playableCache = [];
 				let playAllBtn = null;
-				let playAllWrap = null;
 
 				function updatePlayAllVisibility() {
-					if (!playAllWrap) return;
 					const show = activeTab === 'favorites';
-					playAllWrap.hidden = !show;
-					playAllWrap.setAttribute('aria-hidden', show ? 'false' : 'true');
+					if (window.AudioCheckPageChrome) {
+						if (show) AudioCheckPageChrome.setActions(playAllBtn);
+						else AudioCheckPageChrome.clearActions();
+					}
 				}
 
 				async function playAllFavorites() {
@@ -113,7 +122,9 @@
 					playAllBtn.disabled = true;
 					try {
 						const baseParams = { favorite: '1', sort, limit: PLAY_ALL_PAGE_SIZE };
-						if (query.length >= 2) baseParams.q = query;
+						const q = searchQuery();
+						if (q) baseParams.q = q;
+						if (hideListened) baseParams.hideListened = 1;
 						const tracks = [];
 						let pageNum = 1;
 						let totalTracks = Infinity;
@@ -137,8 +148,12 @@
 								'info',
 							);
 						}
-						AudioCheckPlayer.playQueue(tracks, 0);
-						AudioCheckRouter.navigate('now-playing', {}, true);
+						if (window.AudioCheckPlaybackStart) {
+							await AudioCheckPlaybackStart.playAllWithStartChoice(tracks);
+						} else {
+							AudioCheckPlayer.playQueue(tracks, 0);
+							AudioCheckRouter.navigate('now-playing', {}, true);
+						}
 					} catch (e) {
 						AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error');
 					} finally {
@@ -153,7 +168,6 @@
 					attrs: { 'aria-label': t('audiocheck', 'Play all {kind}', { kind: t('audiocheck', 'Favorites') }) },
 					onClick: () => playAllFavorites(),
 				});
-				playAllWrap = C.el('div', { className: 'ac-page-header__actions' }, [playAllBtn]);
 
 				function setActiveTab(type) {
 					activeTab = type;
@@ -177,57 +191,36 @@
 					loadTab(next.dataset.tabId, true);
 				}
 
-				function searchLabelForTab(tabId) {
-					if (tabId === 'folders') return t('audiocheck', 'Filter folders…');
-					if (tabId === 'favorites') return t('audiocheck', 'Search tracks…');
-					const tab = config.tabs.find((item) => item.id === tabId);
-					const category = tab ? t('audiocheck', tab.labelKey) : t('audiocheck', 'Browse');
-					return t('audiocheck', 'Search {category}', { category });
+				function updateToolbar(tabId) {
+					if (!toolbar || !LPU()) return;
+					toolbar.replaceChildren();
+					const filtersRow = C.el('div', { className: 'ac-library-filters' });
+					filtersRow.appendChild(LPU().buildSortChipRow({
+						sort,
+						options: LPU().defaultSortOptions(),
+						groupLabel: t('audiocheck', 'Sort by'),
+						onChange: (nextSort) => {
+							sort = nextSort;
+							loadTab(tabId, true);
+						},
+					}));
+					if (tabId === 'favorites') {
+						filtersRow.appendChild(LPU().buildHideListenedFilter({
+							idPrefix,
+							checked: hideListened,
+							onChange: (next) => {
+								hideListened = next;
+								loadTab(tabId, true);
+							},
+						}));
+					}
+					toolbar.appendChild(filtersRow);
 				}
 
-				function updateToolbar(tabId) {
-					if (!toolbar) return;
-					toolbar.replaceChildren();
-					const searchLabel = searchLabelForTab(tabId);
-					const search = C.el('input', {
-						type: 'search',
-						className: 'ac-input ac-collection-toolbar__search',
-						attrs: {
-							id: idPrefix + '-search',
-							'aria-label': searchLabel,
-							placeholder: searchLabel,
-							autocomplete: 'off',
-							value: query,
-						},
-					});
-					search.addEventListener('input', () => {
-						clearTimeout(timer);
-						query = search.value.trim();
-						timer = setTimeout(() => loadTab(tabId, true), 300);
-					});
-					toolbar.appendChild(search);
-
-					const sortSel = C.el('select', {
-						className: 'ac-input ac-collection-toolbar__sort',
-						attrs: { 'aria-label': t('audiocheck', 'Sort by') },
-					});
-					[
-						{ v: 'title', l: t('audiocheck', 'Title') },
-						{ v: 'artist', l: t('audiocheck', 'Artist') },
-						{ v: 'added', l: t('audiocheck', 'Recently added') },
-						{ v: 'played', l: t('audiocheck', 'Recently played') },
-					].forEach((opt) => {
-						sortSel.appendChild(C.el('option', {
-							value: opt.v,
-							text: opt.l,
-							attrs: opt.v === sort ? { selected: true } : {},
-						}));
-					});
-					sortSel.addEventListener('change', () => {
-						sort = sortSel.value;
-						loadTab(tabId, true);
-					});
-					toolbar.appendChild(sortSel);
+				function refreshSearchHint() {
+					if (searchHintEl && typeof searchHintEl.refresh === 'function') {
+						searchHintEl.refresh();
+					}
 				}
 
 				function emptyIconForTab(tabId) {
@@ -262,9 +255,9 @@
 				function renderFacetGroup(type, item, host, startOpen) {
 					const label = facetGroupLabel(type, item);
 					const count = item.count || 0;
-					const trackParams = (pageNum) => ({
+					const trackParams = (pageNum, groupSort) => ({
 						...facetTrackParams(type, item),
-						sort,
+						sort: groupSort || sort,
 						page: pageNum || 1,
 						limit: PAGE_SIZE,
 					});
@@ -276,13 +269,17 @@
 						host,
 						startOpen,
 						displayMeta: trackDisplayMeta,
-						loadTracks: (pageNum) => AudioCheckApi.get('/apps/audiocheck/api/tracks', trackParams(pageNum)),
-						playAllTracks: async () => {
+						defaultSort: sort,
+						inlineSort: true,
+						inlinePlayActions: true,
+						loadTracks: (pageNum, groupSort) => AudioCheckApi.get('/apps/audiocheck/api/tracks', trackParams(pageNum, groupSort)),
+						playAllTracks: async (groupSort) => {
 							const tracks = [];
 							let pageNum = 1;
 							let totalTracks = Infinity;
+							const params = (p) => trackParams(p, groupSort);
 							while (tracks.length < totalTracks && tracks.length < PLAY_ALL_MAX_TRACKS) {
-								const data = await AudioCheckApi.get('/apps/audiocheck/api/tracks', trackParams(pageNum));
+								const data = await AudioCheckApi.get('/apps/audiocheck/api/tracks', params(pageNum));
 								const batch = data.items || [];
 								totalTracks = data.total != null ? data.total : batch.length;
 								tracks.push(...batch);
@@ -318,13 +315,15 @@
 					status.textContent = t('audiocheck', 'Loading…');
 					moreWrap.textContent = '';
 					const params = { favorite: '1', limit: PAGE_SIZE, page, sort };
-					if (query.length >= 2) params.q = query;
+					const q = searchQuery();
+					if (q) params.q = q;
+					if (hideListened) params.hideListened = 1;
 					AudioCheckApi.get('/apps/audiocheck/api/tracks', params).then((data) => {
 						const items = data.items || [];
 						total = data.total != null ? data.total : items.length;
 						if (reset && !items.length) {
 							const favCopy = config.emptyCopy.favorites || {};
-							showEmpty('favorites', query.length >= 2
+							showEmpty('favorites', q
 								? noMatchMessage('favorites')
 								: t('audiocheck', favCopy.message || 'Star tracks in Now playing or Browse.'));
 							return;
@@ -360,23 +359,25 @@
 					status.textContent = t('audiocheck', 'Loading…');
 
 					const params = { type, page, limit: FACET_LIST_PAGE_SIZE };
-					if (query.length >= 2 && type !== 'folders') {
-						params.q = query;
+					const q = searchQuery();
+					if (q && type !== 'folders') {
+						params.q = q;
 					}
 
 					AudioCheckApi.get('/apps/audiocheck/api/facets/{type}', null, { params }).then((data) => {
 						let items = (data.items || []).slice();
 						total = data.total != null ? data.total : items.length;
 						if (type === 'folders') {
-							const q = query.toLowerCase();
-							if (q.length >= 2) {
-								items = items.filter((item) => displayFolderLabel(item.name).toLowerCase().includes(q)
-									|| (item.name || '').toLowerCase().includes(q));
+							if (q) {
+								items = items.filter((item) => GS().matchesSearchQuery([
+									displayFolderLabel(item.name),
+									item.name,
+								], q));
 							}
 						}
 						if (reset && !items.length && page === 1) {
 							const copy = config.emptyCopy[type] || {};
-							showEmpty(type, query.length >= 2
+							showEmpty(type, q
 								? noMatchMessage(type)
 								: t('audiocheck', copy.message || 'Scan your library to find audio.'), type === 'artists' ? {
 								label: t('audiocheck', 'Open Music'),
@@ -426,6 +427,7 @@
 				function loadTab(type, reset) {
 					setActiveTab(type);
 					updateToolbar(type);
+					refreshSearchHint();
 					if (reset) page = 1;
 					if (type === 'favorites') {
 						loadFavorites(!!reset);
@@ -433,17 +435,6 @@
 						loadFacets(type, !!reset);
 					}
 				}
-
-				const header = C.el('header', {
-					className: 'ac-page-header ac-page-header--with-actions',
-				});
-				header.appendChild(C.el('div', { className: 'ac-page-header__intro' }, [
-					C.el('h1', { text: config.title }),
-					C.el('p', { text: config.help }),
-				]));
-				header.appendChild(playAllWrap);
-				frag.appendChild(header);
-				updatePlayAllVisibility();
 
 				const tabBar = C.el('div', {
 					className: 'ac-browse-tabs ac-media-library-tabs ac-facet-browse-tabs',
@@ -483,10 +474,7 @@
 							tabindex: tab.id === activeTab ? '0' : '-1',
 							'data-tab-id': tab.id,
 						},
-						onClick: () => {
-							query = '';
-							loadTab(tab.id, true);
-						},
+						onClick: () => loadTab(tab.id, true),
 					});
 					btn.addEventListener('keydown', (ev) => {
 						if (ev.key === 'ArrowRight') { ev.preventDefault(); focusTabByOffset(1); }
@@ -502,15 +490,22 @@
 					return btn;
 				});
 
+				const shell = LPU() ? LPU().createContentShell() : C.el('div', { className: 'ac-library-shell' });
+				searchHintEl = LPU() ? LPU().buildSearchHint(searchQuery) : null;
+				shell.appendChild(leadEl);
+				if (searchHintEl) shell.appendChild(searchHintEl);
+				shell.appendChild(toolbar);
+				shell.appendChild(status);
+				shell.appendChild(panel);
+				shell.appendChild(moreWrap);
 				body.appendChild(tabBar);
-				body.appendChild(leadEl);
-				body.appendChild(toolbar);
-				body.appendChild(status);
-				body.appendChild(panel);
-				body.appendChild(moreWrap);
+				body.appendChild(shell);
 				frag.appendChild(body);
 
 				loadTab(activeTab, true);
+				if (GS()) {
+					GS().registerViewHandler(config.viewId, () => loadTab(activeTab, true));
+				}
 				return frag;
 			},
 		});

@@ -8,6 +8,7 @@ use OCA\AudioCheck\Controller\StreamController;
 use OCA\AudioCheck\Exception\NotFoundException;
 use OCA\AudioCheck\Service\FileAccessService;
 use OCA\AudioCheck\Service\StreamResponseFactory;
+use OCA\AudioCheck\Tests\Shim\IntegrationTestUsers;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\Files\File;
@@ -28,41 +29,25 @@ final class StreamConformanceIntegrationTest extends TestCase
 		if (!class_exists(\OC::class) || !isset(\OC::$server)) {
 			$this->markTestSkipped('Nextcloud is not bootstrapped (run inside Docker with NEXTCLOUD_ROOT).');
 		}
-		/** @var IUserManager $userManager */
-		$userManager = \OC::$server->get(IUserManager::class);
-		foreach ([self::OWNER_FULL, self::OWNER_FOREIGN, self::ATTACKER] as $uid) {
-			if ($userManager->userExists($uid)) {
-				$userManager->get($uid)?->delete();
-			}
-		}
+		IntegrationTestUsers::remove(self::OWNER_FULL, self::OWNER_FOREIGN, self::ATTACKER);
 	}
 
 	protected function tearDown(): void
 	{
-		if (!isset(\OC::$server)) {
-			return;
-		}
-		/** @var IUserSession $session */
-		$session = \OC::$server->get(IUserSession::class);
-		$session->setUser(null);
-		/** @var IUserManager $userManager */
-		$userManager = \OC::$server->get(IUserManager::class);
-		foreach ([self::OWNER_FULL, self::OWNER_FOREIGN, self::ATTACKER] as $uid) {
-			if ($userManager->userExists($uid)) {
-				$userManager->get($uid)?->delete();
-			}
-		}
+		IntegrationTestUsers::clearSession();
+		IntegrationTestUsers::remove(
+			self::OWNER_FULL,
+			self::OWNER_FOREIGN,
+			self::ATTACKER,
+			'ac_stream_owner_rng',
+			'ac_stream_range_416',
+		);
 	}
 
 	public function testOwnFileStreamsWithRangeHeaders(): void
 	{
 		$owner = 'ac_stream_owner_rng';
-		/** @var IUserManager $userManager */
-		$userManager = \OC::$server->get(IUserManager::class);
-		if ($userManager->userExists($owner)) {
-			$userManager->get($owner)?->delete();
-		}
-		$userManager->createUser($owner, self::PASSWORD);
+		IntegrationTestUsers::create($owner, self::PASSWORD);
 
 		/** @var FileAccessService $access */
 		$access = \OC::$server->get(FileAccessService::class);
@@ -91,11 +76,11 @@ final class StreamConformanceIntegrationTest extends TestCase
 
 	public function testForeignStreamReturnsUniformNotFoundJson(): void
 	{
+		IntegrationTestUsers::create(self::OWNER_FOREIGN, self::PASSWORD);
+		IntegrationTestUsers::create(self::ATTACKER, self::PASSWORD);
+
 		/** @var IUserManager $userManager */
 		$userManager = \OC::$server->get(IUserManager::class);
-		$userManager->createUser(self::OWNER_FOREIGN, self::PASSWORD);
-		$userManager->createUser(self::ATTACKER, self::PASSWORD);
-
 		/** @var FileAccessService $access */
 		$access = \OC::$server->get(FileAccessService::class);
 		$file = $access->getUserFolder(self::OWNER_FOREIGN)->newFile('stream-secret.mp3');
@@ -127,12 +112,7 @@ final class StreamConformanceIntegrationTest extends TestCase
 	public function testInvalidRangeReturns416(): void
 	{
 		$owner = 'ac_stream_range_416';
-		/** @var IUserManager $userManager */
-		$userManager = \OC::$server->get(IUserManager::class);
-		if ($userManager->userExists($owner)) {
-			$userManager->get($owner)?->delete();
-		}
-		$userManager->createUser($owner, self::PASSWORD);
+		IntegrationTestUsers::create($owner, self::PASSWORD);
 
 		/** @var FileAccessService $access */
 		$access = \OC::$server->get(FileAccessService::class);

@@ -192,23 +192,65 @@
 		createElement,
 		kindIcon,
 		browserCompatNote,
-		pageHeader(title, help, actions) {
-			const header = el('header', {
-				className: 'ac-page-header' + (actions ? ' ac-page-header--with-actions' : ''),
+		coverImageWrap(fileId, wrapClass) {
+			const wrap = el('div', { className: wrapClass || 'ac-card__cover-wrap' });
+			appendCoverImage(wrap, AudioCheckApi.validFileId(fileId));
+			return wrap;
+		},
+		sectionCard(title, subtitle, content, controls, headingId) {
+			const id = headingId || ('ac-section-' + Math.random().toString(36).slice(2));
+			const section = el('section', {
+				className: 'ac-card ac-section',
+				attrs: { 'aria-labelledby': id },
 			});
-			const intro = el('div', { className: 'ac-page-header__intro' }, [
-				el('h1', { text: title }),
-				help ? el('p', { text: help }) : null,
-			]);
-			header.appendChild(intro);
-			if (actions) {
-				const wrap = el('div', { className: 'ac-page-header__actions' });
-				(Array.isArray(actions) ? actions : [actions]).forEach((node) => {
-					if (node) wrap.appendChild(node);
-				});
-				header.appendChild(wrap);
+			const header = el('header', { className: 'ac-section__header' });
+			const textWrap = el('div');
+			textWrap.appendChild(el('h2', { id, className: 'ac-section__title', text: title }));
+			if (subtitle) {
+				textWrap.appendChild(el('p', { className: 'ac-section__sub', text: subtitle }));
 			}
-			return header;
+			header.appendChild(textWrap);
+			if (controls) {
+				const ctrlWrap = el('div', { className: 'ac-section__controls' });
+				(Array.isArray(controls) ? controls : [controls]).forEach((node) => {
+					if (node) ctrlWrap.appendChild(node);
+				});
+				header.appendChild(ctrlWrap);
+			}
+			section.appendChild(header);
+			const body = el('div', { className: 'ac-section__body' });
+			if (content) {
+				(Array.isArray(content) ? content : [content]).forEach((node) => {
+					if (node) body.appendChild(node);
+				});
+			}
+			section.appendChild(body);
+			return section;
+		},
+		collapsibleSectionCard(title, subtitle, content, headingId) {
+			const id = headingId || ('ac-section-' + Math.random().toString(36).slice(2));
+			const section = el('section', {
+				className: 'ac-card ac-section ac-section--collapsible',
+				attrs: { 'aria-labelledby': id },
+			});
+			const details = el('details', { className: 'ac-section-collapse' });
+			const summary = el('summary', { className: 'ac-section-collapse__summary' });
+			const textWrap = el('div', { className: 'ac-section__header' });
+			textWrap.appendChild(el('h2', { id, className: 'ac-section__title', text: title }));
+			if (subtitle) {
+				textWrap.appendChild(el('p', { className: 'ac-section__sub', text: subtitle }));
+			}
+			summary.appendChild(textWrap);
+			details.appendChild(summary);
+			const body = el('div', { className: 'ac-section__body' });
+			if (content) {
+				(Array.isArray(content) ? content : [content]).forEach((node) => {
+					if (node) body.appendChild(node);
+				});
+			}
+			details.appendChild(body);
+			section.appendChild(details);
+			return section;
 		},
 		section(title, content) {
 			const wrap = el('section', { className: 'ac-section' });
@@ -418,6 +460,38 @@
 				mountIconBtn(listenedBtn, isListened ? 'circle-check' : 'circle', 'icon-checkmark');
 				aside.appendChild(listenedBtn);
 			}
+			if (opts.onToggleFavorite) {
+				const isFav = !!track.favorite;
+				const favBtn = el('button', {
+					type: 'button',
+					className: 'ac-btn ac-btn--icon ac-track-list__favorite'
+						+ (isFav ? ' ac-btn--success' : ''),
+					attrs: {
+						'aria-label': isFav ? t('audiocheck', 'Unfavorite') : t('audiocheck', 'Favorite'),
+						'aria-pressed': isFav ? 'true' : 'false',
+					},
+					onClick: (e) => {
+						e.stopPropagation();
+						favBtn.disabled = true;
+						Promise.resolve(opts.onToggleFavorite(track))
+							.then(() => {
+								const on = !!track.favorite;
+								favBtn.classList.toggle('ac-btn--success', on);
+								favBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+								favBtn.setAttribute('aria-label', on ? t('audiocheck', 'Unfavorite') : t('audiocheck', 'Favorite'));
+								if (window.AudioCheckIcons) {
+									AudioCheckIcons.mount(favBtn, on ? 'heart-filled' : 'heart');
+								}
+							})
+							.catch((err) => {
+								AudioCheckMessaging.toast(err.message || t('audiocheck', 'Request failed.'), 'error');
+							})
+							.finally(() => { favBtn.disabled = false; });
+					},
+				});
+				mountIconBtn(favBtn, isFav ? 'heart-filled' : 'heart', 'icon-star');
+				aside.appendChild(favBtn);
+			}
 			if (opts.onAddPlaylist) {
 				const add = el('button', {
 					type: 'button',
@@ -437,6 +511,19 @@
 				});
 				mountIconBtn(queueBtn, 'queue', 'icon-queue');
 				aside.appendChild(queueBtn);
+			}
+			if (opts.onPlayNext) {
+				const nextBtn = el('button', {
+					type: 'button',
+					className: 'ac-btn ac-btn--icon',
+					attrs: {
+						'aria-label': t('audiocheck', 'Play next'),
+						title: t('audiocheck', 'Plays this track right after the current one'),
+					},
+					onClick: (e) => { e.stopPropagation(); opts.onPlayNext(); },
+				});
+				mountIconBtn(nextBtn, 'next', 'icon-next');
+				aside.appendChild(nextBtn);
 			}
 			if (opts.onRemove) {
 				const rm = el('button', {

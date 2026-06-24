@@ -25,6 +25,22 @@
 			});
 	}
 
+	function toggleFavorite(track) {
+		const fileId = AudioCheckApi.validFileId(track.fileId);
+		if (!fileId) {
+			return Promise.reject(new Error(t('audiocheck', 'Request failed.')));
+		}
+		const next = !track.favorite;
+		return AudioCheckApi.put('/apps/audiocheck/api/tracks/{fileId}/favorite', { favorite: next }, { params: { fileId } })
+			.then(() => {
+				track.favorite = next;
+				AudioCheckMessaging.toast(next
+					? t('audiocheck', 'Added to Favorites.')
+					: t('audiocheck', 'Removed from Favorites.'));
+				return track;
+			});
+	}
+
 	function syncListenedState(track) {
 		const fileId = AudioCheckApi.validFileId(track.fileId);
 		if (!fileId || !window.AudioCheckPlayer || typeof AudioCheckPlayer.getQueue !== 'function') {
@@ -52,14 +68,31 @@
 		const base = {
 			onToggleListened: (tr) => toggleListened(tr),
 			onAddPlaylist: PA() ? () => PA().openAddToPlaylist(track.fileId) : null,
+			onToggleFavorite: () => toggleFavorite(track),
 			onEnqueue: () => {
 				if (!track || track.unavailable) return;
 				if (AudioCheckPlayer.enqueue(track)) {
 					AudioCheckMessaging.toast(t('audiocheck', 'Added to queue.'));
 				}
 			},
+			onPlayNext: () => {
+				if (!track || track.unavailable) return;
+				AudioCheckPlayer.playNext(track);
+			},
 		};
 		return extra ? { ...base, ...extra } : base;
+	}
+
+	function playTracksFromIndex(cache, playIdx) {
+		if (!cache.length || playIdx < 0) return;
+		if (cache.length > 1 && window.AudioCheckPlayer && typeof AudioCheckPlayer.playQueueFromHere === 'function') {
+			AudioCheckPlayer.playQueueFromHere(cache, playIdx);
+		} else {
+			AudioCheckPlayer.playQueue(cache, playIdx);
+		}
+		if (window.AudioCheckRouter) {
+			AudioCheckRouter.navigate('now-playing', {}, true);
+		}
 	}
 
 	function appendTracksToList(list, tracks, cache, C, displayMeta, rowOptionsForTrack) {
@@ -72,7 +105,7 @@
 				cache.push(track);
 			}
 			list.appendChild(C.trackRow(metaFn(track), playIdx >= 0
-				? () => AudioCheckPlayer.playQueue(cache, playIdx)
+				? () => playTracksFromIndex(cache, playIdx)
 				: null, rowOptsFn(track)));
 		});
 	}
@@ -107,8 +140,11 @@
 	 * @param {HTMLElement} opts.host
 	 * @param {boolean} [opts.startOpen]
 	 * @param {string} [opts.groupClassName]
-	 * @param {() => Promise<{items: object[], total?: number}>} opts.loadTracks
-	 * @param {() => Promise<object[]>} opts.playAllTracks
+	 * @param {(pageNum: number, sort?: string) => Promise<{items: object[], total?: number}>} opts.loadTracks
+	 * @param {(sort?: string) => Promise<object[]>} opts.playAllTracks
+	 * @param {string} [opts.defaultSort]
+	 * @param {boolean} [opts.inlineSort]
+	 * @param {boolean} [opts.inlinePlayActions]
 	 * @param {(track: object) => object} [opts.displayMeta]
 	 * @param {(track: object) => object} [opts.rowOptionsForTrack]
 	 * @param {(bodyWrap: HTMLElement, reload: () => void) => void} [opts.mountBodyExtra]
@@ -117,6 +153,9 @@
 	function renderExpandableTrackGroup(opts) {
 		const C = opts.C;
 		const cache = [];
+		let facetSort = opts.defaultSort || 'title';
+		const inlineSort = !!opts.inlineSort;
+		const inlinePlayActions = !!opts.inlinePlayActions;
 		const details = C.el('details', {
 			className: 'ac-media-folder-group ac-facet-group' + (opts.groupClassName ? ' ' + opts.groupClassName : ''),
 			attrs: opts.startOpen ? { open: true } : {},
@@ -130,19 +169,77 @@
 		if (opts.mountSummaryExtra) {
 			opts.mountSummaryExtra(summary);
 		}
-		summary.appendChild(createPlayAllButton(C, opts.label, async () => {
-			const tracks = (await opts.playAllTracks()).filter((tr) => tr && !tr.unavailable);
-			if (!tracks.length) {
-				AudioCheckMessaging.toast(t('audiocheck', 'Nothing here yet'), 'warning');
-				return;
-			}
-			AudioCheckPlayer.playQueue(tracks, 0);
-			AudioCheckRouter.navigate('now-playing', {}, true);
-		}));
+		if (!inlinePlayActions) {
+			summary.appendChild(createPlayAllButton(C, opts.label, async () => {
+				const tracks = (await opts.playAllTracks(facetSort)).filter((tr) => tr && !tr.unavailable);
+				if (!tracks.length) {
+					AudioCheckMessaging.toast(t('audiocheck', 'Nothing here yet'), 'warning');
+					return;
+				}
+				if (window.AudioCheckPlaybackStart) {
+					await AudioCheckPlaybackStart.playAllWithStartChoice(tracks);
+				} else {
+					AudioCheckPlayer.playQueue(tracks, 0);
+					AudioCheckRouter.navigate('now-playing', {}, true);
+				}
+			}));
+		}
 		details.appendChild(summary);
 
 		const bodyWrap = C.el('div', { className: 'ac-media-folder-group__body' });
+		const controlsWrap = C.el('div', { className: 'ac-facet-group__controls' });
+		const extraSlot = C.el('div', { className: 'ac-facet-group__extra' });
+		const playActionsEl = C.el('div', { className: 'ac-facet-group__play-actions' });
 		const list = C.el('ul', { className: 'ac-track-list' });
+
+		if (inlineSort || inlinePlayActions) {
+			bodyWrap.appendChild(controlsWrap);
+		}
+		if (inlineSort) {
+			const sortHeading = C.el('p', {
+				className: 'ac-facet-group__sort-label',
+				text: t('audiocheck', 'Sort tracks in group'),
+			});
+			const sortRow = C.el('div', {
+				className: 'ac-chip-row ac-facet-group__sort',
+				attrs: { role: 'group', 'aria-label': t('audiocheck', 'Sort tracks in group') },
+			});
+			const sortOptions = [
+				{ v: 'title', l: t('audiocheck', 'Title') },
+				{ v: 'added', l: t('audiocheck', 'Recently added') },
+				{ v: 'artist', l: t('audiocheck', 'Artist') },
+			];
+			sortOptions.forEach((opt) => {
+				const chip = C.el('button', {
+					type: 'button',
+					className: 'ac-filter-chip' + (facetSort === opt.v ? ' ac-filter-chip--active' : ''),
+					text: opt.l,
+					attrs: {
+						'data-sort': opt.v,
+						'aria-pressed': facetSort === opt.v ? 'true' : 'false',
+					},
+					onClick: () => {
+						if (facetSort === opt.v) return;
+						facetSort = opt.v;
+						sortRow.querySelectorAll('.ac-filter-chip').forEach((btn) => {
+							const on = btn.getAttribute('data-sort') === opt.v;
+							btn.classList.toggle('ac-filter-chip--active', on);
+							btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+						});
+						reloadList();
+					},
+				});
+				sortRow.appendChild(chip);
+			});
+			controlsWrap.appendChild(sortHeading);
+			controlsWrap.appendChild(sortRow);
+		}
+		if (inlineSort || inlinePlayActions) {
+			controlsWrap.appendChild(extraSlot);
+		}
+		if (inlinePlayActions) {
+			controlsWrap.appendChild(playActionsEl);
+		}
 		bodyWrap.appendChild(list);
 		details.appendChild(bodyWrap);
 		opts.host.appendChild(details);
@@ -152,6 +249,14 @@
 		let trackTotal = opts.count || 0;
 		const TRACK_PAGE_SIZE = 48;
 
+		function refreshPlayActions() {
+			if (!inlinePlayActions || !window.AudioCheckPlaybackStart) return;
+			AudioCheckPlaybackStart.mountExpandPlayActions(playActionsEl, {
+				getTracks: () => cache,
+				trackCount: trackTotal,
+			});
+		}
+
 		function appendPage(data) {
 			const tracks = data.items || [];
 			trackTotal = data.total != null ? data.total : tracks.length;
@@ -160,6 +265,7 @@
 			if (countEl && trackTotal > 0) {
 				countEl.textContent = AudioCheckTime.tracksLabel(trackTotal);
 			}
+			refreshPlayActions();
 			const existingMore = list.querySelector('.ac-facet-group__load-more');
 			if (existingMore) existingMore.remove();
 			if (trackTotal > cache.length) {
@@ -171,7 +277,7 @@
 					onClick: () => {
 						btn.disabled = true;
 						trackPage += 1;
-						opts.loadTracks(trackPage).then((next) => {
+						opts.loadTracks(trackPage, facetSort).then((next) => {
 							appendPage(next);
 						}).catch((e) => {
 							AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error');
@@ -195,7 +301,7 @@
 					text: t('audiocheck', 'Loading…'),
 				}));
 			}
-			opts.loadTracks(trackPage).then((data) => {
+			opts.loadTracks(trackPage, facetSort).then((data) => {
 				list.textContent = '';
 				const tracks = data.items || [];
 				if (!tracks.length) {
@@ -203,6 +309,7 @@
 						className: 'ac-track-list__empty',
 						text: t('audiocheck', 'Nothing here yet'),
 					}));
+					refreshPlayActions();
 					return;
 				}
 				appendPage(data);
@@ -212,18 +319,20 @@
 					className: 'ac-track-list__empty',
 					text: e.message || t('audiocheck', 'Request failed.'),
 				}));
+				refreshPlayActions();
 			});
 		}
 
 		function reloadList() {
 			loaded = false;
 			cache.length = 0;
+			trackPage = 1;
 			list.textContent = '';
 			loadList();
 		}
 
 		if (opts.mountBodyExtra) {
-			opts.mountBodyExtra(bodyWrap, reloadList);
+			opts.mountBodyExtra(inlineSort || inlinePlayActions ? extraSlot : bodyWrap, reloadList);
 		}
 
 		if (opts.startOpen) loadList();
@@ -236,10 +345,22 @@
 		FACET_TRACK_LIMIT,
 		isTrackListened,
 		toggleListened,
+		toggleFavorite,
+		playTracksFromIndex,
 		syncListenedState,
 		trackRowOptions,
 		appendTracksToList,
 		createPlayAllButton,
 		renderExpandableTrackGroup,
+	};
+
+	window.AudioCheckRequireTrackListUi = function () {
+		const ui = window.AudioCheckTrackListUi;
+		if (!ui) {
+			const msg = 'AudioCheck track list UI failed to load. Reload the page.';
+			console.error('[audiocheck]', msg);
+			throw new Error(typeof t === 'function' ? t('audiocheck', 'Track list failed to load. Reload the page.') : msg);
+		}
+		return ui;
 	};
 })();

@@ -46,7 +46,7 @@ if (!class_exists(\Test\TestCase::class)) {
 	}
 }
 
-if (!class_exists(\Symfony\Component\Console\Command\Command::class, false)) {
+if ($base === null && !class_exists(\Symfony\Component\Console\Command\Command::class, false)) {
 	eval('namespace Symfony\Component\Console\Command; class Command {}');
 }
 

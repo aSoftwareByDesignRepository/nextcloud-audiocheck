@@ -702,25 +702,12 @@
 				});
 			}
 
-			// —— Header: title + single primary action ——
-			frag.appendChild(C.pageHeader(
-				t('audiocheck', 'Library'),
-				t('audiocheck', 'Your audio stays in Files. Add folders here so AudioCheck knows what to scan.'),
-				makeAddButton('ac-library-header__add'),
-			));
+			// —— Header action: add folder ——
+			if (window.AudioCheckPageChrome) {
+				AudioCheckPageChrome.setActions(makeAddButton('ac-library-header__add'));
+			}
 
 			// —— Card: Your folders (status bar + scan + list + links) ——
-			foldersCard = C.el('section', {
-				className: 'ac-section ac-card ac-library-folders-section',
-				attrs: { 'aria-labelledby': 'ac-library-folders-heading' },
-			});
-			foldersCard.appendChild(C.el('h2', {
-				id: 'ac-library-folders-heading',
-				className: 'ac-section__title ac-card__title',
-				text: t('audiocheck', 'Your folders'),
-			}));
-
-			const bar = C.el('div', { className: 'ac-library-bar' });
 			summaryEl = C.el('p', {
 				className: 'ac-library-bar__status ac-library-bar__status--muted',
 				attrs: { role: 'status', 'aria-live': 'polite' },
@@ -732,26 +719,19 @@
 				text: t('audiocheck', 'Scan now'),
 				onClick: onScanClick,
 			});
-			bar.appendChild(summaryEl);
-			bar.appendChild(scanBtn);
-			foldersCard.appendChild(bar);
+			const statusBar = C.el('div', { className: 'ac-library-bar' });
+			statusBar.appendChild(summaryEl);
 
 			addStatusEl = C.el('p', {
 				className: 'ac-library-add__status',
 				attrs: { role: 'status', 'aria-live': 'polite', hidden: true },
 			});
-			foldersCard.appendChild(addStatusEl);
-
 			cronCallout = C.el('p', {
 				className: 'ac-callout ac-callout--info',
 				attrs: { role: 'status', hidden: true },
 				text: t('audiocheck', 'This server uses AJAX background jobs instead of system cron. Scans continue while you use AudioCheck; for faster indexing, ask an administrator to enable system cron in Nextcloud settings.'),
 			});
-			foldersCard.appendChild(cronCallout);
-
 			listHost = C.el('div', { className: 'ac-library-folders' });
-			foldersCard.appendChild(listHost);
-
 			quickLinks = C.el('div', {
 				className: 'ac-library-links',
 				attrs: { role: 'group', 'aria-label': t('audiocheck', 'Open your collection'), hidden: true },
@@ -774,35 +754,47 @@
 				text: t('audiocheck', 'Open Browse'),
 				onClick: () => AudioCheckRouter.navigate('browse', {}, true),
 			}));
-			foldersCard.appendChild(quickLinks);
 
+			const folderBody = C.el('div', { className: 'ac-library-folders-body' });
+			folderBody.appendChild(statusBar);
+			folderBody.appendChild(addStatusEl);
+			folderBody.appendChild(cronCallout);
+			folderBody.appendChild(listHost);
+			folderBody.appendChild(quickLinks);
+
+			foldersCard = C.sectionCard(
+				t('audiocheck', 'Your folders'),
+				null,
+				folderBody,
+				scanBtn,
+				'ac-library-folders-heading',
+			);
+			foldersCard.classList.add('ac-library-folders-section');
 			body.appendChild(foldersCard);
 
 			// —— Help: how it works + supported formats ——
-			const helpHow = C.el('details', { className: 'ac-library-help ac-card' });
-			helpHow.appendChild(C.el('summary', {
-				className: 'ac-library-help__summary',
-				text: t('audiocheck', 'How it works'),
-			}));
 			const steps = C.el('ol', { className: 'ac-steps ac-library-steps' });
 			[
 				t('audiocheck', 'Add music folder or Add audiobook folder — pick the matching folder in Files.'),
 				t('audiocheck', 'Scan now — AudioCheck indexes audio inside your folders.'),
 				t('audiocheck', 'Open Music or Audiobooks — listen to albums, playlists, and chapters.'),
 			].forEach((text) => steps.appendChild(C.el('li', { text })));
-			helpHow.appendChild(steps);
-			body.appendChild(helpHow);
+			body.appendChild(C.collapsibleSectionCard(
+				t('audiocheck', 'How it works'),
+				t('audiocheck', 'Add folders, scan, then open Music or Audiobooks.'),
+				steps,
+				'ac-library-how-heading',
+			));
 
-			const helpFormats = C.el('details', { className: 'ac-library-help ac-card' });
-			helpFormats.appendChild(C.el('summary', {
-				className: 'ac-library-help__summary',
-				text: t('audiocheck', 'Supported formats'),
-			}));
-			helpFormats.appendChild(C.el('p', {
-				className: 'ac-field__hint ac-library-help__body',
-				text: t('audiocheck', 'Usually plays in the browser: MP3, M4A, M4B, AAC, OGG, Opus, WAV. FLAC, WMA, and AIFF may need another app or browser.'),
-			}));
-			body.appendChild(helpFormats);
+			body.appendChild(C.collapsibleSectionCard(
+				t('audiocheck', 'Supported formats'),
+				t('audiocheck', 'Common audio types that play in most browsers.'),
+				C.el('p', {
+					className: 'ac-field__hint',
+					text: t('audiocheck', 'Usually plays in the browser: MP3, M4A, M4B, AAC, OGG, Opus, WAV. FLAC, WMA, and AIFF may need another app or browser.'),
+				}),
+				'ac-library-formats-heading',
+			));
 
 			frag.appendChild(body);
 			refresh();

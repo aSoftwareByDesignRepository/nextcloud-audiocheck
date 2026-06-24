@@ -3,7 +3,11 @@
 
 	const C = AudioCheckComponents;
 	const PA = () => window.AudioCheckPlaylistActions;
-	const UIL = () => window.AudioCheckTrackListUi;
+	const UIL = () => (window.AudioCheckRequireTrackListUi
+		? AudioCheckRequireTrackListUi()
+		: window.AudioCheckTrackListUi);
+	const GS = () => window.AudioCheckGlobalSearch;
+	const LPU = () => window.AudioCheckLibraryPageUi;
 	const PAGE_SIZE = 48;
 	const FACET_LIST_PAGE_SIZE = 48;
 	const PLAY_ALL_PAGE_SIZE = 100;
@@ -24,6 +28,11 @@
 		const slash = path.lastIndexOf('/');
 		if (slash > 0) return { ...track, artist: displayFolderLabel(path.slice(0, slash)) };
 		return track;
+	}
+
+	function searchQuery() {
+		const g = GS();
+		return g ? g.apiQueryParam(g.getDebouncedQuery()) : '';
 	}
 
 	/**
@@ -55,16 +64,16 @@
 
 				let activeTab = config.tabs[0].id;
 				let sort = 'title';
-				let query = '';
+				let hideListened = false;
 				let page = 1;
 				let total = 0;
-				let timer = null;
 				let tabButtons = [];
 				let panel = null;
 				let toolbar = null;
 				let leadEl = null;
 				let status = null;
 				let moreWrap = null;
+				let searchHintEl = null;
 				let playableCache = [];
 
 				const playAllBtn = C.el('button', {
@@ -79,7 +88,9 @@
 					playAllBtn.disabled = true;
 					try {
 						const baseParams = { kind: config.kind, sort, limit: PLAY_ALL_PAGE_SIZE };
-						if (query.length >= 2) baseParams.q = query;
+						const q = searchQuery();
+						if (q) baseParams.q = q;
+						if (hideListened) baseParams.hideListened = 1;
 						const tracks = [];
 						let pageNum = 1;
 						let totalTracks = Infinity;
@@ -103,8 +114,12 @@
 								'info',
 							);
 						}
-						AudioCheckPlayer.playQueue(tracks, 0);
-						AudioCheckRouter.navigate('now-playing', {}, true);
+						if (window.AudioCheckPlaybackStart) {
+							await AudioCheckPlaybackStart.playAllWithStartChoice(tracks);
+						} else {
+							AudioCheckPlayer.playQueue(tracks, 0);
+							AudioCheckRouter.navigate('now-playing', {}, true);
+						}
 					} catch (e) {
 						AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error');
 					} finally {
@@ -123,6 +138,10 @@
 					if (leadEl && config.tabLeads[type]) {
 						leadEl.textContent = config.tabLeads[type];
 					}
+					if (window.AudioCheckPageChrome) {
+						if (type === 'tracks') AudioCheckPageChrome.setActions(playAllBtn);
+						else AudioCheckPageChrome.clearActions();
+					}
 				}
 
 				function focusTabByOffset(offset) {
@@ -134,53 +153,41 @@
 				}
 
 				function updateToolbar(tabId) {
-					if (!toolbar) return;
+					if (!toolbar || !LPU()) return;
 					toolbar.replaceChildren();
-					const searchLabel = tabId === 'albums'
-						? t('audiocheck', 'Search collections…')
-						: tabId === 'folders'
-							? t('audiocheck', 'Filter folders…')
-							: t('audiocheck', 'Search tracks…');
-					const search = C.el('input', {
-						type: 'search',
-						className: 'ac-input ac-collection-toolbar__search',
-						attrs: {
-							id: idPrefix + '-search',
-							'aria-label': searchLabel,
-							placeholder: searchLabel,
-							autocomplete: 'off',
-							value: query,
-						},
-					});
-					search.addEventListener('input', () => {
-						clearTimeout(timer);
-						query = search.value.trim();
-						timer = setTimeout(() => loadTab(tabId, true), 300);
-					});
-					toolbar.appendChild(search);
-
+					const filtersRow = C.el('div', { className: 'ac-library-filters' });
 					if (tabId !== 'folders') {
-						const sortSel = C.el('select', {
-							className: 'ac-input ac-collection-toolbar__sort',
-							attrs: { 'aria-label': t('audiocheck', 'Sort by') },
-						});
-						[
-							{ v: 'title', l: t('audiocheck', 'Title') },
-							{ v: 'artist', l: sortArtistLabel },
-							{ v: 'added', l: t('audiocheck', 'Recently added') },
-							{ v: 'played', l: t('audiocheck', 'Recently played') },
-						].forEach((opt) => {
-							sortSel.appendChild(C.el('option', {
-								value: opt.v,
-								text: opt.l,
-								attrs: opt.v === sort ? { selected: true } : {},
-							}));
-						});
-						sortSel.addEventListener('change', () => {
-							sort = sortSel.value;
-							loadTab(tabId, true);
-						});
-						toolbar.appendChild(sortSel);
+						filtersRow.appendChild(LPU().buildSortChipRow({
+							sort,
+							options: LPU().defaultSortOptions(sortArtistLabel),
+							groupLabel: t('audiocheck', 'Sort by'),
+							onChange: (nextSort) => {
+								sort = nextSort;
+								loadTab(tabId, true);
+							},
+						}));
+					}
+					if (tabId === 'tracks') {
+						filtersRow.appendChild(LPU().buildHideListenedFilter({
+							idPrefix,
+							checked: hideListened,
+							onChange: (next) => {
+								hideListened = next;
+								loadTab(tabId, true);
+							},
+						}));
+					}
+					if (filtersRow.children.length) {
+						toolbar.appendChild(filtersRow);
+						toolbar.hidden = false;
+					} else {
+						toolbar.hidden = true;
+					}
+				}
+
+				function refreshSearchHint() {
+					if (searchHintEl && typeof searchHintEl.refresh === 'function') {
+						searchHintEl.refresh();
 					}
 				}
 
@@ -215,12 +222,14 @@
 					status.textContent = t('audiocheck', 'Loading…');
 					moreWrap.textContent = '';
 					const params = { kind: config.kind, limit: PAGE_SIZE, page, sort };
-					if (query.length >= 2) params.q = query;
+					const q = searchQuery();
+					if (q) params.q = q;
+					if (hideListened) params.hideListened = 1;
 					AudioCheckApi.get('/apps/audiocheck/api/tracks', params).then((data) => {
 						const items = data.items || [];
 						total = data.total != null ? data.total : items.length;
 						if (reset && !items.length) {
-							showEmpty(query.length >= 2
+							showEmpty(q
 								? t('audiocheck', 'No matching tracks.')
 								: config.emptyTracks);
 							return;
@@ -247,12 +256,12 @@
 					const folderPath = item.name || '';
 					const count = item.count || 0;
 					const label = displayFolderLabel(folderPath);
-					const trackParams = (pageNum) => ({
+					const trackParams = (pageNum, groupSort) => ({
 						folder: folderPath,
 						kind: config.kind,
 						limit: PAGE_SIZE,
 						page: pageNum || 1,
-						sort,
+						sort: groupSort || sort,
 					});
 
 					UIL().renderExpandableTrackGroup({
@@ -262,13 +271,17 @@
 						host,
 						startOpen,
 						displayMeta: trackDisplayMeta,
-						loadTracks: (pageNum) => AudioCheckApi.get('/apps/audiocheck/api/tracks', trackParams(pageNum)),
-						playAllTracks: async () => {
+						defaultSort: sort,
+						inlineSort: true,
+						inlinePlayActions: true,
+						loadTracks: (pageNum, groupSort) => AudioCheckApi.get('/apps/audiocheck/api/tracks', trackParams(pageNum, groupSort)),
+						playAllTracks: async (groupSort) => {
 							const tracks = [];
 							let pageNum = 1;
 							let totalTracks = Infinity;
+							const params = (p) => trackParams(p, groupSort);
 							while (tracks.length < totalTracks && tracks.length < PLAY_ALL_MAX_TRACKS) {
-								const data = await AudioCheckApi.get('/apps/audiocheck/api/tracks', trackParams(pageNum));
+								const data = await AudioCheckApi.get('/apps/audiocheck/api/tracks', params(pageNum));
 								const batch = data.items || [];
 								totalTracks = data.total != null ? data.total : batch.length;
 								tracks.push(...batch);
@@ -308,13 +321,15 @@
 					}).then((data) => {
 						const items = (data.items || []).slice();
 						const facetTotal = data.total != null ? data.total : items.length;
-						const q = query.toLowerCase();
-						const filtered = q.length >= 2
-							? items.filter((item) => displayFolderLabel(item.name).toLowerCase().includes(q)
-								|| (item.name || '').toLowerCase().includes(q))
+						const q = searchQuery();
+						const filtered = q
+							? items.filter((item) => GS().matchesSearchQuery([
+								displayFolderLabel(item.name),
+								item.name,
+							], q))
 							: items;
 						if (reset && page === 1 && !filtered.length) {
-							showEmpty(query.length >= 2
+							showEmpty(q
 								? t('audiocheck', 'No matching folders.')
 								: config.emptyFolders, 'folder', {
 								label: t('audiocheck', 'Show all tracks'),
@@ -353,12 +368,13 @@
 					status.textContent = t('audiocheck', 'Loading…');
 					moreWrap.textContent = '';
 					const params = { kind: config.kind, limit: PAGE_SIZE, page, sort };
-					if (query.length >= 2) params.q = query;
+					const q = searchQuery();
+					if (q) params.q = q;
 					AudioCheckApi.get('/apps/audiocheck/api/collections', params).then((data) => {
 						const items = data.items || [];
 						total = data.total != null ? data.total : items.length;
 						if (reset && !items.length) {
-							showEmpty(query.length >= 2
+							showEmpty(q
 								? t('audiocheck', 'No matching collections.')
 								: config.emptyAlbums, emptyIcon, {
 								label: t('audiocheck', 'Show all tracks'),
@@ -397,13 +413,16 @@
 				function loadTab(type, reset) {
 					setActiveTab(type);
 					updateToolbar(type);
+					refreshSearchHint();
 					if (reset) page = 1;
 					if (type === 'tracks') loadTracks(!!reset);
 					else if (type === 'folders') loadFolders(!!reset);
 					else loadAlbums(!!reset);
 				}
 
-				frag.appendChild(C.pageHeader(config.title, config.help, playAllBtn));
+				if (window.AudioCheckPageChrome && activeTab === 'tracks') {
+					AudioCheckPageChrome.setActions(playAllBtn);
+				}
 
 				const tabBar = C.el('div', {
 					className: 'ac-browse-tabs ac-media-library-tabs',
@@ -442,10 +461,7 @@
 							tabindex: tab.id === activeTab ? '0' : '-1',
 							'data-tab-id': tab.id,
 						},
-						onClick: () => {
-							query = '';
-							loadTab(tab.id, true);
-						},
+						onClick: () => loadTab(tab.id, true),
 					});
 					btn.addEventListener('keydown', (ev) => {
 						if (ev.key === 'ArrowRight') { ev.preventDefault(); focusTabByOffset(1); }
@@ -461,15 +477,22 @@
 					return btn;
 				});
 
+				const shell = LPU() ? LPU().createContentShell() : C.el('div', { className: 'ac-library-shell' });
+				searchHintEl = LPU() ? LPU().buildSearchHint(searchQuery) : null;
+				shell.appendChild(leadEl);
+				if (searchHintEl) shell.appendChild(searchHintEl);
+				shell.appendChild(toolbar);
+				shell.appendChild(status);
+				shell.appendChild(panel);
+				shell.appendChild(moreWrap);
 				body.appendChild(tabBar);
-				body.appendChild(leadEl);
-				body.appendChild(toolbar);
-				body.appendChild(status);
-				body.appendChild(panel);
-				body.appendChild(moreWrap);
+				body.appendChild(shell);
 				frag.appendChild(body);
 
 				loadTab(activeTab, true);
+				if (GS()) {
+					GS().registerViewHandler(config.viewId, () => loadTab(activeTab, true));
+				}
 				return frag;
 			},
 		});

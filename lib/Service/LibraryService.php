@@ -7,7 +7,10 @@ namespace OCA\AudioCheck\Service;
 use OCA\AudioCheck\AppInfo\Application;
 use OCA\AudioCheck\Exception\NotFoundException;
 use OCA\AudioCheck\Exception\ValidationException;
+use OCA\AudioCheck\Util\SearchTextNormalizer;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCP\DB\QueryBuilder\IQueryFunction;
 use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\IDBConnection;
@@ -244,15 +247,7 @@ class LibraryService
 		if ($kind !== null && in_array($kind, [self::KIND_MUSIC, self::KIND_AUDIOBOOK], true)) {
 			$qb->andWhere($qb->expr()->eq('m.kind', $qb->createNamedParameter($kind)));
 		}
-		if ($q !== null && trim($q) !== '') {
-			$like = '%' . $this->db->escapeLikeParameter(trim($q)) . '%';
-			$qb->andWhere($qb->expr()->orX(
-				$qb->expr()->like('m.title', $qb->createNamedParameter($like)),
-				$qb->expr()->like('m.artist', $qb->createNamedParameter($like)),
-				$qb->expr()->like('m.album', $qb->createNamedParameter($like)),
-				$qb->expr()->like('t.file_name', $qb->createNamedParameter($like)),
-			));
-		}
+		$this->applySearchFilter($qb, ['m.title_norm', 'm.artist_norm', 'm.album_norm', 't.file_name_norm'], $q);
 		if ($genre !== null && trim($genre) !== '') {
 			$qb->andWhere($qb->expr()->eq('m.genre', $qb->createNamedParameter(trim($genre))));
 		}
@@ -448,14 +443,11 @@ class LibraryService
 		if ($kind !== null && in_array($kind, [self::KIND_MUSIC, self::KIND_AUDIOBOOK], true)) {
 			$qb->andWhere($qb->expr()->eq('m.kind', $qb->createNamedParameter($kind)));
 		}
-		if ($q !== null && trim($q) !== '') {
-			$like = '%' . $this->db->escapeLikeParameter(trim($q)) . '%';
-			$qb->andWhere($qb->expr()->orX(
-				$qb->expr()->like($qb->createFunction($albumExpr), $qb->createNamedParameter($like)),
-				$qb->expr()->like('m.artist', $qb->createNamedParameter($like)),
-				$qb->expr()->like($qb->createFunction($albumArtistExpr), $qb->createNamedParameter($like)),
-			));
-		}
+		$this->applySearchFilter($qb, [
+			$qb->createFunction($this->effectiveAlbumNormSql()),
+			'm.artist_norm',
+			$qb->createFunction($this->effectiveAlbumArtistNormSql()),
+		], $q);
 
 		$sortCol = match ($sort) {
 			self::SORT_ARTIST => 'album_artist',
@@ -845,11 +837,18 @@ class LibraryService
 			return $this->paginateFacetItems($this->listTagFacets($userId, $q), $page, $limit);
 		}
 
-		$column = match ($type) {
+		$displayColumn = match ($type) {
 			'artists' => 'm.artist',
 			'authors' => 'm.artist',
 			'series' => 'm.series',
 			'genres' => 'm.genre',
+			'folders' => 't.rel_path',
+			default => throw new ValidationException('Invalid facet type.'),
+		};
+		$searchColumn = match ($type) {
+			'artists', 'authors' => 'm.artist_norm',
+			'series' => 'm.series_norm',
+			'genres' => 'm.genre_norm',
 			'folders' => 't.rel_path',
 			default => throw new ValidationException('Invalid facet type.'),
 		};
@@ -866,25 +865,24 @@ class LibraryService
 			}
 			$qb->groupBy('t.rel_path');
 		} else {
-			$qb->selectAlias($column, 'name')
+			$qb->selectAlias($displayColumn, 'name')
 				->selectAlias($qb->func()->count('t.id'), 'c')
 				->from('ac_tracks', 't')
 				->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'))
 				->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
-				->andWhere($qb->expr()->isNotNull($column))
-				->groupBy($column);
+				->andWhere($qb->expr()->isNotNull($displayColumn))
+				->groupBy($displayColumn);
 			if ($type === 'artists') {
 				$qb->andWhere($qb->expr()->eq('m.kind', $qb->createNamedParameter(self::KIND_MUSIC)));
 			} elseif ($type === 'authors') {
 				$qb->andWhere($qb->expr()->eq('m.kind', $qb->createNamedParameter(self::KIND_AUDIOBOOK)));
 			} elseif ($type === 'series') {
-				$qb->andWhere($qb->expr()->neq($column, $qb->createNamedParameter('')));
+				$qb->andWhere($qb->expr()->neq($displayColumn, $qb->createNamedParameter('')));
 			}
 		}
 
-		if ($q !== null && trim($q) !== '' && $type !== 'folders') {
-			$like = '%' . $this->db->escapeLikeParameter(trim($q)) . '%';
-			$qb->andWhere($qb->expr()->like($column, $qb->createNamedParameter($like)));
+		if ($type !== 'folders') {
+			$this->applySearchFilter($qb, [$searchColumn], $q);
 		}
 
 		$result = $qb->executeQuery();
@@ -955,6 +953,53 @@ class LibraryService
 		return rtrim(strtr(base64_encode($album . "\0" . $albumArtist . "\0" . $kind), '+/', '-_'), '=');
 	}
 
+	/**
+	 * Maximum number of search tokens honoured per query. Guards against
+	 * pathological inputs (hundreds of words) inflating the generated SQL.
+	 */
+	private const SEARCH_MAX_TOKENS = 8;
+
+	/**
+	 * Split a raw search string into normalized, de-duplicated tokens.
+	 *
+	 * Mirrors the mobile client's tokenizer: whitespace separated and order
+	 * independent. Tokens are matched with AND semantics by the caller, so
+	 * "beatles abbey" finds a track whose artist is "The Beatles" and whose
+	 * album is "Abbey Road".
+	 *
+	 * @return list<string>
+	 */
+	private function searchTokens(?string $q): array
+	{
+		return SearchTextNormalizer::tokenize($q, self::SEARCH_MAX_TOKENS);
+	}
+
+	/**
+	 * Apply a forgiving search filter to a query builder.
+	 *
+	 * Every token must match (AND); within a token any of the supplied fields
+	 * may match (OR). Query tokens and field values are normalized the same way
+	 * as the mobile offline matcher (see SearchTextNormalizer). Search targets
+	 * the *_norm shadow columns populated on scan/metadata write.
+	 *
+	 * @param list<string|IQueryFunction> $fields Column names or SQL expressions to search.
+	 */
+	private function applySearchFilter(IQueryBuilder $qb, array $fields, ?string $q): void
+	{
+		if ($fields === []) {
+			return;
+		}
+		foreach ($this->searchTokens($q) as $token) {
+			$like = '%' . $this->db->escapeLikeParameter($token) . '%';
+			$param = $qb->createNamedParameter($like);
+			$conditions = [];
+			foreach ($fields as $field) {
+				$conditions[] = $qb->expr()->like($field, $param);
+			}
+			$qb->andWhere($qb->expr()->orX(...$conditions));
+		}
+	}
+
 	private function effectiveAlbumSql(): string
 	{
 		return "COALESCE(NULLIF(m.album, ''), NULLIF(m.title, ''), t.file_name)";
@@ -963,6 +1008,16 @@ class LibraryService
 	private function effectiveAlbumArtistSql(): string
 	{
 		return "COALESCE(NULLIF(m.album_artist, ''), NULLIF(m.artist, ''), '')";
+	}
+
+	private function effectiveAlbumNormSql(): string
+	{
+		return "COALESCE(NULLIF(m.album_norm, ''), NULLIF(m.title_norm, ''), t.file_name_norm)";
+	}
+
+	private function effectiveAlbumArtistNormSql(): string
+	{
+		return "COALESCE(NULLIF(m.album_artist_norm, ''), NULLIF(m.artist_norm, ''), '')";
 	}
 
 	/** @return array{album:string,albumArtist:string,kind:string} */
@@ -1078,14 +1133,11 @@ class LibraryService
 		if ($kind !== null && in_array($kind, [self::KIND_MUSIC, self::KIND_AUDIOBOOK], true)) {
 			$qb->andWhere($qb->expr()->eq('m.kind', $qb->createNamedParameter($kind)));
 		}
-		if ($q !== null && trim($q) !== '') {
-			$like = '%' . $this->db->escapeLikeParameter(trim($q)) . '%';
-			$qb->andWhere($qb->expr()->orX(
-				$qb->expr()->like($qb->createFunction($albumExpr), $qb->createNamedParameter($like)),
-				$qb->expr()->like('m.artist', $qb->createNamedParameter($like)),
-				$qb->expr()->like($qb->createFunction($albumArtistExpr), $qb->createNamedParameter($like)),
-			));
-		}
+		$this->applySearchFilter($qb, [
+			$qb->createFunction($this->effectiveAlbumNormSql()),
+			'm.artist_norm',
+			$qb->createFunction($this->effectiveAlbumArtistNormSql()),
+		], $q);
 
 		$result = $qb->executeQuery();
 		$total = 0;

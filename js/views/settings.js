@@ -4,9 +4,9 @@
 	AudioCheckRouter.register('settings', {
 		render() {
 			const frag = document.createDocumentFragment();
-			frag.appendChild(C.pageHeader(t('audiocheck', 'Settings'), t('audiocheck', 'Personal playback and scan preferences.')));
+			const body = C.el('div', { className: 'ac-page-body ac-settings-page' });
 
-			const form = C.el('form', { className: 'ac-card ac-form' });
+			const form = C.el('form', { className: 'ac-form' });
 
 			const playbackFs = C.el('fieldset', { className: 'ac-fieldset' });
 			playbackFs.appendChild(C.el('legend', { className: 'ac-fieldset__legend', text: t('audiocheck', 'Playback') }));
@@ -58,6 +58,32 @@
 			playbackFs.appendChild(volumeRow);
 			playbackFs.appendChild(resumeRow);
 
+			const listenedFs = C.el('fieldset', { className: 'ac-fieldset' });
+			listenedFs.appendChild(C.el('legend', { className: 'ac-fieldset__legend', text: t('audiocheck', 'Mark as listened') }));
+			listenedFs.appendChild(C.el('p', {
+				className: 'ac-field__hint',
+				text: t('audiocheck', 'Automatically mark tracks as listened when you reach this percentage.'),
+			}));
+			const listenedRow = C.el('div', {
+				className: 'ac-form-row ac-listened-threshold',
+				attrs: { role: 'radiogroup', 'aria-label': t('audiocheck', 'Listened threshold') },
+			});
+			const listenedOptions = [75, 80, 85, 90, 95, 100];
+			const listenedRadios = [];
+			listenedOptions.forEach((percent) => {
+				const id = 'ac-listened-' + percent;
+				const wrap = C.el('div', { className: 'ac-listened-threshold__option' });
+				const radio = C.el('input', { id, type: 'radio', name: 'ac-listened-threshold', value: String(percent) });
+				listenedRadios.push(radio);
+				wrap.appendChild(radio);
+				wrap.appendChild(C.el('label', {
+					attrs: { for: id },
+					text: t('audiocheck', '{percent}% of duration', { percent: String(percent) }),
+				}));
+				listenedRow.appendChild(wrap);
+			});
+			listenedFs.appendChild(listenedRow);
+
 			const scanFs = C.el('fieldset', { className: 'ac-fieldset' });
 			scanFs.appendChild(C.el('legend', { className: 'ac-fieldset__legend', text: t('audiocheck', 'Library scanning') }));
 			const subRow = C.el('div', { className: 'ac-form-row ac-form-row--checkbox' });
@@ -71,6 +97,7 @@
 			actions.appendChild(C.el('button', { type: 'submit', className: 'ac-btn ac-btn--primary', text: t('audiocheck', 'Save') }));
 
 			form.appendChild(playbackFs);
+			form.appendChild(listenedFs);
 			form.appendChild(scanFs);
 			form.appendChild(actions);
 
@@ -93,6 +120,10 @@
 					defaultVolume: vol,
 					resumeOnOpen: resume.checked,
 					scanSubfolders: subfolders.checked,
+					listenedThresholdPercent: parseInt(
+						(listenedRadios.find((r) => r.checked) || listenedRadios[4]).value,
+						10,
+					),
 				})
 					.then((r) => {
 						window.AudioCheckUserPrefs = r.prefs || {};
@@ -110,10 +141,15 @@
 				const vol = typeof r.prefs.defaultVolume === 'number' ? r.prefs.defaultVolume : AudioCheckPlayer.getVolumePercent();
 				volumeSlider.value = String(vol);
 				updateVolumeLabel(vol);
+				const threshold = typeof r.prefs.listenedThresholdPercent === 'number'
+					? r.prefs.listenedThresholdPercent
+					: 95;
+				listenedRadios.forEach((radio) => {
+					radio.checked = parseInt(radio.value, 10) === threshold;
+				});
 			}).catch((err) => AudioCheckMessaging.toast(err.message || t('audiocheck', 'Request failed.'), 'error'));
 
-			const onScreen = C.el('div', { className: 'ac-card ac-controls-ref' });
-			onScreen.appendChild(C.el('h2', { className: 'ac-card__title', text: t('audiocheck', 'On-screen controls') }));
+			const onScreen = C.el('div', { className: 'ac-controls-ref' });
 			onScreen.appendChild(C.el('p', {
 				className: 'ac-field__hint ac-controls-ref__intro',
 				text: t('audiocheck', 'You can control playback without the keyboard. Look for these controls:'),
@@ -135,8 +171,7 @@
 				onClick: () => AudioCheckRouter.navigate('now-playing', {}, true),
 			}));
 
-			const shortcuts = C.el('div', { className: 'ac-card ac-shortcuts' });
-			shortcuts.appendChild(C.el('h2', { className: 'ac-card__title', text: t('audiocheck', 'Keyboard shortcuts') }));
+			const shortcuts = C.el('div', { className: 'ac-shortcuts' });
 			shortcuts.appendChild(C.el('p', {
 				className: 'ac-field__hint',
 				text: t('audiocheck', 'Shortcuts work when no text field is focused and no dialog is open.'),
@@ -156,8 +191,7 @@
 			});
 			shortcuts.appendChild(dl);
 
-			const libraryLink = C.el('div', { className: 'ac-card ac-settings-library' });
-			libraryLink.appendChild(C.el('h2', { className: 'ac-card__title', text: t('audiocheck', 'Library folders') }));
+			const libraryLink = C.el('div', { className: 'ac-settings-library' });
 			libraryLink.appendChild(C.el('p', {
 				className: 'ac-field__hint',
 				text: t('audiocheck', 'Add or remove folders to scan in the Library section.'),
@@ -169,10 +203,27 @@
 				onClick: () => AudioCheckRouter.navigate('library', {}, true),
 			}));
 
-			frag.appendChild(form);
-			frag.appendChild(C.section(t('audiocheck', 'Controls'), onScreen));
-			frag.appendChild(C.section(t('audiocheck', 'Help'), shortcuts));
-			frag.appendChild(C.section(t('audiocheck', 'Library'), libraryLink));
+			body.appendChild(C.sectionCard(
+				t('audiocheck', 'Your preferences'),
+				t('audiocheck', 'Defaults used when you open AudioCheck and start new playback.'),
+				form,
+			));
+			body.appendChild(C.sectionCard(
+				t('audiocheck', 'On-screen controls'),
+				t('audiocheck', 'Where to find play, pause, seek, and volume without the keyboard.'),
+				onScreen,
+			));
+			body.appendChild(C.sectionCard(
+				t('audiocheck', 'Keyboard shortcuts'),
+				t('audiocheck', 'Shortcuts work when no text field is focused and no dialog is open.'),
+				shortcuts,
+			));
+			body.appendChild(C.sectionCard(
+				t('audiocheck', 'Library folders'),
+				t('audiocheck', 'Add or remove folders to scan in the Library section.'),
+				libraryLink,
+			));
+			frag.appendChild(body);
 			return frag;
 		},
 	});
