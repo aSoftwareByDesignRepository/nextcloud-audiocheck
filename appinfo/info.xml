@@ -113,6 +113,7 @@ Deine MP3-, MP4-, M4A-, M4B- und weiteren Audiodateien liegen bereits in Dateien
 		<admin>OCA\AudioCheck\Settings\AdminSettings</admin>
 	</settings>
 	<commands>
+		<command>OCA\AudioCheck\Command\UpgradeBackupCommand</command>
 		<command>OCA\AudioCheck\Command\Scan</command>
 	</commands>
 	<background-jobs>
@@ -128,5 +129,8 @@ Deine MP3-, MP4-, M4A-, M4B- und weiteren Audiodateien liegen bereits in Dateien
 		<uninstall>
 			<step>OCA\AudioCheck\Repair\UninstallDropTables</step>
 		</uninstall>
-	</repair-steps>
+		<pre-migration>
+			<step>OCA\AudioCheck\Repair\BackupBeforeUpdate</step>
+		</pre-migration>
+</repair-steps>
 </info>

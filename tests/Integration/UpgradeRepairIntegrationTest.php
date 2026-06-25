@@ -6,6 +6,7 @@ namespace OCA\AudioCheck\Tests\Integration;
 
 use OCA\AudioCheck\Repair\EnsureAudioCheckSchema;
 use OCA\AudioCheck\Repair\UninstallDropTables;
+use OCA\AudioCheck\Repair\BackupBeforeUpdate;
 use OCP\Migration\IOutput;
 use Test\TestCase;
 
@@ -23,6 +24,7 @@ final class UpgradeRepairIntegrationTest extends TestCase
 		foreach ([
 			EnsureAudioCheckSchema::class,
 			UninstallDropTables::class,
+			BackupBeforeUpdate::class,
 		] as $class) {
 			$step = \OC::$server->get($class);
 			$this->assertInstanceOf($class, $step);

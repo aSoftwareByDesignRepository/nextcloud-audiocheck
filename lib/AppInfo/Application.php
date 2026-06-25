@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace OCA\AudioCheck\AppInfo;
 
+use OCP\Lock\ILockingProvider;
+use OCP\Files\IRootFolder;
+use OCP\App\IAppManager;
+use OCA\AudioCheck\Service\UpgradeBackupService;
+use OCA\AudioCheck\Repair\BackupBeforeUpdate;
 use OCA\AudioCheck\BackgroundJob\ScanJob;
 use OCA\AudioCheck\Command\Scan as ScanCommand;
 use OCA\AudioCheck\Dashboard\ContinueWidget;
@@ -175,9 +180,26 @@ class Application extends App implements IBootstrap
 			return new UninstallDropTables(
 				$c->query(\OCP\IDBConnection::class),
 				$c->query(\OCP\IConfig::class),
-				$c->query(CoverService::class),
+				$c->query(IRootFolder::class),
 			);
 		});
+		$context->registerService(UpgradeBackupService::class, function ($c): UpgradeBackupService {
+			return new UpgradeBackupService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(\OCP\IConfig::class),
+				$c->query(IRootFolder::class),
+				$c->query(IAppManager::class),
+				$c->query(ILockingProvider::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
+			);
+		});
+
+		$context->registerService(BackupBeforeUpdate::class, function ($c): BackupBeforeUpdate {
+			return new BackupBeforeUpdate(
+				$c->query(UpgradeBackupService::class),
+			);
+		});
+
 
 		$context->registerService(ContinueWidget::class, function ($c): ContinueWidget {
 			return new ContinueWidget(
