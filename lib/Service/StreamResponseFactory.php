@@ -153,6 +153,13 @@ class StreamResponseFactory
 
 		$range = $rangeHeader !== null ? $this->parseRange($rangeHeader, $fileSize) : null;
 
+		// RFC 7233 §3.2: an If-Range validator that no longer matches means the
+		// client's stored partial is stale — ignore the Range and serve the full
+		// file (200) so resumed downloads never splice bytes of two versions.
+		if ($rangeHeader !== null && $ifRange !== null && !$this->etagMatches($ifRange, $etag)) {
+			$range = null;
+		}
+
 		if ($range === false) {
 			return new RangeStreamResponse($file, fopen('php://memory', 'rb'), $fileSize, $mime, $etag, null, Http::STATUS_REQUEST_RANGE_NOT_SATISFIABLE);
 		}
