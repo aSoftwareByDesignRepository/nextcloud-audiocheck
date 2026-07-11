@@ -4,17 +4,14 @@ All notable changes to AudioCheck are documented in this file.
 
 ## [Unreleased]
 
+## [1.2.7] — 2026-07-11
+
 ### Fixed
 
 - **Scan memory** — library scans walk folders depth-first in batches instead of loading every audio file into memory before indexing; cursor now stores a `walkStack` for resume.
 - **Concurrent scans** — only one worker can claim `RUNNING` per user via an atomic DB update; lease heartbeats prevent stale takeover mid-batch.
 - **Playlist integrity** — reorder and delete run inside DB transactions so partial failures cannot leave inconsistent sort orders or orphan headers.
 - **Mini player volume (mobile)** — volume icon opens an accessible popover with slider and mute on small screens; desktop keeps inline controls (WCAG 2.1 AA).
-
-## [1.2.7] — 2026-07-11
-
-### Fixed
-
 - **API error logging** — `safe()` and service catch blocks now pass the exception object (`['exception' => $e]`) to the logger instead of a `message` context key, which the Nextcloud logger's PSR-3 interpolation silently discarded. Internal errors now log the full class, message, and stack trace.
 - **Favorites listing 500** — `ITags::getFavorites()` may return `false` on transient DB errors; `LibraryService` now degrades to "no favorites" instead of throwing a `TypeError` that broke `/api/tracks?favorite=1` and all views built on it.
 - **SQL portability** — count queries no longer inherit `ORDER BY` on non-aggregated columns (rejected by PostgreSQL and MySQL 8 with `ONLY_FULL_GROUP_BY`); `MAX()` aggregates use `selectAlias()` so library sync revisions and playlist sort orders are read correctly; internal Doctrine `ArrayParameterType` replaced with the public `IQueryBuilder::PARAM_INT_ARRAY`.
