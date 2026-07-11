@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace OCA\AudioCheck\Service;
 
 use OCA\AudioCheck\AppInfo\Application;
+use OCA\AudioCheck\Exception\InternalErrorException;
 use OCA\AudioCheck\Exception\NotFoundException;
 use OCA\AudioCheck\Exception\ValidationException;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\DB\Exception as DBException;
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IConfig;
 use OCP\IDBConnection;
 
@@ -69,6 +72,9 @@ class PlaybackStateService
 			if ($row === null) {
 				throw new NotFoundException();
 			}
+			if (!$this->fileAccess->isFileAccessible($userId, $fileId)) {
+				throw new NotFoundException();
+			}
 			return $this->formatProgress($row, $userId);
 		}
 		return ['continue' => $this->getContinueListening($userId)];
@@ -76,11 +82,11 @@ class PlaybackStateService
 
 	public function saveProgress(string $userId, int $fileId, int $positionMs, int $speed, bool $finished, int $durationMs, ?int $clientUpdatedAt = null): array
 	{
-		$file = $this->fileAccess->resolveReadableFile($userId, $fileId);
+		$this->fileAccess->resolveReadableFile($userId, $fileId);
 		$speed = $this->clampSpeed($speed);
-		if ($durationMs <= 0) {
-			$durationMs = max(0, $file->getSize() > 0 ? 0 : 0);
-		}
+		// Unknown duration stays 0: the threshold check below only runs for
+		// a known duration, and the position clamp falls back to PHP_INT_MAX.
+		$durationMs = max(0, $durationMs);
 		$positionMs = max(0, min($positionMs, $durationMs > 0 ? $durationMs : PHP_INT_MAX));
 
 		$listened = $finished;
@@ -110,39 +116,63 @@ class PlaybackStateService
 					return $this->formatProgress($existing, $userId);
 				}
 			}
-			$qb = $this->db->getQueryBuilder();
-			$qb->update('ac_play_state')
-				->set('position_ms', $qb->createNamedParameter($positionMs, \PDO::PARAM_INT))
-				->set('duration_ms', $qb->createNamedParameter($durationMs, \PDO::PARAM_INT))
-				->set('playback_speed', $qb->createNamedParameter($speed, \PDO::PARAM_INT))
-				->set('finished', $qb->createNamedParameter($finished ? 1 : 0, \PDO::PARAM_INT))
-				->set('listened', $qb->createNamedParameter($listened ? 1 : 0, \PDO::PARAM_INT))
-				->set('updated_at', $qb->createNamedParameter($now, \PDO::PARAM_INT))
-				->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], \PDO::PARAM_INT)));
-			$qb->executeStatement();
+			$this->updateProgressRow((int)$existing['id'], $positionMs, $durationMs, $speed, $finished, $listened, $now);
 		} else {
-			$qb = $this->db->getQueryBuilder();
-			$qb->insert('ac_play_state')
-				->values([
-					'user_id' => $qb->createNamedParameter($userId),
-					'file_id' => $qb->createNamedParameter($fileId, \PDO::PARAM_INT),
-					'position_ms' => $qb->createNamedParameter($positionMs, \PDO::PARAM_INT),
-					'duration_ms' => $qb->createNamedParameter($durationMs, \PDO::PARAM_INT),
-					'playback_speed' => $qb->createNamedParameter($speed, \PDO::PARAM_INT),
-					'finished' => $qb->createNamedParameter($finished ? 1 : 0, \PDO::PARAM_INT),
-					'listened' => $qb->createNamedParameter($listened ? 1 : 0, \PDO::PARAM_INT),
-					'updated_at' => $qb->createNamedParameter($now, \PDO::PARAM_INT),
-				]);
-			$qb->executeStatement();
+			try {
+				$qb = $this->db->getQueryBuilder();
+				$qb->insert('ac_play_state')
+					->values([
+						'user_id' => $qb->createNamedParameter($userId),
+						'file_id' => $qb->createNamedParameter($fileId, \PDO::PARAM_INT),
+						'position_ms' => $qb->createNamedParameter($positionMs, \PDO::PARAM_INT),
+						'duration_ms' => $qb->createNamedParameter($durationMs, \PDO::PARAM_INT),
+						'playback_speed' => $qb->createNamedParameter($speed, \PDO::PARAM_INT),
+						'finished' => $qb->createNamedParameter($finished ? 1 : 0, \PDO::PARAM_INT),
+						'listened' => $qb->createNamedParameter($listened ? 1 : 0, \PDO::PARAM_INT),
+						'updated_at' => $qb->createNamedParameter($now, \PDO::PARAM_INT),
+					]);
+				$qb->executeStatement();
+			} catch (DBException $e) {
+				// Unload beacon and interval save can race on the (user_id,
+				// file_id) unique index; the loser retries as an update.
+				if ($e->getReason() !== DBException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+					throw $e;
+				}
+				$existing = $this->findProgress($userId, $fileId);
+				if ($existing !== null) {
+					$this->updateProgressRow((int)$existing['id'], $positionMs, $durationMs, $speed, $finished, $listened, $now);
+				}
+			}
 		}
 
 		$row = $this->findProgress($userId, $fileId);
-		return $this->formatProgress($row ?? [], $userId);
+		if ($row === null) {
+			throw new InternalErrorException('Progress save failed after retry.');
+		}
+		return $this->formatProgress($row, $userId);
+	}
+
+	private function updateProgressRow(int $rowId, int $positionMs, int $durationMs, int $speed, bool $finished, bool $listened, int $now): void
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->update('ac_play_state')
+			->set('position_ms', $qb->createNamedParameter($positionMs, \PDO::PARAM_INT))
+			->set('duration_ms', $qb->createNamedParameter($durationMs, \PDO::PARAM_INT))
+			->set('playback_speed', $qb->createNamedParameter($speed, \PDO::PARAM_INT))
+			->set('finished', $qb->createNamedParameter($finished ? 1 : 0, \PDO::PARAM_INT))
+			->set('listened', $qb->createNamedParameter($listened ? 1 : 0, \PDO::PARAM_INT))
+			->set('updated_at', $qb->createNamedParameter($now, \PDO::PARAM_INT))
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($rowId, \PDO::PARAM_INT)));
+		$qb->executeStatement();
 	}
 
 	public function deleteProgress(string $userId, int $fileId): void
 	{
-		$this->fileAccess->resolveReadableFile($userId, $fileId);
+		// Users may reset progress after a share is revoked; the row is
+		// user-owned and must be purgeable without live file access.
+		if ($this->findProgress($userId, $fileId) === null) {
+			return;
+		}
 		$qb = $this->db->getQueryBuilder();
 		$qb->delete('ac_play_state')
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
@@ -191,7 +221,7 @@ class PlaybackStateService
 		$qb->select('file_id')
 			->from('ac_play_state')
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
-			->andWhere($qb->expr()->in('file_id', $qb->createNamedParameter($accessible, \Doctrine\DBAL\ArrayParameterType::INTEGER)));
+			->andWhere($qb->expr()->in('file_id', $qb->createNamedParameter($accessible, IQueryBuilder::PARAM_INT_ARRAY)));
 		$result = $qb->executeQuery();
 		$existing = [];
 		while ($row = $result->fetch()) {
@@ -206,24 +236,32 @@ class PlaybackStateService
 				->set('finished', $qb->createNamedParameter($flag, \PDO::PARAM_INT))
 				->set('updated_at', $qb->createNamedParameter($now, \PDO::PARAM_INT))
 				->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
-				->andWhere($qb->expr()->in('file_id', $qb->createNamedParameter($existing, \Doctrine\DBAL\ArrayParameterType::INTEGER)));
+				->andWhere($qb->expr()->in('file_id', $qb->createNamedParameter($existing, IQueryBuilder::PARAM_INT_ARRAY)));
 			$qb->executeStatement();
 		}
 
 		foreach (array_values(array_diff($accessible, $existing)) as $fileId) {
-			$qb = $this->db->getQueryBuilder();
-			$qb->insert('ac_play_state')
-				->values([
-					'user_id' => $qb->createNamedParameter($userId),
-					'file_id' => $qb->createNamedParameter($fileId, \PDO::PARAM_INT),
-					'position_ms' => $qb->createNamedParameter(0, \PDO::PARAM_INT),
-					'duration_ms' => $qb->createNamedParameter(0, \PDO::PARAM_INT),
-					'playback_speed' => $qb->createNamedParameter($defaultSpeed, \PDO::PARAM_INT),
-					'finished' => $qb->createNamedParameter($flag, \PDO::PARAM_INT),
-					'listened' => $qb->createNamedParameter($flag, \PDO::PARAM_INT),
-					'updated_at' => $qb->createNamedParameter($now, \PDO::PARAM_INT),
-				]);
-			$qb->executeStatement();
+			try {
+				$qb = $this->db->getQueryBuilder();
+				$qb->insert('ac_play_state')
+					->values([
+						'user_id' => $qb->createNamedParameter($userId),
+						'file_id' => $qb->createNamedParameter($fileId, \PDO::PARAM_INT),
+						'position_ms' => $qb->createNamedParameter(0, \PDO::PARAM_INT),
+						'duration_ms' => $qb->createNamedParameter(0, \PDO::PARAM_INT),
+						'playback_speed' => $qb->createNamedParameter($defaultSpeed, \PDO::PARAM_INT),
+						'finished' => $qb->createNamedParameter($flag, \PDO::PARAM_INT),
+						'listened' => $qb->createNamedParameter($flag, \PDO::PARAM_INT),
+						'updated_at' => $qb->createNamedParameter($now, \PDO::PARAM_INT),
+					]);
+				$qb->executeStatement();
+			} catch (DBException $e) {
+				if ($e->getReason() !== DBException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+					throw $e;
+				}
+				// Concurrent request created the row first; apply the flag to it.
+				$this->applyListenedFlag($userId, $fileId, $flag, $now);
+			}
 		}
 
 		return ['updated' => count($accessible), 'skipped' => $skipped];
@@ -234,33 +272,48 @@ class PlaybackStateService
 	{
 		$this->fileAccess->resolveReadableFile($userId, $fileId);
 		$now = $this->timeFactory->getTime();
+		$flag = $listened ? 1 : 0;
 		$existing = $this->findProgress($userId, $fileId);
 		if ($existing !== null) {
-			$qb = $this->db->getQueryBuilder();
-			$qb->update('ac_play_state')
-				->set('listened', $qb->createNamedParameter($listened ? 1 : 0, \PDO::PARAM_INT))
-				->set('finished', $qb->createNamedParameter($listened ? 1 : 0, \PDO::PARAM_INT))
-				->set('updated_at', $qb->createNamedParameter($now, \PDO::PARAM_INT))
-				->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], \PDO::PARAM_INT)));
-			$qb->executeStatement();
+			$this->applyListenedFlag($userId, $fileId, $flag, $now);
 		} else {
-			$qb = $this->db->getQueryBuilder();
-			$qb->insert('ac_play_state')
-				->values([
-					'user_id' => $qb->createNamedParameter($userId),
-					'file_id' => $qb->createNamedParameter($fileId, \PDO::PARAM_INT),
-					'position_ms' => $qb->createNamedParameter(0, \PDO::PARAM_INT),
-					'duration_ms' => $qb->createNamedParameter(0, \PDO::PARAM_INT),
-					'playback_speed' => $qb->createNamedParameter($this->getDefaultSpeed($userId), \PDO::PARAM_INT),
-					'finished' => $qb->createNamedParameter($listened ? 1 : 0, \PDO::PARAM_INT),
-					'listened' => $qb->createNamedParameter($listened ? 1 : 0, \PDO::PARAM_INT),
-					'updated_at' => $qb->createNamedParameter($now, \PDO::PARAM_INT),
-				]);
-			$qb->executeStatement();
+			try {
+				$qb = $this->db->getQueryBuilder();
+				$qb->insert('ac_play_state')
+					->values([
+						'user_id' => $qb->createNamedParameter($userId),
+						'file_id' => $qb->createNamedParameter($fileId, \PDO::PARAM_INT),
+						'position_ms' => $qb->createNamedParameter(0, \PDO::PARAM_INT),
+						'duration_ms' => $qb->createNamedParameter(0, \PDO::PARAM_INT),
+						'playback_speed' => $qb->createNamedParameter($this->getDefaultSpeed($userId), \PDO::PARAM_INT),
+						'finished' => $qb->createNamedParameter($flag, \PDO::PARAM_INT),
+						'listened' => $qb->createNamedParameter($flag, \PDO::PARAM_INT),
+						'updated_at' => $qb->createNamedParameter($now, \PDO::PARAM_INT),
+					]);
+				$qb->executeStatement();
+			} catch (DBException $e) {
+				if ($e->getReason() !== DBException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+					throw $e;
+				}
+				$this->applyListenedFlag($userId, $fileId, $flag, $now);
+			}
 		}
 
 		$row = $this->findProgress($userId, $fileId);
 		return $this->formatProgress($row ?? [], $userId);
+	}
+
+	/** Set listened/finished on an existing row addressed by (user, file). */
+	private function applyListenedFlag(string $userId, int $fileId, int $flag, int $now): void
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->update('ac_play_state')
+			->set('listened', $qb->createNamedParameter($flag, \PDO::PARAM_INT))
+			->set('finished', $qb->createNamedParameter($flag, \PDO::PARAM_INT))
+			->set('updated_at', $qb->createNamedParameter($now, \PDO::PARAM_INT))
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->andWhere($qb->expr()->eq('file_id', $qb->createNamedParameter($fileId, \PDO::PARAM_INT)));
+		$qb->executeStatement();
 	}
 
 	/**
@@ -277,7 +330,7 @@ class PlaybackStateService
 		$qb->select('file_id', 'listened')
 			->from('ac_play_state')
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
-			->andWhere($qb->expr()->in('file_id', $qb->createNamedParameter($fileIds, \Doctrine\DBAL\ArrayParameterType::INTEGER)));
+			->andWhere($qb->expr()->in('file_id', $qb->createNamedParameter($fileIds, IQueryBuilder::PARAM_INT_ARRAY)));
 		$result = $qb->executeQuery();
 		$map = [];
 		while ($row = $result->fetch()) {

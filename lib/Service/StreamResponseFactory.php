@@ -50,6 +50,8 @@ class RangeStreamResponse extends Response implements ICallbackResponse
 			$length = $end - $start + 1;
 			$headers['Content-Range'] = sprintf('bytes %d-%d/%d', $start, $end, $this->fileSize);
 			$headers['Content-Length'] = (string)$length;
+		} elseif ($this->statusCode === Http::STATUS_REQUEST_RANGE_NOT_SATISFIABLE) {
+			$headers['Content-Range'] = sprintf('bytes */%d', $this->fileSize);
 		} else {
 			$headers['Content-Length'] = (string)$this->fileSize;
 		}

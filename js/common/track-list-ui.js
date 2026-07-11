@@ -1,8 +1,6 @@
 (function () {
 	'use strict';
 
-	const FACET_TRACK_LIMIT = 500;
-
 	function isTrackListened(track) {
 		return !!(track && (track.listened || track.finished));
 	}
@@ -247,6 +245,7 @@
 		let loaded = false;
 		let trackPage = 1;
 		let trackTotal = opts.count || 0;
+		let rowsLoaded = 0;
 		const TRACK_PAGE_SIZE = 48;
 
 		function refreshPlayActions() {
@@ -260,6 +259,7 @@
 		function appendPage(data) {
 			const tracks = data.items || [];
 			trackTotal = data.total != null ? data.total : tracks.length;
+			rowsLoaded += tracks.length;
 			appendTracksToList(list, tracks, cache, C, opts.displayMeta, opts.rowOptionsForTrack);
 			const countEl = details.querySelector('.ac-media-folder-group__count');
 			if (countEl && trackTotal > 0) {
@@ -268,7 +268,7 @@
 			refreshPlayActions();
 			const existingMore = list.querySelector('.ac-facet-group__load-more');
 			if (existingMore) existingMore.remove();
-			if (trackTotal > cache.length) {
+			if (rowsLoaded < trackTotal) {
 				const li = C.el('li', { className: 'ac-track-list__empty ac-facet-group__load-more' });
 				const btn = C.el('button', {
 					type: 'button',
@@ -294,14 +294,15 @@
 		function loadList() {
 			if (loaded && trackPage === 1) return;
 			if (!loaded) {
-				loaded = true;
 				trackPage = 1;
+				rowsLoaded = 0;
 				list.appendChild(C.el('li', {
 					className: 'ac-track-list__empty',
 					text: t('audiocheck', 'Loading…'),
 				}));
 			}
 			opts.loadTracks(trackPage, facetSort).then((data) => {
+				loaded = true;
 				list.textContent = '';
 				const tracks = data.items || [];
 				if (!tracks.length) {
@@ -314,6 +315,7 @@
 				}
 				appendPage(data);
 			}).catch((e) => {
+				loaded = false;
 				list.textContent = '';
 				list.appendChild(C.el('li', {
 					className: 'ac-track-list__empty',
@@ -327,6 +329,7 @@
 			loaded = false;
 			cache.length = 0;
 			trackPage = 1;
+			rowsLoaded = 0;
 			list.textContent = '';
 			loadList();
 		}
@@ -342,7 +345,6 @@
 	}
 
 	window.AudioCheckTrackListUi = {
-		FACET_TRACK_LIMIT,
 		isTrackListened,
 		toggleListened,
 		toggleFavorite,

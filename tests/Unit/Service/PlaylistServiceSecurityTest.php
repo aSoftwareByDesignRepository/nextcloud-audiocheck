@@ -28,4 +28,14 @@ final class PlaylistServiceSecurityTest extends TestCase
 		$this->assertStringContainsString('Invalid item order.', $source);
 		$this->assertStringContainsString('listItemIdsForPlaylist', $source);
 	}
+
+	public function testReorderAndDeleteUseTransactions(): void
+	{
+		$source = file_get_contents(dirname(__DIR__, 3) . '/lib/Service/PlaylistService.php');
+		$this->assertIsString($source);
+		$this->assertStringContainsString('function reorderItems', $source);
+		$this->assertStringContainsString('function deletePlaylist', $source);
+		$this->assertGreaterThanOrEqual(2, substr_count($source, 'beginTransaction'));
+		$this->assertGreaterThanOrEqual(2, substr_count($source, 'rollBack'));
+	}
 }

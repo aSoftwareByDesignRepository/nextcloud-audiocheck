@@ -7,6 +7,7 @@ namespace OCA\AudioCheck\Service;
 use OCA\AudioCheck\AppInfo\Application;
 use OCA\AudioCheck\Util\SearchTextNormalizer;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\DB\Exception as DBException;
 use OCP\Files\File;
 use OCP\IDBConnection;
 use Psr\Log\LoggerInterface;
@@ -167,7 +168,7 @@ class MetadataService
 		} catch (\Throwable $e) {
 			$this->logger->info('AudioCheck metadata extraction failed', [
 				'fileId' => $file->getId(),
-				'message' => $e->getMessage(),
+				'exception' => $e,
 			]);
 			return $defaults;
 		} finally {
@@ -368,7 +369,20 @@ class MetadataService
 				'cover_state' => $qb->createNamedParameter((string)$data['cover_state']),
 				'analyzed_at' => $qb->createNamedParameter($now, \PDO::PARAM_INT),
 			]);
-		$qb->executeStatement();
+		try {
+			$qb->executeStatement();
+		} catch (DBException $e) {
+			// Concurrent scans can race on ac_file_meta.file_id; the loser
+			// must return the winner's row instead of leaving meta_id null.
+			if ($e->getReason() !== DBException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+				throw $e;
+			}
+			$existing = $this->findMetaByFileId($fileId);
+			if ($existing === null) {
+				throw $e;
+			}
+			return (int)$existing['id'];
+		}
 		return (int)$this->db->lastInsertId('ac_file_meta');
 	}
 
@@ -409,21 +423,13 @@ class MetadataService
 
 	public function garbageCollectOrphans(): int
 	{
+		// NOT EXISTS avoids huge NOT IN (...) lists on large libraries.
 		$qb = $this->db->getQueryBuilder();
-		$qb->selectDistinct('file_id')->from('ac_tracks');
-		$result = $qb->executeQuery();
-		$fileIds = [];
-		while ($row = $result->fetch()) {
-			$fileIds[] = (int)$row['file_id'];
-		}
-		$result->closeCursor();
+		$metaTable = $qb->getTableName('ac_file_meta');
+		$tracksTable = $qb->getTableName('ac_tracks');
+		$sql = 'DELETE FROM ' . $metaTable
+			. ' WHERE NOT EXISTS (SELECT 1 FROM ' . $tracksTable . ' t WHERE t.file_id = ' . $metaTable . '.file_id)';
 
-		$dq = $this->db->getQueryBuilder();
-		if ($fileIds === []) {
-			return $dq->delete('ac_file_meta')->executeStatement();
-		}
-		$dq->delete('ac_file_meta')
-			->where($dq->expr()->notIn('file_id', $dq->createNamedParameter($fileIds, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)));
-		return $dq->executeStatement();
+		return $this->db->executeStatement($sql);
 	}
 }

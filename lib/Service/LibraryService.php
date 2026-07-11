@@ -9,6 +9,7 @@ use OCA\AudioCheck\Exception\NotFoundException;
 use OCA\AudioCheck\Exception\ValidationException;
 use OCA\AudioCheck\Util\SearchTextNormalizer;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\DB\Exception as DBException;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\DB\QueryBuilder\IQueryFunction;
 use OCP\Files\File;
@@ -81,18 +82,35 @@ class LibraryService
 		}
 
 		$now = $this->timeFactory->getTime();
-		$qb = $this->db->getQueryBuilder();
-		$qb->insert('ac_libraries')
-			->values([
-				'user_id' => $qb->createNamedParameter($userId),
-				'folder_path' => $qb->createNamedParameter($path),
-				'root_file_id' => $qb->createNamedParameter($rootFileId, \PDO::PARAM_INT),
-				'include_subfolders' => $qb->createNamedParameter($includeSubfolders ? 1 : 0, \PDO::PARAM_INT),
-				'content_kind' => $qb->createNamedParameter($contentKind),
-				'enabled' => $qb->createNamedParameter(1, \PDO::PARAM_INT),
-				'created_at' => $qb->createNamedParameter($now, \PDO::PARAM_INT),
-			]);
-		$qb->executeStatement();
+		try {
+			$qb = $this->db->getQueryBuilder();
+			$qb->insert('ac_libraries')
+				->values([
+					'user_id' => $qb->createNamedParameter($userId),
+					'folder_path' => $qb->createNamedParameter($path),
+					'root_file_id' => $qb->createNamedParameter($rootFileId, \PDO::PARAM_INT),
+					'include_subfolders' => $qb->createNamedParameter($includeSubfolders ? 1 : 0, \PDO::PARAM_INT),
+					'content_kind' => $qb->createNamedParameter($contentKind),
+					'enabled' => $qb->createNamedParameter(1, \PDO::PARAM_INT),
+					'created_at' => $qb->createNamedParameter($now, \PDO::PARAM_INT),
+				]);
+			$qb->executeStatement();
+		} catch (DBException $e) {
+			// Two tabs adding the same folder can race on (user_id, root_file_id).
+			if ($e->getReason() !== DBException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+				throw $e;
+			}
+			$existing = $this->findLibraryByRootOrPath($userId, $rootFileId, $path);
+			if ($existing === null) {
+				throw $e;
+			}
+			$result = $this->updateLibrary($userId, (int)$existing['id'], $includeSubfolders, $contentKind);
+			return [
+				'library' => $result['library'],
+				'alreadyExisted' => true,
+				'rescanRecommended' => $result['rescanRecommended'],
+			];
+		}
 		$id = (int)$this->db->lastInsertId('ac_libraries');
 		return [
 			'library' => $this->getLibrary($userId, $id),
@@ -168,8 +186,6 @@ class LibraryService
 				$changed = true;
 				if ($normalized === self::CONTENT_KIND_AUTO) {
 					$rescanRecommended = true;
-				} else {
-					$this->applyFixedContentKindToLibrary($userId, $libraryId, $normalized);
 				}
 			}
 		}
@@ -197,29 +213,8 @@ class LibraryService
 
 	private function applyFixedContentKindToLibrary(string $userId, int $libraryId, string $kind): void
 	{
-		if (!in_array($kind, [self::KIND_MUSIC, self::KIND_AUDIOBOOK], true)) {
-			return;
-		}
-		$qb = $this->db->getQueryBuilder();
-		$qb->select('meta_id')
-			->from('ac_tracks')
-			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
-			->andWhere($qb->expr()->eq('library_id', $qb->createNamedParameter($libraryId, \PDO::PARAM_INT)))
-			->andWhere($qb->expr()->isNotNull('meta_id'));
-		$result = $qb->executeQuery();
-		$metaIds = [];
-		while ($row = $result->fetch()) {
-			$metaIds[] = (int)$row['meta_id'];
-		}
-		$result->closeCursor();
-		if ($metaIds === []) {
-			return;
-		}
-		$uq = $this->db->getQueryBuilder();
-		$uq->update('ac_file_meta')
-			->set('kind', $uq->createNamedParameter($kind))
-			->where($uq->expr()->in('id', $uq->createNamedParameter($metaIds, \Doctrine\DBAL\ArrayParameterType::INTEGER)));
-		$uq->executeStatement();
+		// Per-library content type is resolved at query time (see effectiveKindSql)
+		// so shared ac_file_meta rows are never mutated across users.
 	}
 
 	public function getLibrary(string $userId, int $libraryId): array
@@ -243,10 +238,8 @@ class LibraryService
 		$qb->from('ac_tracks', 't')
 			->leftJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'))
 			->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)));
-
-		if ($kind !== null && in_array($kind, [self::KIND_MUSIC, self::KIND_AUDIOBOOK], true)) {
-			$qb->andWhere($qb->expr()->eq('m.kind', $qb->createNamedParameter($kind)));
-		}
+		$this->joinLibraryForEffectiveKind($qb);
+		$this->applyEffectiveKindFilter($qb, $kind);
 		$this->applySearchFilter($qb, ['m.title_norm', 'm.artist_norm', 'm.album_norm', 't.file_name_norm'], $q);
 		if ($genre !== null && trim($genre) !== '') {
 			$qb->andWhere($qb->expr()->eq('m.genre', $qb->createNamedParameter(trim($genre))));
@@ -263,12 +256,11 @@ class LibraryService
 			$qb->andWhere($qb->expr()->like('t.rel_path', $qb->createNamedParameter($like)));
 		}
 		if ($favoritesOnly) {
-			$tagger = $this->tagManager->load('files');
-			$favoriteIds = $tagger !== null ? array_map('intval', $tagger->getFavorites()) : [];
+			$favoriteIds = $this->loadFavoriteFileIds();
 			if ($favoriteIds === []) {
 				return ['items' => [], 'total' => 0, 'page' => $page, 'limit' => $limit];
 			}
-			$qb->andWhere($qb->expr()->in('t.file_id', $qb->createNamedParameter($favoriteIds, \Doctrine\DBAL\ArrayParameterType::INTEGER)));
+			$qb->andWhere($qb->expr()->in('t.file_id', $qb->createNamedParameter($favoriteIds, IQueryBuilder::PARAM_INT_ARRAY)));
 		}
 		if ($tagId !== null && $tagId > 0) {
 			try {
@@ -283,7 +275,7 @@ class LibraryService
 			if ($tagFileIds === []) {
 				return ['items' => [], 'total' => 0, 'page' => $page, 'limit' => $limit];
 			}
-			$qb->andWhere($qb->expr()->in('t.file_id', $qb->createNamedParameter($tagFileIds, \Doctrine\DBAL\ArrayParameterType::INTEGER)));
+			$qb->andWhere($qb->expr()->in('t.file_id', $qb->createNamedParameter($tagFileIds, IQueryBuilder::PARAM_INT_ARRAY)));
 		}
 		if ($hideListened) {
 			$qb->leftJoin('t', 'ac_play_state', 'ps_hl', $qb->expr()->andX(
@@ -303,15 +295,18 @@ class LibraryService
 			));
 		}
 
-		$this->applyTrackSort($qb, $sort);
-
 		$countQb = clone $qb;
 		$countQb->select($countQb->func()->count('t.id', 'c'));
 		$countResult = $countQb->executeQuery();
 		$total = (int)($countResult->fetch()['c'] ?? 0);
 		$countResult->closeCursor();
 
-		$qb->select('t.file_id', 't.file_name', 't.rel_path', 't.added_at', 't.size', 'm.title', 'm.artist', 'm.album', 'm.album_artist', 'm.kind', 'm.duration_ms', 'm.mimetype', 'm.has_chapters', 'm.cover_state');
+		// Sort only the page query: an ORDER BY on a non-aggregated column in
+		// the COUNT query is rejected by PostgreSQL and by MySQL 8 with
+		// ONLY_FULL_GROUP_BY (default), even though MariaDB tolerates it.
+		$this->applyTrackSort($qb, $sort);
+		$qb->select('t.file_id', 't.file_name', 't.rel_path', 't.added_at', 't.size', 'm.title', 'm.artist', 'm.album', 'm.album_artist', 'm.duration_ms', 'm.mimetype', 'm.has_chapters', 'm.cover_state')
+			->selectAlias($qb->createFunction($this->effectiveKindSql()), 'kind');
 		$qb->setMaxResults($limit)->setFirstResult($offset);
 		$result = $qb->executeQuery();
 		$items = [];
@@ -379,10 +374,17 @@ class LibraryService
 		if ($tagger === null) {
 			throw new ValidationException('Favorites are not available.');
 		}
-		if ($favorite) {
-			$tagger->addToFavorites($fileId);
-		} else {
-			$tagger->removeFromFavorites($fileId);
+		// Idempotent PUT: repeating the current state must not re-insert the
+		// favorite relation (core Tags::tagAs would log a PK violation).
+		if ($favorite !== $this->isFavorite($fileId)) {
+			$ok = $favorite
+				? $tagger->addToFavorites($fileId)
+				: $tagger->removeFromFavorites($fileId);
+			// A concurrent request may have won the same transition; only fail
+			// when the store genuinely does not reflect the desired state.
+			if ($ok === false && $this->isFavorite($fileId) !== $favorite) {
+				throw new ValidationException('Could not update favorite state.');
+			}
 		}
 		return ['favorite' => $favorite];
 	}
@@ -417,16 +419,18 @@ class LibraryService
 		$albumArtistExpr = $this->effectiveAlbumArtistSql();
 
 		$qb = $this->db->getQueryBuilder();
+		$kindExpr = $this->effectiveKindSql();
 		$qb->selectAlias($qb->createFunction($albumExpr), 'album')
 			->selectAlias($qb->createFunction($albumArtistExpr), 'album_artist')
 			->selectAlias($qb->func()->min('m.artist'), 'artist')
-			->selectAlias($qb->func()->min('m.kind'), 'kind')
+			->selectAlias($qb->createFunction($kindExpr), 'kind')
 			->selectAlias($qb->func()->count('t.id'), 'track_count')
 			->selectAlias($qb->func()->min('t.file_id'), 'cover_file_id')
 			->selectAlias($qb->func()->max('t.added_at'), 'added_at')
 			->from('ac_tracks', 't')
-			->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'))
-			->leftJoin('t', 'ac_play_state', 'ps', $qb->expr()->andX(
+			->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'));
+		$this->joinLibraryForEffectiveKind($qb);
+		$qb->leftJoin('t', 'ac_play_state', 'ps', $qb->expr()->andX(
 				$qb->expr()->eq('ps.user_id', $qb->createNamedParameter($userId)),
 				$qb->expr()->eq('ps.file_id', 't.file_id'),
 			))
@@ -438,11 +442,8 @@ class LibraryService
 			->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
 			->groupBy($qb->createFunction($albumExpr))
 			->addGroupBy($qb->createFunction($albumArtistExpr))
-			->addGroupBy('m.kind');
-
-		if ($kind !== null && in_array($kind, [self::KIND_MUSIC, self::KIND_AUDIOBOOK], true)) {
-			$qb->andWhere($qb->expr()->eq('m.kind', $qb->createNamedParameter($kind)));
-		}
+			->addGroupBy($qb->createFunction($kindExpr));
+		$this->applyEffectiveKindFilter($qb, $kind);
 		$this->applySearchFilter($qb, [
 			$qb->createFunction($this->effectiveAlbumNormSql()),
 			'm.artist_norm',
@@ -573,7 +574,8 @@ class LibraryService
 		$albumExpr = $this->effectiveAlbumSql();
 		$albumArtistExpr = $this->effectiveAlbumArtistSql();
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('t.file_id', 't.file_name', 't.added_at', 'm.title', 'm.artist', 'm.album', 'm.album_artist', 'm.kind', 'm.duration_ms', 'm.mimetype', 'm.track_no', 'm.disc_no', 'm.has_chapters', 'm.cover_state')
+		$qb->select('t.file_id', 't.file_name', 't.added_at', 'm.title', 'm.artist', 'm.album', 'm.album_artist', 'm.duration_ms', 'm.mimetype', 'm.track_no', 'm.disc_no', 'm.has_chapters', 'm.cover_state')
+			->selectAlias($qb->createFunction($this->effectiveKindSql()), 'kind')
 			->from('ac_tracks', 't')
 			->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'));
 		$this->applyCollectionTrackFilters($qb, $userId, $decoded);
@@ -599,9 +601,10 @@ class LibraryService
 	{
 		$albumExpr = $this->effectiveAlbumSql();
 		$albumArtistExpr = $this->effectiveAlbumArtistSql();
+		$this->joinLibraryForEffectiveKind($qb);
 		$qb->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
 			->andWhere($qb->expr()->eq($qb->createFunction($albumExpr), $qb->createNamedParameter($decoded['album'])))
-			->andWhere($qb->expr()->eq('m.kind', $qb->createNamedParameter($decoded['kind'])));
+			->andWhere($qb->expr()->eq($qb->createFunction($this->effectiveKindSql()), $qb->createNamedParameter($decoded['kind'])));
 		if ($decoded['albumArtist'] !== '') {
 			$qb->andWhere($qb->expr()->eq($qb->createFunction($albumArtistExpr), $qb->createNamedParameter($decoded['albumArtist'])));
 		} else {
@@ -750,12 +753,11 @@ class LibraryService
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('t.file_id')
 			->from('ac_tracks', 't')
-			->leftJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'))
-			->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
+			->leftJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'));
+		$this->joinLibraryForEffectiveKind($qb);
+		$qb->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
 			->andWhere($qb->expr()->like('t.rel_path', $qb->createNamedParameter($like)));
-		if ($kind !== null && in_array($kind, [self::KIND_MUSIC, self::KIND_AUDIOBOOK], true)) {
-			$qb->andWhere($qb->expr()->eq('m.kind', $qb->createNamedParameter($kind)));
-		}
+		$this->applyEffectiveKindFilter($qb, $kind);
 		$result = $qb->executeQuery();
 		$fileIds = [];
 		while ($row = $result->fetch()) {
@@ -858,24 +860,24 @@ class LibraryService
 			$qb->select('t.rel_path')
 				->selectAlias($qb->func()->count('t.id'), 'c')
 				->from('ac_tracks', 't')
-				->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)));
-			if ($kind !== null && in_array($kind, [self::KIND_MUSIC, self::KIND_AUDIOBOOK], true)) {
-				$qb->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'))
-					->andWhere($qb->expr()->eq('m.kind', $qb->createNamedParameter($kind)));
-			}
+				->leftJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'));
+			$this->joinLibraryForEffectiveKind($qb);
+			$qb->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)));
+			$this->applyEffectiveKindFilter($qb, $kind);
 			$qb->groupBy('t.rel_path');
 		} else {
 			$qb->selectAlias($displayColumn, 'name')
 				->selectAlias($qb->func()->count('t.id'), 'c')
 				->from('ac_tracks', 't')
-				->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'))
-				->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
+				->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'));
+			$this->joinLibraryForEffectiveKind($qb);
+			$qb->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
 				->andWhere($qb->expr()->isNotNull($displayColumn))
 				->groupBy($displayColumn);
 			if ($type === 'artists') {
-				$qb->andWhere($qb->expr()->eq('m.kind', $qb->createNamedParameter(self::KIND_MUSIC)));
+				$this->applyEffectiveKindFilter($qb, self::KIND_MUSIC);
 			} elseif ($type === 'authors') {
-				$qb->andWhere($qb->expr()->eq('m.kind', $qb->createNamedParameter(self::KIND_AUDIOBOOK)));
+				$this->applyEffectiveKindFilter($qb, self::KIND_AUDIOBOOK);
 			} elseif ($type === 'series') {
 				$qb->andWhere($qb->expr()->neq($displayColumn, $qb->createNamedParameter('')));
 			}
@@ -920,6 +922,7 @@ class LibraryService
 				$folderItems[] = ['name' => $name, 'count' => $count];
 			}
 			usort($folderItems, static fn ($a, $b) => strcmp($a['name'], $b['name']));
+			$folderItems = $this->filterFolderFacetItems($folderItems, $q);
 			return $this->paginateFacetItems(['items' => $folderItems, 'total' => count($folderItems)], $page, $limit);
 		}
 
@@ -1020,6 +1023,57 @@ class LibraryService
 		return "COALESCE(NULLIF(m.album_artist_norm, ''), NULLIF(m.artist_norm, ''), '')";
 	}
 
+	private function effectiveKindSql(): string
+	{
+		return "CASE WHEN lib.content_kind IN ('music','audiobook') THEN lib.content_kind ELSE COALESCE(m.kind, 'music') END";
+	}
+
+	private function joinLibraryForEffectiveKind(IQueryBuilder $qb, string $trackAlias = 't'): void
+	{
+		$qb->leftJoin($trackAlias, 'ac_libraries', 'lib', $qb->expr()->andX(
+			$qb->expr()->eq('lib.id', $trackAlias . '.library_id'),
+			$qb->expr()->eq('lib.user_id', $trackAlias . '.user_id'),
+		));
+	}
+
+	private function applyEffectiveKindFilter(IQueryBuilder $qb, ?string $kind): void
+	{
+		if ($kind === null || !in_array($kind, [self::KIND_MUSIC, self::KIND_AUDIOBOOK], true)) {
+			return;
+		}
+		$qb->andWhere($qb->expr()->eq(
+			$qb->createFunction($this->effectiveKindSql()),
+			$qb->createNamedParameter($kind),
+		));
+	}
+
+	/**
+	 * @param list<array{name:string,count:int}> $folderItems
+	 * @return list<array{name:string,count:int}>
+	 */
+	private function filterFolderFacetItems(array $folderItems, ?string $q): array
+	{
+		$tokens = $this->searchTokens($q);
+		if ($tokens === []) {
+			return $folderItems;
+		}
+
+		return array_values(array_filter($folderItems, static function (array $item) use ($tokens): bool {
+			$name = (string)($item['name'] ?? '');
+			$label = basename(str_replace('\\', '/', $name));
+			$haystack = SearchTextNormalizer::normalize($name . ' ' . $label);
+			if ($haystack === null) {
+				return false;
+			}
+			foreach ($tokens as $token) {
+				if (!str_contains($haystack, $token)) {
+					return false;
+				}
+			}
+			return true;
+		}));
+	}
+
 	/** @return array{album:string,albumArtist:string,kind:string} */
 	public function decodeCollectionKey(string $key): array
 	{
@@ -1118,21 +1172,20 @@ class LibraryService
 	{
 		$albumExpr = $this->effectiveAlbumSql();
 		$albumArtistExpr = $this->effectiveAlbumArtistSql();
+		$kindExpr = $this->effectiveKindSql();
 
 		$qb = $this->db->getQueryBuilder();
 		$qb->select($qb->createFunction($albumExpr))
 			->addSelect($qb->createFunction($albumArtistExpr))
-			->addSelect('m.kind')
+			->addSelect($qb->createFunction($kindExpr))
 			->from('ac_tracks', 't')
-			->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'))
-			->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
+			->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'));
+		$this->joinLibraryForEffectiveKind($qb);
+		$qb->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
 			->groupBy($qb->createFunction($albumExpr))
 			->addGroupBy($qb->createFunction($albumArtistExpr))
-			->addGroupBy('m.kind');
-
-		if ($kind !== null && in_array($kind, [self::KIND_MUSIC, self::KIND_AUDIOBOOK], true)) {
-			$qb->andWhere($qb->expr()->eq('m.kind', $qb->createNamedParameter($kind)));
-		}
+			->addGroupBy($qb->createFunction($kindExpr));
+		$this->applyEffectiveKindFilter($qb, $kind);
 		$this->applySearchFilter($qb, [
 			$qb->createFunction($this->effectiveAlbumNormSql()),
 			'm.artist_norm',
@@ -1162,10 +1215,12 @@ class LibraryService
 	private function findTrackRow(string $userId, int $fileId): ?array
 	{
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('t.*', 'm.title', 'm.artist', 'm.album', 'm.album_artist', 'm.kind', 'm.duration_ms', 'm.mimetype', 'm.has_chapters', 'm.chapters_json', 'm.cover_state', 'm.genre', 'm.track_no', 'm.disc_no', 'm.release_year')
+		$qb->select('t.*', 'm.title', 'm.artist', 'm.album', 'm.album_artist', 'm.duration_ms', 'm.mimetype', 'm.has_chapters', 'm.chapters_json', 'm.cover_state', 'm.genre', 'm.track_no', 'm.disc_no', 'm.release_year')
+			->selectAlias($qb->createFunction($this->effectiveKindSql()), 'kind')
 			->from('ac_tracks', 't')
-			->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'))
-			->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
+			->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'));
+		$this->joinLibraryForEffectiveKind($qb);
+		$qb->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
 			->andWhere($qb->expr()->eq('t.file_id', $qb->createNamedParameter($fileId, \PDO::PARAM_INT)));
 		$result = $qb->executeQuery();
 		$row = $result->fetch();
@@ -1188,15 +1243,7 @@ class LibraryService
 	/** @param list<array<string, mixed>> $items */
 	private function applyFavoriteFlags(array &$items): void
 	{
-		$tagger = $this->tagManager->load('files');
-		$favoriteSet = [];
-		if ($tagger !== null) {
-			foreach (array_map('intval', $tagger->getFavorites()) as $fileId) {
-				if ($fileId > 0) {
-					$favoriteSet[$fileId] = true;
-				}
-			}
-		}
+		$favoriteSet = array_fill_keys($this->loadFavoriteFileIds(), true);
 		foreach ($items as &$item) {
 			$fileId = (int)($item['fileId'] ?? 0);
 			$item['favorite'] = isset($favoriteSet[$fileId]);
@@ -1204,11 +1251,46 @@ class LibraryService
 		unset($item);
 	}
 
+	/**
+	 * Favorite file ids for the acting user, hardened against the ITags
+	 * contract: getFavorites() is documented as array|false and may fail on
+	 * transient DB errors. A broken favorites lookup must never take down
+	 * track listing (it degrades to "no favorites" instead).
+	 *
+	 * @return list<int>
+	 */
+	private function loadFavoriteFileIds(): array
+	{
+		try {
+			$tagger = $this->tagManager->load('files');
+		} catch (\Throwable) {
+			return [];
+		}
+		if ($tagger === null) {
+			return [];
+		}
+		$favorites = $tagger->getFavorites();
+		if (!is_array($favorites)) {
+			return [];
+		}
+		$ids = [];
+		foreach ($favorites as $raw) {
+			$id = (int)$raw;
+			if ($id > 0) {
+				$ids[] = $id;
+			}
+		}
+		return array_values(array_unique($ids));
+	}
+
 	/** @return array{revision:int,trackCount:int} */
 	public function getLibrarySyncState(string $userId): array
 	{
 		$qb = $this->db->getQueryBuilder();
-		$qb->select($qb->func()->max('last_seen_at', 'max_seen'))
+		// func()->max() takes no alias parameter (unlike count()), so alias
+		// explicitly — otherwise the result column name is driver-defined and
+		// the row lookup below silently falls back to 0.
+		$qb->selectAlias($qb->func()->max('last_seen_at'), 'max_seen')
 			->addSelect($qb->func()->count('id', 'track_count'))
 			->from('ac_tracks')
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
@@ -1324,11 +1406,7 @@ class LibraryService
 	/** @return array{items:list<array{name:string,count:int}>,total:int} */
 	private function listFavoriteFacet(string $userId): array
 	{
-		$tagger = $this->tagManager->load('files');
-		if ($tagger === null) {
-			return ['items' => [], 'total' => 0];
-		}
-		$favoriteIds = array_map('intval', $tagger->getFavorites());
+		$favoriteIds = $this->loadFavoriteFileIds();
 		if ($favoriteIds === []) {
 			return ['items' => [], 'total' => 0];
 		}
@@ -1336,7 +1414,7 @@ class LibraryService
 		$qb->select($qb->func()->count('t.id', 'c'))
 			->from('ac_tracks', 't')
 			->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
-			->andWhere($qb->expr()->in('t.file_id', $qb->createNamedParameter($favoriteIds, \Doctrine\DBAL\ArrayParameterType::INTEGER)));
+			->andWhere($qb->expr()->in('t.file_id', $qb->createNamedParameter($favoriteIds, IQueryBuilder::PARAM_INT_ARRAY)));
 		$result = $qb->executeQuery();
 		$count = (int)($result->fetch()['c'] ?? 0);
 		$result->closeCursor();

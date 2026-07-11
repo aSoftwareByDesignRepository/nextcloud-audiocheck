@@ -68,6 +68,31 @@ final class IntegrationTestUsers
 		return $user;
 	}
 
+	/**
+	 * Simulate a logged-in user in PHPUnit (CLI boots with incognito mode on).
+	 */
+	public static function loginAs(IUser|string $user): void
+	{
+		if (!isset(\OC::$server)) {
+			return;
+		}
+
+		if (is_string($user)) {
+			/** @var IUserManager $userManager */
+			$userManager = \OC::$server->get(IUserManager::class);
+			$resolved = $userManager->get($user);
+			if ($resolved === null) {
+				throw new \RuntimeException('Integration test user not found: ' . $user);
+			}
+			$user = $resolved;
+		}
+
+		\OC_User::setIncognitoMode(false);
+		/** @var IUserSession $session */
+		$session = \OC::$server->get(IUserSession::class);
+		$session->setUser($user);
+	}
+
 	public static function clearSession(): void
 	{
 		if (!isset(\OC::$server)) {
@@ -76,6 +101,7 @@ final class IntegrationTestUsers
 		/** @var IUserSession $session */
 		$session = \OC::$server->get(IUserSession::class);
 		$session->setUser(null);
+		\OC_User::setIncognitoMode(true);
 	}
 
 	private static function removeOrphanDataDirectory(string $uid): void

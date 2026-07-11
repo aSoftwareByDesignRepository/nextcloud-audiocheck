@@ -303,7 +303,7 @@
 					if (batch.length < PLAY_ALL_PAGE_SIZE) break;
 					pageNum += 1;
 				}
-				if (totalTracks > tracks.length) {
+				if (totalTracks > PLAY_ALL_MAX_TRACKS) {
 					AudioCheckMessaging.toast(
 						t('audiocheck', 'Playing first {count} tracks.', { count: String(tracks.length) }),
 						'info',
@@ -492,9 +492,11 @@
 		if (q && visiblePlaylists === 0 && favCount > 0) {
 			status.textContent = t('audiocheck', 'No matching playlists');
 		} else if (visiblePlaylists > 0 || favCount > 0) {
-			status.textContent = t('audiocheck', '{count} items', { count: String(visiblePlaylists + 1) })
-				+ ' — '
-				+ AudioCheckTime.tracksLabel(trackTotal);
+			const listCount = visiblePlaylists + 1;
+			const listLabel = listCount === 1
+				? t('audiocheck', '1 item')
+				: t('audiocheck', '{count} items', { count: String(listCount) });
+			status.textContent = listLabel + ' — ' + AudioCheckTime.tracksLabel(trackTotal);
 		} else {
 			status.textContent = '';
 		}

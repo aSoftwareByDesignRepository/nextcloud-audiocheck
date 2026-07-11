@@ -609,10 +609,13 @@ class ApiController extends Controller
 		} catch (RateLimitExceededException) {
 			return $this->error('rate_limit_exceeded', Http::STATUS_TOO_MANY_REQUESTS, 'rate_limit_exceeded');
 		} catch (InternalErrorException|AudioCheckException $e) {
-			$this->logger->error('AudioCheck API error', ['message' => $e->getMessage()]);
+			// Pass the exception object: the NC logger's PSR-3 interpolation
+			// overwrites a custom 'message' context key, which would silently
+			// drop all diagnostic detail from the log entry.
+			$this->logger->error('AudioCheck API error', ['exception' => $e]);
 			return $this->error('internal_error', Http::STATUS_INTERNAL_SERVER_ERROR, 'internal_error');
 		} catch (\Throwable $e) {
-			$this->logger->error('AudioCheck API unexpected error', ['message' => $e->getMessage()]);
+			$this->logger->error('AudioCheck API unexpected error', ['exception' => $e]);
 			return $this->error('internal_error', Http::STATUS_INTERNAL_SERVER_ERROR, 'internal_error');
 		}
 	}

@@ -9,6 +9,7 @@ use OCA\AudioCheck\Controller\ApiController;
 use OCA\AudioCheck\Exception\AppAccessDeniedException;
 use OCA\AudioCheck\Middleware\AppAccessMiddleware;
 use OCA\AudioCheck\Service\AccessControlService;
+use OCA\AudioCheck\Tests\Shim\IntegrationTestUsers;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IConfig;
@@ -71,17 +72,13 @@ final class AppAccessGateIntegrationTest extends TestCase
 				$userManager->get($uid)?->delete();
 			}
 		}
-		/** @var IUserSession $session */
-		$session = \OC::$server->get(IUserSession::class);
-		$session->setUser(null);
+		IntegrationTestUsers::clearSession();
 	}
 
 	public function testDeniedUserBlockedByMiddleware(): void
 	{
-		/** @var IUserManager $userManager */
-		$userManager = \OC::$server->get(IUserManager::class);
-		$userManager->createUser(self::ALLOWED, self::PASSWORD);
-		$userManager->createUser(self::DENIED, self::PASSWORD);
+		IntegrationTestUsers::create(self::ALLOWED, self::PASSWORD);
+		IntegrationTestUsers::create(self::DENIED, self::PASSWORD);
 
 		/** @var IConfig $config */
 		$config = \OC::$server->get(IConfig::class);
@@ -89,9 +86,7 @@ final class AppAccessGateIntegrationTest extends TestCase
 		$config->setAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_ALLOWED_USER_IDS, json_encode([self::ALLOWED], JSON_THROW_ON_ERROR));
 		$config->setAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_ALLOWED_GROUP_IDS, '[]');
 
-		/** @var IUserSession $session */
-		$session = \OC::$server->get(IUserSession::class);
-		$session->setUser($userManager->get(self::DENIED));
+		IntegrationTestUsers::loginAs(self::DENIED);
 
 		/** @var ApiController $controller */
 		$controller = \OC::$server->get(ApiController::class);
@@ -114,11 +109,7 @@ final class AppAccessGateIntegrationTest extends TestCase
 
 	public function testAllowedUserPassesGate(): void
 	{
-		/** @var IUserManager $userManager */
-		$userManager = \OC::$server->get(IUserManager::class);
-		if (!$userManager->userExists(self::ALLOWED)) {
-			$userManager->createUser(self::ALLOWED, self::PASSWORD);
-		}
+		IntegrationTestUsers::create(self::ALLOWED, self::PASSWORD);
 
 		/** @var IConfig $config */
 		$config = \OC::$server->get(IConfig::class);
@@ -126,9 +117,7 @@ final class AppAccessGateIntegrationTest extends TestCase
 		$config->setAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_ALLOWED_USER_IDS, json_encode([self::ALLOWED], JSON_THROW_ON_ERROR));
 		$config->setAppValue(Application::APP_ID, AccessControlService::KEY_ACCESS_ALLOWED_GROUP_IDS, '[]');
 
-		/** @var IUserSession $session */
-		$session = \OC::$server->get(IUserSession::class);
-		$session->setUser($userManager->get(self::ALLOWED));
+		IntegrationTestUsers::loginAs(self::ALLOWED);
 
 		/** @var ApiController $controller */
 		$controller = \OC::$server->get(ApiController::class);

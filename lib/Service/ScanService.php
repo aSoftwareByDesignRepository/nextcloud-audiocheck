@@ -10,6 +10,8 @@ use OCA\AudioCheck\Exception\ValidationException;
 use OCA\AudioCheck\Util\SearchTextNormalizer;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJobList;
+use OCP\DB\Exception as DBException;
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\Node;
@@ -143,20 +145,18 @@ class ScanService
 			return;
 		}
 
-		$scanRow = $this->getScanRow($userId);
-		$currentStatus = $scanRow !== null ? (string)$scanRow['status'] : self::STATUS_IDLE;
-		if ($currentStatus === self::STATUS_RUNNING && !$this->isStaleRunning($userId, $scanRow)) {
+		if (!$this->tryClaimScan($userId)) {
 			return;
 		}
 
+		$scanRow = $this->getScanRow($userId);
 		$now = $this->timeFactory->getTime();
 		$cursor = $this->parseCursor($scanRow);
 		$isResume = $cursor['scanGen'] > 0;
 		$scanGen = $isResume ? $cursor['scanGen'] : $now;
 		$rootIdx = $isResume ? $cursor['rootIdx'] : 0;
-		$fileOffset = $isResume ? $cursor['fileOffset'] : 0;
+		$walkStack = $isResume ? $cursor['walkStack'] : [];
 
-		$this->setStatus($userId, self::STATUS_RUNNING, null);
 		$processed = 0;
 
 		try {
@@ -189,43 +189,47 @@ class ScanService
 					if ($libraryId > 0) {
 						$this->disableLibrary($userId, $libraryId);
 					}
+					$walkStack = [];
 					continue;
 				}
 				$includeSub = (int)($root['include_subfolders'] ?? 1) === 1;
-				$nodes = $this->fileAccess->listAudioFilesInFolder($folder, $includeSub);
-				$startAt = ($ri === $rootIdx) ? $fileOffset : 0;
-				for ($fi = $startAt; $fi < count($nodes); $fi++) {
-					$node = $nodes[$fi];
-					if (!($node instanceof File)) {
-						continue;
-					}
-					if (!$this->fileAccess->isAllowedAudioFile($node)) {
-						continue;
-					}
-					$this->upsertTrack(
-						$userId,
-						$node,
-						(int)($root['id'] ?? 0),
-						$scanGen,
-						$now,
-						false,
-						(string)($root['content_kind'] ?? LibraryService::CONTENT_KIND_AUTO),
-					);
-					$processed++;
-					if ($processed >= self::SCAN_BATCH_SIZE) {
-						$this->saveCursor($userId, [
-							'scanGen' => $scanGen,
-							'rootIdx' => $ri,
-							'fileOffset' => $fi + 1,
-						]);
-						$total = $this->countTracks($userId);
-						$this->setStatus($userId, self::STATUS_QUEUED, null, null, $total);
-						if (!$this->jobList->has(\OCA\AudioCheck\BackgroundJob\ScanJob::class, ['userId' => $userId])) {
-							$this->jobList->add(\OCA\AudioCheck\BackgroundJob\ScanJob::class, ['userId' => $userId]);
-						}
-						return;
-					}
+				if ($ri !== $rootIdx) {
+					$walkStack = [];
 				}
+				do {
+					$remaining = self::SCAN_BATCH_SIZE - $processed;
+					$batch = $this->fileAccess->walkAudioFilesBatch($folder, $includeSub, $walkStack, $remaining);
+					$walkStack = $batch['stack'];
+					foreach ($batch['files'] as $node) {
+						$this->upsertTrack(
+							$userId,
+							$node,
+							(int)($root['id'] ?? 0),
+							$scanGen,
+							$now,
+							false,
+							(string)($root['content_kind'] ?? LibraryService::CONTENT_KIND_AUTO),
+						);
+						$processed++;
+						if (($processed % 25) === 0) {
+							$this->touchScanLease($userId);
+						}
+						if ($processed >= self::SCAN_BATCH_SIZE) {
+							$this->saveCursor($userId, [
+								'scanGen' => $scanGen,
+								'rootIdx' => $ri,
+								'walkStack' => $walkStack,
+							]);
+							$total = $this->countTracks($userId);
+							$this->setStatus($userId, self::STATUS_QUEUED, null, null, $total);
+							if (!$this->jobList->has(\OCA\AudioCheck\BackgroundJob\ScanJob::class, ['userId' => $userId])) {
+								$this->jobList->add(\OCA\AudioCheck\BackgroundJob\ScanJob::class, ['userId' => $userId]);
+							}
+							return;
+						}
+					}
+				} while (!$batch['done']);
+				$walkStack = [];
 			}
 
 			$this->pruneByScanGeneration($userId, $scanGen);
@@ -236,7 +240,7 @@ class ScanService
 			$this->setStatus($userId, self::STATUS_IDLE, null, $now, $total);
 		} catch (\Throwable $e) {
 			$this->clearCursor($userId);
-			$this->logger->error('AudioCheck scan failed', ['userId' => $userId, 'message' => $e->getMessage()]);
+			$this->logger->error('AudioCheck scan failed', ['userId' => $userId, 'exception' => $e]);
 			$this->setStatus($userId, self::STATUS_IDLE, mb_substr($e->getMessage(), 0, 1000));
 		}
 	}
@@ -247,11 +251,13 @@ class ScanService
 			return;
 		}
 		if ($event === 'deleted') {
+			$fileId = (int)$node->getId();
 			$qb = $this->db->getQueryBuilder();
 			$qb->delete('ac_tracks')
 				->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
-				->andWhere($qb->expr()->eq('file_id', $qb->createNamedParameter($node->getId(), \PDO::PARAM_INT)));
+				->andWhere($qb->expr()->eq('file_id', $qb->createNamedParameter($fileId, \PDO::PARAM_INT)));
 			$qb->executeStatement();
+			$this->purgeFileReferences($userId, $fileId);
 			return;
 		}
 		if ($node instanceof File && $this->fileAccess->isAllowedAudioFile($node)) {
@@ -360,38 +366,60 @@ class ScanService
 
 		$existing = $this->findTrack($userId, $file->getId());
 		if ($existing !== null) {
-			$qb = $this->db->getQueryBuilder();
-			$qb->update('ac_tracks')
-				->set('meta_id', $qb->createNamedParameter($metaId, $metaId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT))
-				->set('rel_path', $qb->createNamedParameter($relPath))
-				->set('file_name', $qb->createNamedParameter($file->getName()))
-				->set('file_name_norm', $qb->createNamedParameter(SearchTextNormalizer::normalize($file->getName())))
-				->set('mtime', $qb->createNamedParameter($file->getMTime(), \PDO::PARAM_INT))
-				->set('size', $qb->createNamedParameter($file->getSize(), \PDO::PARAM_INT))
-				->set('etag', $qb->createNamedParameter($file->getEtag()))
-				->set('library_id', $qb->createNamedParameter($libraryId, $libraryId === null || $libraryId < 1 ? \PDO::PARAM_NULL : \PDO::PARAM_INT))
-				->set('last_seen_at', $qb->createNamedParameter($scanGeneration, \PDO::PARAM_INT))
-				->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], \PDO::PARAM_INT)));
-			$qb->executeStatement();
+			$this->updateTrackRow((int)$existing['id'], $file, $metaId, $relPath, $libraryId, $scanGeneration);
 			return;
 		}
 
+		try {
+			$qb = $this->db->getQueryBuilder();
+			$qb->insert('ac_tracks')
+				->values([
+					'user_id' => $qb->createNamedParameter($userId),
+					'file_id' => $qb->createNamedParameter($file->getId(), \PDO::PARAM_INT),
+					'meta_id' => $qb->createNamedParameter($metaId, $metaId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+					'rel_path' => $qb->createNamedParameter($relPath),
+					'file_name' => $qb->createNamedParameter($file->getName()),
+					'file_name_norm' => $qb->createNamedParameter(SearchTextNormalizer::normalize($file->getName())),
+					'mtime' => $qb->createNamedParameter($file->getMTime(), \PDO::PARAM_INT),
+					'size' => $qb->createNamedParameter($file->getSize(), \PDO::PARAM_INT),
+					'etag' => $qb->createNamedParameter($file->getEtag()),
+					'library_id' => $qb->createNamedParameter($libraryId, $libraryId === null || $libraryId < 1 ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+					'added_at' => $qb->createNamedParameter($addedAt, \PDO::PARAM_INT),
+					'last_seen_at' => $qb->createNamedParameter($scanGeneration, \PDO::PARAM_INT),
+				]);
+			$qb->executeStatement();
+		} catch (DBException $e) {
+			// A file-event listener (NodeCreated/NodeWritten) and a scan batch
+			// can index the same file concurrently; the (user_id, file_id)
+			// unique index makes the loser retry as an update.
+			if ($e->getReason() !== DBException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+				throw $e;
+			}
+			$existing = $this->findTrack($userId, $file->getId());
+			if ($existing !== null) {
+				$this->updateTrackRow((int)$existing['id'], $file, $metaId, $relPath, $libraryId, $scanGeneration);
+			}
+		}
+	}
+
+	private function updateTrackRow(int $trackId, File $file, ?int $metaId, string $relPath, ?int $libraryId, int $scanGeneration): void
+	{
 		$qb = $this->db->getQueryBuilder();
-		$qb->insert('ac_tracks')
-			->values([
-				'user_id' => $qb->createNamedParameter($userId),
-				'file_id' => $qb->createNamedParameter($file->getId(), \PDO::PARAM_INT),
-				'meta_id' => $qb->createNamedParameter($metaId, $metaId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
-				'rel_path' => $qb->createNamedParameter($relPath),
-				'file_name' => $qb->createNamedParameter($file->getName()),
-				'file_name_norm' => $qb->createNamedParameter(SearchTextNormalizer::normalize($file->getName())),
-				'mtime' => $qb->createNamedParameter($file->getMTime(), \PDO::PARAM_INT),
-				'size' => $qb->createNamedParameter($file->getSize(), \PDO::PARAM_INT),
-				'etag' => $qb->createNamedParameter($file->getEtag()),
-				'library_id' => $qb->createNamedParameter($libraryId, $libraryId === null || $libraryId < 1 ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
-				'added_at' => $qb->createNamedParameter($addedAt, \PDO::PARAM_INT),
-				'last_seen_at' => $qb->createNamedParameter($scanGeneration, \PDO::PARAM_INT),
-			]);
+		$qb->update('ac_tracks')
+			->set('rel_path', $qb->createNamedParameter($relPath))
+			->set('file_name', $qb->createNamedParameter($file->getName()))
+			->set('file_name_norm', $qb->createNamedParameter(SearchTextNormalizer::normalize($file->getName())))
+			->set('mtime', $qb->createNamedParameter($file->getMTime(), \PDO::PARAM_INT))
+			->set('size', $qb->createNamedParameter($file->getSize(), \PDO::PARAM_INT))
+			->set('etag', $qb->createNamedParameter($file->getEtag()))
+			->set('library_id', $qb->createNamedParameter($libraryId, $libraryId === null || $libraryId < 1 ? \PDO::PARAM_NULL : \PDO::PARAM_INT))
+			->set('last_seen_at', $qb->createNamedParameter($scanGeneration, \PDO::PARAM_INT));
+		// A transient analyze failure must not unlink metadata another worker
+		// just committed on the same file_id unique index.
+		if ($metaId !== null) {
+			$qb->set('meta_id', $qb->createNamedParameter($metaId, \PDO::PARAM_INT));
+		}
+		$qb->where($qb->expr()->eq('id', $qb->createNamedParameter($trackId, \PDO::PARAM_INT)));
 		$qb->executeStatement();
 	}
 
@@ -415,47 +443,71 @@ class ScanService
 		$result->closeCursor();
 	}
 
-	/** @param array<string, mixed>|null $row @return array{scanGen:int,rootIdx:int,fileOffset:int} */
+	/** @param array<string, mixed>|null $row @return array{scanGen:int,rootIdx:int,walkStack:list<array{path:string,offset:int}>} */
 	private function parseCursor(?array $row): array
 	{
 		if ($row === null || $row['cursor'] === null || (string)$row['cursor'] === '') {
-			return ['scanGen' => 0, 'rootIdx' => 0, 'fileOffset' => 0];
+			return ['scanGen' => 0, 'rootIdx' => 0, 'walkStack' => []];
 		}
 		try {
 			$data = json_decode((string)$row['cursor'], true, 8, JSON_THROW_ON_ERROR);
 			if (!is_array($data)) {
-				return ['scanGen' => 0, 'rootIdx' => 0, 'fileOffset' => 0];
+				return ['scanGen' => 0, 'rootIdx' => 0, 'walkStack' => []];
+			}
+			$walkStack = [];
+			if (isset($data['walkStack']) && is_array($data['walkStack'])) {
+				foreach ($data['walkStack'] as $frame) {
+					if (!is_array($frame)) {
+						continue;
+					}
+					$walkStack[] = [
+						'path' => (string)($frame['path'] ?? ''),
+						'offset' => max(0, (int)($frame['offset'] ?? 0)),
+					];
+				}
 			}
 			return [
 				'scanGen' => (int)($data['scanGen'] ?? 0),
 				'rootIdx' => (int)($data['rootIdx'] ?? 0),
-				'fileOffset' => (int)($data['fileOffset'] ?? 0),
+				'walkStack' => $walkStack,
 			];
 		} catch (\JsonException) {
-			return ['scanGen' => 0, 'rootIdx' => 0, 'fileOffset' => 0];
+			return ['scanGen' => 0, 'rootIdx' => 0, 'walkStack' => []];
 		}
 	}
 
-	/** @param array{scanGen:int,rootIdx:int,fileOffset:int} $cursor */
+	/** @param array{scanGen:int,rootIdx:int,walkStack:list<array{path:string,offset:int}>} $cursor */
 	private function saveCursor(string $userId, array $cursor): void
 	{
 		$json = json_encode($cursor, JSON_THROW_ON_ERROR);
 		$row = $this->getScanRow($userId);
 		if ($row === null) {
 			$now = $this->timeFactory->getTime();
-			$qb = $this->db->getQueryBuilder();
-			$qb->insert('ac_scan_state')
-				->values([
-					'user_id' => $qb->createNamedParameter($userId),
-					'status' => $qb->createNamedParameter(self::STATUS_QUEUED),
-					'last_full_scan_at' => $qb->createNamedParameter(0, \PDO::PARAM_INT),
-					'last_error' => $qb->createNamedParameter(null),
-					'tracks_total' => $qb->createNamedParameter(0, \PDO::PARAM_INT),
-					'cursor' => $qb->createNamedParameter($json),
-					'updated_at' => $qb->createNamedParameter($now, \PDO::PARAM_INT),
-				]);
-			$qb->executeStatement();
-			return;
+			try {
+				$qb = $this->db->getQueryBuilder();
+				$qb->insert('ac_scan_state')
+					->values([
+						'user_id' => $qb->createNamedParameter($userId),
+						'status' => $qb->createNamedParameter(self::STATUS_QUEUED),
+						'last_full_scan_at' => $qb->createNamedParameter(0, \PDO::PARAM_INT),
+						'last_error' => $qb->createNamedParameter(null),
+						'tracks_total' => $qb->createNamedParameter(0, \PDO::PARAM_INT),
+						'cursor' => $qb->createNamedParameter($json),
+						'updated_at' => $qb->createNamedParameter($now, \PDO::PARAM_INT),
+					]);
+				$qb->executeStatement();
+			} catch (DBException $e) {
+				if ($e->getReason() !== DBException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+					throw $e;
+				}
+				$row = $this->getScanRow($userId);
+				if ($row === null) {
+					throw $e;
+				}
+			}
+			if ($row === null) {
+				return;
+			}
 		}
 		$qb = $this->db->getQueryBuilder();
 		$qb->update('ac_scan_state')
@@ -514,23 +566,107 @@ class ScanService
 		return $row === false ? null : $row;
 	}
 
+	/**
+	 * Atomically claim a scan batch so only one worker runs per user.
+	 */
+	private function tryClaimScan(string $userId): bool
+	{
+		$now = $this->timeFactory->getTime();
+		$staleBefore = $now - self::STALE_RUNNING_SECONDS;
+		if ($this->claimScanWithUpdate($userId, $now, $staleBefore)) {
+			return true;
+		}
+
+		$row = $this->getScanRow($userId);
+		if ($row !== null) {
+			return false;
+		}
+
+		try {
+			$qb = $this->db->getQueryBuilder();
+			$qb->insert('ac_scan_state')
+				->values([
+					'user_id' => $qb->createNamedParameter($userId),
+					'status' => $qb->createNamedParameter(self::STATUS_RUNNING),
+					'last_full_scan_at' => $qb->createNamedParameter(0, \PDO::PARAM_INT),
+					'last_error' => $qb->createNamedParameter(null),
+					'tracks_total' => $qb->createNamedParameter(0, \PDO::PARAM_INT),
+					'updated_at' => $qb->createNamedParameter($now, \PDO::PARAM_INT),
+				]);
+			$qb->executeStatement();
+			return true;
+		} catch (DBException $e) {
+			if ($e->getReason() !== DBException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+				throw $e;
+			}
+		}
+
+		return $this->claimScanWithUpdate($userId, $now, $staleBefore);
+	}
+
+	private function claimScanWithUpdate(string $userId, int $now, int $staleBefore): bool
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->update('ac_scan_state')
+			->set('status', $qb->createNamedParameter(self::STATUS_RUNNING))
+			->set('updated_at', $qb->createNamedParameter($now, \PDO::PARAM_INT))
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->andWhere($qb->expr()->orX(
+				$qb->expr()->in(
+					'status',
+					$qb->createNamedParameter(
+						[self::STATUS_IDLE, self::STATUS_QUEUED],
+						IQueryBuilder::PARAM_STR_ARRAY,
+					),
+				),
+				$qb->expr()->andX(
+					$qb->expr()->eq('status', $qb->createNamedParameter(self::STATUS_RUNNING)),
+					$qb->expr()->lt('updated_at', $qb->createNamedParameter($staleBefore, \PDO::PARAM_INT)),
+				),
+			));
+
+		return $qb->executeStatement() > 0;
+	}
+
+	private function touchScanLease(string $userId): void
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->update('ac_scan_state')
+			->set('updated_at', $qb->createNamedParameter($this->timeFactory->getTime(), \PDO::PARAM_INT))
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->andWhere($qb->expr()->eq('status', $qb->createNamedParameter(self::STATUS_RUNNING)));
+		$qb->executeStatement();
+	}
+
 	private function setStatus(string $userId, string $status, ?string $error, ?int $lastScanAt = null, ?int $tracksTotal = null): void
 	{
 		$now = $this->timeFactory->getTime();
 		$row = $this->getScanRow($userId);
 		if ($row === null) {
-			$qb = $this->db->getQueryBuilder();
-			$qb->insert('ac_scan_state')
-				->values([
-					'user_id' => $qb->createNamedParameter($userId),
-					'status' => $qb->createNamedParameter($status),
-					'last_full_scan_at' => $qb->createNamedParameter($lastScanAt ?? 0, \PDO::PARAM_INT),
-					'last_error' => $qb->createNamedParameter($error),
-					'tracks_total' => $qb->createNamedParameter($tracksTotal ?? 0, \PDO::PARAM_INT),
-					'updated_at' => $qb->createNamedParameter($now, \PDO::PARAM_INT),
-				]);
-			$qb->executeStatement();
-			return;
+			try {
+				$qb = $this->db->getQueryBuilder();
+				$qb->insert('ac_scan_state')
+					->values([
+						'user_id' => $qb->createNamedParameter($userId),
+						'status' => $qb->createNamedParameter($status),
+						'last_full_scan_at' => $qb->createNamedParameter($lastScanAt ?? 0, \PDO::PARAM_INT),
+						'last_error' => $qb->createNamedParameter($error),
+						'tracks_total' => $qb->createNamedParameter($tracksTotal ?? 0, \PDO::PARAM_INT),
+						'updated_at' => $qb->createNamedParameter($now, \PDO::PARAM_INT),
+					]);
+				$qb->executeStatement();
+			} catch (DBException $e) {
+				if ($e->getReason() !== DBException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+					throw $e;
+				}
+				$row = $this->getScanRow($userId);
+				if ($row === null) {
+					throw $e;
+				}
+			}
+			if ($row === null) {
+				return;
+			}
 		}
 
 		$qb = $this->db->getQueryBuilder();
@@ -601,6 +737,51 @@ class ScanService
 		$result->closeCursor();
 
 		return array_keys($ids);
+	}
+
+	private function purgeFileReferences(string $userId, int $fileId): void
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete('ac_play_state')
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->andWhere($qb->expr()->eq('file_id', $qb->createNamedParameter($fileId, \PDO::PARAM_INT)));
+		$qb->executeStatement();
+
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')
+			->from('ac_playlists')
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+		$result = $qb->executeQuery();
+		$playlistIds = [];
+		while ($row = $result->fetch()) {
+			$playlistIds[] = (int)$row['id'];
+		}
+		$result->closeCursor();
+		if ($playlistIds !== []) {
+			$dq = $this->db->getQueryBuilder();
+			$dq->delete('ac_playlist_items')
+				->where($dq->expr()->in('playlist_id', $dq->createNamedParameter($playlistIds, IQueryBuilder::PARAM_INT_ARRAY)))
+				->andWhere($dq->expr()->eq('file_id', $dq->createNamedParameter($fileId, \PDO::PARAM_INT)));
+			$dq->executeStatement();
+		}
+
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('q.id')
+			->from('ac_queue', 'q')
+			->where($qb->expr()->eq('q.user_id', $qb->createNamedParameter($userId)));
+		$result = $qb->executeQuery();
+		$queueIds = [];
+		while ($row = $result->fetch()) {
+			$queueIds[] = (int)$row['id'];
+		}
+		$result->closeCursor();
+		if ($queueIds !== []) {
+			$dq = $this->db->getQueryBuilder();
+			$dq->delete('ac_queue_items')
+				->where($dq->expr()->in('queue_id', $dq->createNamedParameter($queueIds, IQueryBuilder::PARAM_INT_ARRAY)))
+				->andWhere($dq->expr()->eq('file_id', $dq->createNamedParameter($fileId, \PDO::PARAM_INT)));
+			$dq->executeStatement();
+		}
 	}
 
 	public function purgeUserData(string $userId): void

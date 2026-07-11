@@ -538,7 +538,6 @@
 					paintRestoring();
 					return;
 				}
-				paintRestoring();
 				AudioCheckApi.get('/apps/audiocheck/api/progress').then((data) => {
 					if (AudioCheckPlayer.getCurrentTrack()) return;
 					const cont = (data.progress && data.progress.continue) || [];
@@ -822,6 +821,9 @@
 					const a = document.getElementById('ac-audio');
 					const ms = parseInt(e.target.value, 10);
 					if (a && a.duration) a.currentTime = ms / 1000;
+					const posText = AudioCheckTime.formatMs(ms);
+					if (posEl) posEl.textContent = posText;
+					e.target.setAttribute('aria-valuetext', posText);
 				});
 				const timeRow = C.el('div', { className: 'ac-now-time' });
 				posEl = C.el('span', { className: 'ac-now-time__pos', text: '0:00' });

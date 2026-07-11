@@ -12,6 +12,7 @@ use OCA\AudioCheck\Repair\BackupBeforeUpdate;
 use OCA\AudioCheck\BackgroundJob\ScanJob;
 use OCA\AudioCheck\Command\Scan as ScanCommand;
 use OCA\AudioCheck\Dashboard\ContinueWidget;
+use OCA\AudioCheck\Listener\BeforeTemplateRenderedListener;
 use OCA\AudioCheck\Listener\GroupDeletedListener;
 use OCA\AudioCheck\Listener\NodeEventListener;
 use OCA\AudioCheck\Listener\UserDeletedListener;
@@ -39,6 +40,7 @@ use OCP\Files\Events\Node\NodeCreatedEvent;
 use OCP\Files\Events\Node\NodeDeletedEvent;
 use OCP\Files\Events\Node\NodeRenamedEvent;
 use OCP\Files\Events\Node\NodeWrittenEvent;
+use OCP\AppFramework\Http\Events\BeforeTemplateRenderedEvent;
 use OCP\Group\Events\GroupDeletedEvent;
 use OCP\INavigationManager;
 use OCP\L10N\IFactory;
@@ -105,6 +107,7 @@ class Application extends App implements IBootstrap
 				$c->query(\OCP\Files\IAppData::class),
 				$c->query(FileAccessService::class),
 				$c->query(MetadataService::class),
+				$c->query(AccessControlService::class),
 				$c->query(\OCP\IDBConnection::class),
 				$c->query(\Psr\Log\LoggerInterface::class),
 			);
@@ -215,6 +218,7 @@ class Application extends App implements IBootstrap
 
 		$context->registerEventListener(UserDeletedEvent::class, UserDeletedListener::class);
 		$context->registerEventListener(GroupDeletedEvent::class, GroupDeletedListener::class);
+		$context->registerEventListener(BeforeTemplateRenderedEvent::class, BeforeTemplateRenderedListener::class, -100);
 		$context->registerEventListener(NodeCreatedEvent::class, NodeEventListener::class);
 		$context->registerEventListener(NodeWrittenEvent::class, NodeEventListener::class);
 		$context->registerEventListener(NodeDeletedEvent::class, NodeEventListener::class);

@@ -87,9 +87,7 @@ final class StreamConformanceIntegrationTest extends TestCase
 		$file->putContent($this->minimalMp3Bytes());
 		$fileId = (int)$file->getId();
 
-		/** @var IUserSession $session */
-		$session = \OC::$server->get(IUserSession::class);
-		$session->setUser($userManager->get(self::ATTACKER));
+		IntegrationTestUsers::loginAs(self::ATTACKER);
 
 		/** @var StreamController $controller */
 		$controller = \OC::$server->get(StreamController::class);
@@ -124,6 +122,7 @@ final class StreamConformanceIntegrationTest extends TestCase
 		$factory = \OC::$server->get(StreamResponseFactory::class);
 		$response = $factory->createFromFile($file, 'bytes=5-1', null, null);
 		$this->assertSame(Http::STATUS_REQUEST_RANGE_NOT_SATISFIABLE, $response->getStatus());
+		$this->assertStringStartsWith('bytes */', $response->getHeaders()['Content-Range'] ?? '');
 	}
 
 	private function minimalMp3Bytes(): string

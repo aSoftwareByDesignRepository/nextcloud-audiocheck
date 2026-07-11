@@ -121,6 +121,7 @@
 		menu.setAttribute('aria-label', moreLabel);
 		const closeOverflow = () => {
 			details.open = false;
+			summary.focus();
 		};
 		sec.forEach((node) => {
 			menu.appendChild(node);

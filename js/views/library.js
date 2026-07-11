@@ -33,7 +33,8 @@
 		if (status === 'queued') return t('audiocheck', 'Queued');
 		if (status === 'idle') return t('audiocheck', 'Idle');
 		if (status === 'failed' || status === 'error') return t('audiocheck', 'Failed');
-		return status || t('audiocheck', 'Unknown');
+		if (!status) return t('audiocheck', 'Unknown');
+		return t('audiocheck', 'Unknown');
 	}
 
 	function scanBadgeClass(status) {
@@ -68,11 +69,7 @@
 			return { text: t('audiocheck', 'Scanning your folders…'), tone: 'active' };
 		}
 		if (scan && (scan.status === 'failed' || scan.status === 'error')) {
-			let text = t('audiocheck', 'Scan failed. Press Scan now to try again.');
-			if (scan.lastError) {
-				text += ' ' + t('audiocheck', 'Last error: {error}', { error: scan.lastError });
-			}
-			return { text, tone: 'warn' };
+			return { text: t('audiocheck', 'Scan failed. Press Scan now to try again.'), tone: 'warn' };
 		}
 		if (tracks === 0) {
 			return { text: t('audiocheck', 'No audio found yet. Press Scan now to look for audio.'), tone: 'muted' };

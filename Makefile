@@ -68,10 +68,11 @@ release-signed: release verify-release
 clean:
 	@rm -rf $(build_dir) .phpunit.result.cache test-results
 
-test:
+	test:
 	composer install --no-interaction
 	./vendor/bin/phpunit
 	npm test
+	bash scripts/check-theme-tokens.sh
 	bash scripts/check-file-access-gate.sh
 	bash scripts/check-no-outbound-http.sh
 

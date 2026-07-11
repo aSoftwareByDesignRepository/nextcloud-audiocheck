@@ -7,6 +7,9 @@
 	let shuffle = false;
 	let speed = 100;
 	let volumeBeforeMute = 100;
+	// True while the <audio> src was set without a user playback request
+	// (session restore). Suppresses error toasts for loads the user never asked for.
+	let passiveLoad = false;
 	let lastPositionStateAt = 0;
 	let volumePersistTimer = null;
 	const volumeUis = new Set();
@@ -98,6 +101,10 @@
 		if (!host || host.dataset.acReady || !window.AudioCheckComponents) return;
 		host.dataset.acReady = '1';
 		host.appendChild(AudioCheckComponents.volumeControl({ idPrefix: 'ac-mini', compact: true }));
+		const popover = host.querySelector('details.ac-volume-popover');
+		if (popover && window.matchMedia('(min-width: 1024px)').matches) {
+			popover.setAttribute('open', '');
+		}
 	}
 
 	function applyDefaultVolume() {
@@ -900,6 +907,7 @@
 			syncAllVolumeUis();
 		});
 		a.addEventListener('play', () => {
+			passiveLoad = false;
 			updateMini(activeTrack(), { announce: false });
 			startProgressTimer();
 			notify();
@@ -924,6 +932,11 @@
 			next();
 		});
 		a.addEventListener('error', () => {
+			// Session restore preloads the last track without the user asking
+			// for playback. A transient load failure there (network blip,
+			// server restart) must not alarm the user or cascade-skip the
+			// queue — pressing play simply retries and surfaces real errors.
+			if (passiveLoad) return;
 			AudioCheckMessaging.toast(t('audiocheck', 'This file may not play in your browser.'), 'error');
 			handlePlaybackError(index);
 		});
@@ -934,7 +947,9 @@
 			const ms = parseInt(e.target.value, 10);
 			if (a.duration) a.currentTime = ms / 1000;
 			const posEl = document.getElementById('ac-mini-pos');
-			if (posEl) posEl.textContent = AudioCheckTime.formatMs(ms);
+			const posText = AudioCheckTime.formatMs(ms);
+			if (posEl) posEl.textContent = posText;
+			e.target.setAttribute('aria-valuetext', posText);
 		});
 		const miniSeek = document.getElementById('ac-mini-seek');
 		miniSeek?.addEventListener('pointerdown', () => { seekDragging = true; });
@@ -975,7 +990,7 @@
 			if (e.key === 'l' || e.key === 'L') { e.preventDefault(); seekChapter(1); }
 		});
 		if ('mediaSession' in navigator) {
-			navigator.mediaSession.setActionHandler('play', () => a.play());
+			navigator.mediaSession.setActionHandler('play', () => { passiveLoad = false; a.play(); });
 			navigator.mediaSession.setActionHandler('pause', () => a.pause());
 			navigator.mediaSession.setActionHandler('previoustrack', prev);
 			navigator.mediaSession.setActionHandler('nexttrack', next);
@@ -1008,6 +1023,7 @@
 		const shouldPlay = autoplay !== false;
 
 		function beginPlayback(seekMs) {
+			passiveLoad = !shouldPlay;
 			a.src = AudioCheckApi.streamUrl(track.fileId);
 			a.playbackRate = speed / 100;
 			a.load();
@@ -1073,6 +1089,14 @@
 		if (!a) return;
 		const track = activeTrack();
 		if (a.paused) {
+			passiveLoad = false;
+			if (a.error && index >= 0 && queue[index]) {
+				// The passive restore load failed (e.g. transient network
+				// error); retry from the saved position now that the user
+				// explicitly asked for playback.
+				loadTrack(index);
+				return;
+			}
 			a.play().catch(() => handlePlaybackError(index));
 		} else {
 			a.pause();

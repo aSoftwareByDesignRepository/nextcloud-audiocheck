@@ -2,6 +2,28 @@
 
 All notable changes to AudioCheck are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- **Scan memory** — library scans walk folders depth-first in batches instead of loading every audio file into memory before indexing; cursor now stores a `walkStack` for resume.
+- **Concurrent scans** — only one worker can claim `RUNNING` per user via an atomic DB update; lease heartbeats prevent stale takeover mid-batch.
+- **Playlist integrity** — reorder and delete run inside DB transactions so partial failures cannot leave inconsistent sort orders or orphan headers.
+- **Mini player volume (mobile)** — volume icon opens an accessible popover with slider and mute on small screens; desktop keeps inline controls (WCAG 2.1 AA).
+
+## [1.2.7] — 2026-07-11
+
+### Fixed
+
+- **API error logging** — `safe()` and service catch blocks now pass the exception object (`['exception' => $e]`) to the logger instead of a `message` context key, which the Nextcloud logger's PSR-3 interpolation silently discarded. Internal errors now log the full class, message, and stack trace.
+- **Favorites listing 500** — `ITags::getFavorites()` may return `false` on transient DB errors; `LibraryService` now degrades to "no favorites" instead of throwing a `TypeError` that broke `/api/tracks?favorite=1` and all views built on it.
+- **SQL portability** — count queries no longer inherit `ORDER BY` on non-aggregated columns (rejected by PostgreSQL and MySQL 8 with `ONLY_FULL_GROUP_BY`); `MAX()` aggregates use `selectAlias()` so library sync revisions and playlist sort orders are read correctly; internal Doctrine `ArrayParameterType` replaced with the public `IQueryBuilder::PARAM_INT_ARRAY`.
+- **Upsert races** — concurrent progress saves, listened-flag writes, queue creation, and track scanning no longer 500 on unique-constraint violations; the losing writer retries as an update.
+- **Playlist integrity** — duplicate-name detection only maps genuine unique-constraint violations to a validation error (other DB errors surface as server errors); playlist items get a stable secondary sort key; `defaultSpeed` is clamped on update.
+- **Favorites shuffle truncation** — the client paged past the server's 100-per-page clamp instead of silently shuffling only the first 100 favorites; removed a misleading 500-track request limit from facet browsing.
+- **User-facing error messages** — machine codes like `internal_error` are translated to human-readable, localized messages in toasts; network failures get a dedicated "could not reach the server" message; fixed "1 items" pluralization on the Playlists page.
+- **Dark / high-contrast theming** — theme-derived `--ac-*` tokens are re-bound on `body`, `#content[class*="app-audiocheck"]`, and `#app-content.ac-app`; `css/theme-bind.css` loads after Nextcloud theme stylesheets so backgrounds and ink stay paired on every theme (fixes light text on white backgrounds in dark mode). Added `--ac-surface` and corrected `--ac-muted-strong` mixing. Guard script `scripts/check-theme-tokens.sh` enforces token scope in CI.
+
 ## [1.2.6] — 2026-06-24
 
 ### Added

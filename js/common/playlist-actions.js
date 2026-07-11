@@ -581,18 +581,36 @@
 		}).catch((e) => AudioCheckMessaging.toast(e.message, 'error'));
 	}
 
-	function shuffleFavoriteTracks() {
-		return AudioCheckApi.get('/apps/audiocheck/api/tracks', { favorite: '1', limit: 500, sort: 'title' })
-			.then((data) => {
-				const tracks = (data.items || []).filter((x) => !x.unavailable);
-				if (!tracks.length) {
-					AudioCheckMessaging.toast(t('audiocheck', 'No favorite tracks yet.'), 'warning');
-					return;
-				}
-				AudioCheckPlayer.setShuffle(true);
-				AudioCheckPlayer.playQueue(shuffleArray(tracks), 0);
-				AudioCheckMessaging.toast(t('audiocheck', 'Shuffling: {name}', { name: t('audiocheck', 'Favorites') }));
+	async function shuffleFavoriteTracks() {
+		// The server clamps limit to 100 per page, so page until we have
+		// everything (bounded at 500 tracks like the play-all flows).
+		const FAV_PAGE_SIZE = 100;
+		const FAV_MAX_TRACKS = 500;
+		const tracks = [];
+		let page = 1;
+		let total = Infinity;
+		while (tracks.length < total && tracks.length < FAV_MAX_TRACKS) {
+			const data = await AudioCheckApi.get('/apps/audiocheck/api/tracks', {
+				favorite: '1',
+				limit: FAV_PAGE_SIZE,
+				page,
+				sort: 'title',
 			});
+			const batch = data.items || [];
+			batch.forEach((tr) => {
+				if (tr && !tr.unavailable) tracks.push(tr);
+			});
+			total = data.total != null ? data.total : tracks.length;
+			if (batch.length < FAV_PAGE_SIZE) break;
+			page += 1;
+		}
+		if (!tracks.length) {
+			AudioCheckMessaging.toast(t('audiocheck', 'No favorite tracks yet.'), 'warning');
+			return;
+		}
+		AudioCheckPlayer.setShuffle(true);
+		AudioCheckPlayer.playQueue(shuffleArray(tracks), 0);
+		AudioCheckMessaging.toast(t('audiocheck', 'Shuffling: {name}', { name: t('audiocheck', 'Favorites') }));
 	}
 
 	function shufflePinnedPlaylist() {

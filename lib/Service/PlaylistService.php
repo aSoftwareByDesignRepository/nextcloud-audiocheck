@@ -7,6 +7,7 @@ namespace OCA\AudioCheck\Service;
 use OCA\AudioCheck\Exception\NotFoundException;
 use OCA\AudioCheck\Exception\ValidationException;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\DB\Exception as DBException;
 use OCP\IDBConnection;
 
 class PlaylistService
@@ -59,8 +60,13 @@ class PlaylistService
 			]);
 		try {
 			$qb->executeStatement();
-		} catch (\Exception $e) {
-			throw new ValidationException('Playlist name already exists.');
+		} catch (DBException $e) {
+			// Only a (user_id, name) unique violation means a duplicate name;
+			// anything else is a genuine server error and must surface as one.
+			if ($e->getReason() === DBException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+				throw new ValidationException('Playlist name already exists.');
+			}
+			throw $e;
 		}
 		$id = (int)$this->db->lastInsertId('ac_playlists');
 		return $this->getPlaylist($userId, $id);
@@ -92,26 +98,40 @@ class PlaylistService
 			$qb->set('is_pinned', $qb->createNamedParameter($payload['isPinned'] ? 1 : 0, \PDO::PARAM_INT));
 		}
 		if (isset($payload['defaultSpeed'])) {
-			$qb->set('default_speed', $qb->createNamedParameter((int)$payload['defaultSpeed'], \PDO::PARAM_INT));
+			$qb->set('default_speed', $qb->createNamedParameter($this->playback->clampSpeed((int)$payload['defaultSpeed']), \PDO::PARAM_INT));
 		}
 
 		$qb->where($qb->expr()->eq('id', $qb->createNamedParameter($playlistId, \PDO::PARAM_INT)))
 			->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
-		$qb->executeStatement();
+		try {
+			$qb->executeStatement();
+		} catch (DBException $e) {
+			if ($e->getReason() === DBException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+				throw new ValidationException('Playlist name already exists.');
+			}
+			throw $e;
+		}
 		return $this->getPlaylist($userId, $playlistId);
 	}
 
 	public function deletePlaylist(string $userId, int $playlistId): void
 	{
 		$this->assertPlaylistOwned($userId, $playlistId);
-		$dq = $this->db->getQueryBuilder();
-		$dq->delete('ac_playlist_items')->where($dq->expr()->eq('playlist_id', $dq->createNamedParameter($playlistId, \PDO::PARAM_INT)));
-		$dq->executeStatement();
-		$qb = $this->db->getQueryBuilder();
-		$qb->delete('ac_playlists')
-			->where($qb->expr()->eq('id', $qb->createNamedParameter($playlistId, \PDO::PARAM_INT)))
-			->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
-		$qb->executeStatement();
+		$this->db->beginTransaction();
+		try {
+			$dq = $this->db->getQueryBuilder();
+			$dq->delete('ac_playlist_items')->where($dq->expr()->eq('playlist_id', $dq->createNamedParameter($playlistId, \PDO::PARAM_INT)));
+			$dq->executeStatement();
+			$qb = $this->db->getQueryBuilder();
+			$qb->delete('ac_playlists')
+				->where($qb->expr()->eq('id', $qb->createNamedParameter($playlistId, \PDO::PARAM_INT)))
+				->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+			$qb->executeStatement();
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
+		}
 	}
 
 	public function addItem(string $userId, int $playlistId, int $fileId): array
@@ -131,8 +151,11 @@ class PlaylistService
 			]);
 		try {
 			$qb->executeStatement();
-		} catch (\Exception) {
-			throw new ValidationException('Track already in playlist.');
+		} catch (DBException $e) {
+			if ($e->getReason() === DBException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+				throw new ValidationException('Track already in playlist.');
+			}
+			throw $e;
 		}
 
 		$uq = $this->db->getQueryBuilder();
@@ -160,14 +183,28 @@ class PlaylistService
 			}
 		}
 		$order = 0;
-		foreach ($requested as $itemId) {
-			$qb = $this->db->getQueryBuilder();
-			$qb->update('ac_playlist_items')
-				->set('sort_order', $qb->createNamedParameter($order, \PDO::PARAM_INT))
-				->where($qb->expr()->eq('id', $qb->createNamedParameter($itemId, \PDO::PARAM_INT)))
-				->andWhere($qb->expr()->eq('playlist_id', $qb->createNamedParameter($playlistId, \PDO::PARAM_INT)));
-			$qb->executeStatement();
-			$order++;
+		$now = $this->timeFactory->getTime();
+		$this->db->beginTransaction();
+		try {
+			foreach ($requested as $itemId) {
+				$qb = $this->db->getQueryBuilder();
+				$qb->update('ac_playlist_items')
+					->set('sort_order', $qb->createNamedParameter($order, \PDO::PARAM_INT))
+					->where($qb->expr()->eq('id', $qb->createNamedParameter($itemId, \PDO::PARAM_INT)))
+					->andWhere($qb->expr()->eq('playlist_id', $qb->createNamedParameter($playlistId, \PDO::PARAM_INT)));
+				$qb->executeStatement();
+				$order++;
+			}
+			$uq = $this->db->getQueryBuilder();
+			$uq->update('ac_playlists')
+				->set('updated_at', $uq->createNamedParameter($now, \PDO::PARAM_INT))
+				->where($uq->expr()->eq('id', $uq->createNamedParameter($playlistId, \PDO::PARAM_INT)))
+				->andWhere($uq->expr()->eq('user_id', $uq->createNamedParameter($userId)));
+			$uq->executeStatement();
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
 		}
 		return $this->getPlaylist($userId, $playlistId);
 	}
@@ -232,7 +269,8 @@ class PlaylistService
 			))
 			->leftJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'))
 			->where($qb->expr()->eq('pi.playlist_id', $qb->createNamedParameter($playlistId, \PDO::PARAM_INT)))
-			->orderBy('pi.sort_order', 'ASC');
+			->orderBy('pi.sort_order', 'ASC')
+			->addOrderBy('pi.id', 'ASC');
 		$result = $qb->executeQuery();
 		$items = [];
 		while ($row = $result->fetch()) {
@@ -280,7 +318,7 @@ class PlaylistService
 	private function maxSortOrder(int $playlistId): int
 	{
 		$qb = $this->db->getQueryBuilder();
-		$qb->select($qb->func()->max('sort_order', 'm'))->from('ac_playlist_items')
+		$qb->selectAlias($qb->func()->max('sort_order'), 'm')->from('ac_playlist_items')
 			->where($qb->expr()->eq('playlist_id', $qb->createNamedParameter($playlistId, \PDO::PARAM_INT)));
 		$result = $qb->executeQuery();
 		$row = $result->fetch();

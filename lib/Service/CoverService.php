@@ -21,6 +21,7 @@ class CoverService
 		private IAppData $appData,
 		private FileAccessService $fileAccess,
 		private MetadataService $metadata,
+		private AccessControlService $accessControl,
 		private IDBConnection $db,
 		private LoggerInterface $logger,
 	) {
@@ -103,7 +104,7 @@ class CoverService
 			}
 			return ['data' => $picture['data'], 'mime' => $mime];
 		} catch (\Throwable $e) {
-			$this->logger->info('Cover extraction failed', ['fileId' => $file->getId()]);
+			$this->logger->info('Cover extraction failed', ['fileId' => $file->getId(), 'exception' => $e]);
 			return null;
 		} finally {
 			if ($tempPath !== null && is_file($tempPath)) {
@@ -117,6 +118,10 @@ class CoverService
 		$local = $this->fileAccess->getLocalFilePathIfAllowed($file);
 		if ($local !== null) {
 			return $local;
+		}
+		$maxBytes = $this->accessControl->getMaxMetaTempMb() * 1024 * 1024;
+		if ($file->getSize() > $maxBytes) {
+			return null;
 		}
 		$tempPath = tempnam(sys_get_temp_dir(), 'ac_cover_');
 		if ($tempPath === false) {
@@ -172,7 +177,7 @@ class CoverService
 			$folder->newFile($cacheKey, json_encode(['mime' => $mime], JSON_THROW_ON_ERROR));
 			$folder->newFile($cacheKey . '.bin', $data);
 		} catch (\Throwable $e) {
-			$this->logger->info('Cover cache write failed', ['message' => $e->getMessage()]);
+			$this->logger->info('Cover cache write failed', ['exception' => $e]);
 		}
 	}
 

@@ -284,11 +284,13 @@
 								const data = await AudioCheckApi.get('/apps/audiocheck/api/tracks', params(pageNum));
 								const batch = data.items || [];
 								totalTracks = data.total != null ? data.total : batch.length;
-								tracks.push(...batch);
+								batch.forEach((tr) => {
+									if (tr && !tr.unavailable) tracks.push(tr);
+								});
 								if (batch.length === 0 || tracks.length >= totalTracks) break;
 								pageNum += 1;
 							}
-							if (totalTracks > tracks.length) {
+							if (totalTracks > PLAY_ALL_MAX_TRACKS) {
 								AudioCheckMessaging.toast(
 									t('audiocheck', 'Playing first {count} tracks.', { count: String(tracks.length) }),
 									'info',
@@ -317,18 +319,17 @@
 					status.textContent = t('audiocheck', 'Loading…');
 
 					AudioCheckApi.get('/apps/audiocheck/api/facets/{type}', null, {
-						params: { type: 'folders', kind: config.kind, page, limit: FACET_LIST_PAGE_SIZE },
+						params: (() => {
+							const p = { type: 'folders', kind: config.kind, page, limit: FACET_LIST_PAGE_SIZE };
+							const q = searchQuery();
+							if (q) p.q = q;
+							return p;
+						})(),
 					}).then((data) => {
 						const items = (data.items || []).slice();
 						const facetTotal = data.total != null ? data.total : items.length;
 						const q = searchQuery();
-						const filtered = q
-							? items.filter((item) => GS().matchesSearchQuery([
-								displayFolderLabel(item.name),
-								item.name,
-							], q))
-							: items;
-						if (reset && page === 1 && !filtered.length) {
+						if (reset && page === 1 && !items.length) {
 							showEmpty(q
 								? t('audiocheck', 'No matching folders.')
 								: config.emptyFolders, 'folder', {
@@ -337,8 +338,8 @@
 							});
 							return;
 						}
-						const openAll = reset && page === 1 && filtered.length === 1 && facetTotal === 1;
-						filtered.forEach((item) => renderFolderGroup(item, host, openAll));
+						const openAll = reset && page === 1 && items.length === 1 && facetTotal === 1;
+						items.forEach((item) => renderFolderGroup(item, host, openAll));
 						const shown = host.children.length;
 						status.textContent = t('audiocheck', 'Showing {shown} of {total} folders', {
 							shown: String(shown),

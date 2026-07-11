@@ -10,7 +10,6 @@
 	const LPU = () => window.AudioCheckLibraryPageUi;
 	const PAGE_SIZE = 48;
 	const FACET_LIST_PAGE_SIZE = 48;
-	const FACET_TRACK_LIMIT = 500;
 	const PLAY_ALL_PAGE_SIZE = 100;
 	const PLAY_ALL_MAX_TRACKS = 500;
 
@@ -32,7 +31,8 @@
 	}
 
 	function facetTrackParams(type, item) {
-		const params = { limit: FACET_TRACK_LIMIT, sort: 'title' };
+		// Callers set their own page/limit; this only builds the filter params.
+		const params = { sort: 'title' };
 		if (type === 'favorites') {
 			params.favorite = '1';
 		} else if (type === 'tags' && item.id) {
@@ -282,11 +282,13 @@
 								const data = await AudioCheckApi.get('/apps/audiocheck/api/tracks', params(pageNum));
 								const batch = data.items || [];
 								totalTracks = data.total != null ? data.total : batch.length;
-								tracks.push(...batch);
+								batch.forEach((tr) => {
+									if (tr && !tr.unavailable) tracks.push(tr);
+								});
 								if (batch.length === 0 || tracks.length >= totalTracks) break;
 								pageNum += 1;
 							}
-							if (totalTracks > tracks.length) {
+							if (totalTracks > PLAY_ALL_MAX_TRACKS) {
 								AudioCheckMessaging.toast(
 									t('audiocheck', 'Playing first {count} tracks.', { count: String(tracks.length) }),
 									'info',
@@ -360,21 +362,13 @@
 
 					const params = { type, page, limit: FACET_LIST_PAGE_SIZE };
 					const q = searchQuery();
-					if (q && type !== 'folders') {
+					if (q) {
 						params.q = q;
 					}
 
 					AudioCheckApi.get('/apps/audiocheck/api/facets/{type}', null, { params }).then((data) => {
 						let items = (data.items || []).slice();
 						total = data.total != null ? data.total : items.length;
-						if (type === 'folders') {
-							if (q) {
-								items = items.filter((item) => GS().matchesSearchQuery([
-									displayFolderLabel(item.name),
-									item.name,
-								], q));
-							}
-						}
 						if (reset && !items.length && page === 1) {
 							const copy = config.emptyCopy[type] || {};
 							showEmpty(type, q

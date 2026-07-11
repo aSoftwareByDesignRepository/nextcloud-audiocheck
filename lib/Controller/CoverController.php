@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace OCA\AudioCheck\Controller;
 
+use OCA\AudioCheck\Exception\AccessDeniedException;
+use OCA\AudioCheck\Exception\NotAuthenticatedException;
 use OCA\AudioCheck\Exception\NotFoundException;
 use OCA\AudioCheck\Service\AccessControlService;
 use OCA\AudioCheck\Service\CoverService;
@@ -32,7 +34,8 @@ class CoverController extends Controller
 		try {
 			$userId = $this->access->currentUserId();
 			return $this->cover->getCoverResponse($userId, $fileId);
-		} catch (NotFoundException) {
+		} catch (NotFoundException|NotAuthenticatedException|AccessDeniedException) {
+			// Uniform 404 on all access failures (AC-TST-09).
 			return new JSONResponse([
 				'ok' => false,
 				'error' => ['code' => 'not_found'],

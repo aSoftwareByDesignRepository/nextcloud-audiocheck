@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace OCA\AudioCheck\Controller;
 
+use OCA\AudioCheck\Exception\AccessDeniedException;
+use OCA\AudioCheck\Exception\NotAuthenticatedException;
 use OCA\AudioCheck\Exception\NotFoundException;
 use OCA\AudioCheck\Service\AccessControlService;
 use OCA\AudioCheck\Service\FileAccessService;
@@ -39,7 +41,9 @@ class StreamController extends Controller
 				$this->request->getHeader('If-None-Match') ?: null,
 				$this->request->getHeader('If-Range') ?: null,
 			);
-		} catch (NotFoundException) {
+		} catch (NotFoundException|NotAuthenticatedException|AccessDeniedException) {
+			// Uniform 404 on all access failures: do not reveal whether a file
+			// exists to unauthenticated or unauthorized callers (§9.7 / AC-TST-01).
 			return new \OCP\AppFramework\Http\JSONResponse([
 				'ok' => false,
 				'error' => ['code' => 'not_found'],

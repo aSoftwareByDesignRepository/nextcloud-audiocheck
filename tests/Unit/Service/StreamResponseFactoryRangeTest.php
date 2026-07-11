@@ -38,6 +38,14 @@ final class StreamResponseFactoryRangeTest extends TestCase
 		$this->assertFalse($this->factory->parseRange('bytes=2000-3000', 1000));
 	}
 
+	public function testUnsatisfiableRangeIncludesContentRangeHeader(): void
+	{
+		[$factory, $file] = $this->makeFactoryAndFile();
+		$response = $factory->createFromFile($file, 'bytes=5-1', null, null);
+		$this->assertSame(\OCP\AppFramework\Http::STATUS_REQUEST_RANGE_NOT_SATISFIABLE, $response->getStatus());
+		$this->assertSame('bytes */1000', $response->getHeaders()['Content-Range'] ?? null);
+	}
+
 	public function testRangeEndClampedToFileSize(): void
 	{
 		$this->assertSame(['start' => 0, 'end' => 999], $this->factory->parseRange('bytes=0-1500', 1000));

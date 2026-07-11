@@ -391,6 +391,90 @@ class FileAccessService
 		return $files;
 	}
 
+	/**
+	 * Walk audio files depth-first without materializing the full tree in memory.
+	 *
+	 * @param list<array{path:string,offset:int}> $stack Empty stack starts at $root.
+	 * @return array{files:list<File>,stack:list<array{path:string,offset:int}>,done:bool}
+	 */
+	public function walkAudioFilesBatch(Folder $root, bool $recursive, array $stack, int $limit): array
+	{
+		$limit = max(1, $limit);
+		$files = [];
+		if ($stack === []) {
+			$stack[] = ['path' => '', 'offset' => 0];
+		}
+
+		while ($stack !== [] && count($files) < $limit) {
+			$frameIdx = count($stack) - 1;
+			$frame = &$stack[$frameIdx];
+			$folder = $this->folderAtRelativePath($root, (string)$frame['path']);
+			if ($folder === null) {
+				array_pop($stack);
+				continue;
+			}
+
+			$listing = $this->sortedDirectoryListing($folder);
+			$count = count($listing);
+			while ($frame['offset'] < $count && count($files) < $limit) {
+				$node = $listing[$frame['offset']];
+				$frame['offset']++;
+				if ($node instanceof File && $node->isReadable() && $this->isAllowedAudioFile($node)) {
+					$files[] = $node;
+					continue;
+				}
+				if ($recursive && $node instanceof Folder && $node->isReadable()) {
+					$childPath = $this->childRelativePath((string)$frame['path'], $node->getName());
+					$stack[] = ['path' => $childPath, 'offset' => 0];
+					break;
+				}
+			}
+
+			if ($frame['offset'] >= $count) {
+				array_pop($stack);
+			}
+		}
+
+		return [
+			'files' => $files,
+			'stack' => $stack,
+			'done' => $stack === [],
+		];
+	}
+
+	private function folderAtRelativePath(Folder $root, string $relPath): ?Folder
+	{
+		$relPath = trim(str_replace('\\', '/', $relPath), '/');
+		if ($relPath === '') {
+			return $root;
+		}
+		try {
+			$node = $root->get($relPath);
+		} catch (FilesNotFoundException) {
+			return null;
+		}
+		return $node instanceof Folder && $node->isReadable() ? $node : null;
+	}
+
+	private function childRelativePath(string $parentPath, string $name): string
+	{
+		$parentPath = trim(str_replace('\\', '/', $parentPath), '/');
+		return $parentPath === '' ? $name : $parentPath . '/' . $name;
+	}
+
+	/**
+	 * @return list<\OCP\Files\Node>
+	 */
+	private function sortedDirectoryListing(Folder $folder): array
+	{
+		$listing = [];
+		foreach ($folder->getDirectoryListing() as $node) {
+			$listing[] = $node;
+		}
+		usort($listing, static fn ($a, $b): int => strnatcasecmp($a->getName(), $b->getName()));
+		return $listing;
+	}
+
 	/** @return list<File> */
 	private function collectAudioFilesRecursive(Folder $folder): array
 	{

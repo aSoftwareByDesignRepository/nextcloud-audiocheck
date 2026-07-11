@@ -592,8 +592,6 @@
 					'aria-valuetext': t('audiocheck', 'Volume {percent}%', { percent: '100' }),
 				},
 			});
-			wrap.appendChild(muteBtn);
-			wrap.appendChild(slider);
 			const ui = { muteBtn, slider, wrap };
 			muteBtn.addEventListener('click', () => AudioCheckPlayer.toggleMute());
 			let dragging = false;
@@ -606,6 +604,35 @@
 			slider.addEventListener('change', () => {
 				AudioCheckPlayer.setVolumePercent(parseInt(slider.value, 10), { persist: true });
 			});
+			if (compact) {
+				const popover = el('details', { className: 'ac-volume-popover' });
+				const toggle = el('summary', {
+					className: 'ac-volume-popover__toggle',
+					attrs: {
+						'aria-label': t('audiocheck', 'Volume controls'),
+					},
+				});
+				if (window.AudioCheckIcons) {
+					toggle.appendChild(AudioCheckIcons.createSvg('volume-high'));
+				}
+				const panel = el('div', {
+					className: 'ac-volume-popover__panel',
+					attrs: { role: 'group', 'aria-label': t('audiocheck', 'Volume') },
+				});
+				panel.appendChild(slider);
+				panel.appendChild(muteBtn);
+				popover.appendChild(toggle);
+				popover.appendChild(panel);
+				popover.addEventListener('toggle', () => {
+					if (!popover.open) {
+						toggle.focus();
+					}
+				});
+				wrap.appendChild(popover);
+			} else {
+				wrap.appendChild(muteBtn);
+				wrap.appendChild(slider);
+			}
 			if (typeof AudioCheckPlayer.registerVolumeUi === 'function') {
 				ui.unsub = AudioCheckPlayer.registerVolumeUi(ui);
 			}

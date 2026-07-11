@@ -6,6 +6,7 @@ namespace OCA\AudioCheck\Tests\Integration;
 
 use OCA\AudioCheck\Controller\CoverController;
 use OCA\AudioCheck\Service\FileAccessService;
+use OCA\AudioCheck\Tests\Shim\IntegrationTestUsers;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\Files\File;
@@ -39,9 +40,7 @@ final class CoverForeignFileIntegrationTest extends TestCase
 		if (!isset(\OC::$server)) {
 			return;
 		}
-		/** @var IUserSession $session */
-		$session = \OC::$server->get(IUserSession::class);
-		$session->setUser(null);
+		IntegrationTestUsers::clearSession();
 		/** @var IUserManager $userManager */
 		$userManager = \OC::$server->get(IUserManager::class);
 		foreach ([self::OWNER, self::ATTACKER] as $uid) {
@@ -53,10 +52,8 @@ final class CoverForeignFileIntegrationTest extends TestCase
 
 	public function testForeignCoverReturnsUniformNotFoundJson(): void
 	{
-		/** @var IUserManager $userManager */
-		$userManager = \OC::$server->get(IUserManager::class);
-		$userManager->createUser(self::OWNER, self::PASSWORD);
-		$userManager->createUser(self::ATTACKER, self::PASSWORD);
+		IntegrationTestUsers::create(self::OWNER, self::PASSWORD);
+		IntegrationTestUsers::create(self::ATTACKER, self::PASSWORD);
 
 		/** @var FileAccessService $access */
 		$access = \OC::$server->get(FileAccessService::class);
@@ -65,9 +62,7 @@ final class CoverForeignFileIntegrationTest extends TestCase
 		$file->putContent($this->minimalMp3Bytes());
 		$fileId = (int)$file->getId();
 
-		/** @var IUserSession $session */
-		$session = \OC::$server->get(IUserSession::class);
-		$session->setUser($userManager->get(self::ATTACKER));
+		IntegrationTestUsers::loginAs(self::ATTACKER);
 
 		/** @var CoverController $controller */
 		$controller = \OC::$server->get(CoverController::class);

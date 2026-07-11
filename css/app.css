@@ -3,6 +3,9 @@
  * Tokens: --ac-* derived from Nextcloud CSS variables.
  */
 
+/* Nextcloud theming sets --color-* on body[data-theme-*], not :root. Theme-derived
+ * tokens must be re-bound on body and the app shell — defining them only on :root
+ * freezes light computed values for inherited --ac-bg-* / --ac-surface (ProjectCheck pattern). */
 :root {
 	--ac-space-1: 4px;
 	--ac-space-2: 8px;
@@ -20,15 +23,29 @@
 	--ac-fs-md: 1rem;
 	--ac-fs-lg: 1.25rem;
 	--ac-fs-xl: 1.5rem;
+	--ac-fs-2xl: 1.875rem;
+	--ac-line-tight: 1.2;
+	--ac-line-base: 1.45;
+	--ac-player-clearance: 0px;
+	--ac-nav-w: 260px;
+	--ac-touch: 44px;
+	/* Nextcloud breakpoints (literal values in @media — vars document intent only) */
+	--ac-bp-tablet: 768px;
+	--ac-bp-desktop: 1024px;
+}
+
+body,
+#content[class*="app-audiocheck"] {
 	--ac-shadow-sm: 0 1px 2px color-mix(in srgb, var(--color-main-text) 8%, transparent);
 	--ac-shadow-md: 0 8px 24px color-mix(in srgb, var(--color-main-text) 12%, transparent);
 	--ac-bg-soft: color-mix(in srgb, var(--color-main-background) 96%, var(--color-main-text) 4%);
 	--ac-bg-card: var(--color-main-background);
+	--ac-surface: var(--color-main-background);
 	--ac-border: var(--color-border, color-mix(in srgb, var(--color-main-text) 24%, transparent));
 	--ac-border-strong: color-mix(in srgb, var(--color-main-text) 50%, var(--color-border, transparent));
-	/* Secondary text: NC maxcontrast when available; otherwise a safe mix on every theme. */
-	--ac-muted: var(--color-text-maxcontrast, color-mix(in srgb, var(--color-main-text) 90%, var(--color-main-background)));
-	--ac-muted-strong: color-mix(in srgb, var(--color-main-text) 97%, var(--color-main-background));
+	/* Secondary text: NC maxcontrast (tuned per theme); safe mix fallback on older NC. */
+	--ac-muted: var(--color-text-maxcontrast, color-mix(in srgb, var(--color-main-text) 62%, transparent));
+	--ac-muted-strong: color-mix(in srgb, var(--color-main-text) 82%, var(--color-text-maxcontrast, transparent));
 	/* Content-kind accents — always derived from Nextcloud theme variables */
 	--ac-accent-music: var(--color-primary-element);
 	--ac-accent-music-text: var(--color-primary-element-text, var(--color-main-text));
@@ -44,17 +61,51 @@
 	--ac-danger-bg-hover: color-mix(in srgb, var(--ac-danger-ink) 24%, var(--color-main-background));
 	--ac-danger-border: color-mix(in srgb, var(--ac-danger-ink) 44%, var(--color-border, var(--ac-border)));
 	--ac-favorite-ink: var(--ac-danger-ink);
-	--ac-fs-2xl: 1.875rem;
-	--ac-line-tight: 1.2;
-	--ac-line-base: 1.45;
-	--ac-text: var(--color-main-text, #1d1d1d);
+	--ac-text: var(--color-main-text);
 	--ac-tint-info: color-mix(in srgb, var(--color-primary-element) 14%, transparent);
-	--ac-player-clearance: 0px;
-	--ac-nav-w: 260px;
-	--ac-touch: 44px;
-	/* Nextcloud breakpoints (literal values in @media — vars document intent only) */
-	--ac-bp-tablet: 768px;
-	--ac-bp-desktop: 1024px;
+}
+
+/* Re-bind theme tokens on the main pane so backgrounds track ink even when NC
+ * theme variables resolve differently on :root vs body (OS dark + user light, etc.). */
+#app-content.ac-app {
+	--ac-shadow-sm: 0 1px 2px color-mix(in srgb, var(--color-main-text) 8%, transparent);
+	--ac-shadow-md: 0 8px 24px color-mix(in srgb, var(--color-main-text) 12%, transparent);
+	--ac-bg-soft: color-mix(in srgb, var(--color-main-background) 96%, var(--color-main-text) 4%);
+	--ac-bg-card: var(--color-main-background);
+	--ac-surface: var(--color-main-background);
+	--ac-border: var(--color-border, color-mix(in srgb, var(--color-main-text) 24%, transparent));
+	--ac-border-strong: color-mix(in srgb, var(--color-main-text) 50%, var(--color-border, transparent));
+	--ac-muted: var(--color-text-maxcontrast, color-mix(in srgb, var(--color-main-text) 62%, transparent));
+	--ac-muted-strong: color-mix(in srgb, var(--color-main-text) 82%, var(--color-text-maxcontrast, transparent));
+	--ac-accent-music: var(--color-primary-element);
+	--ac-accent-music-text: var(--color-primary-element-text, var(--color-main-text));
+	--ac-accent-music-soft: color-mix(in srgb, var(--ac-accent-music) 14%, var(--color-main-background));
+	--ac-accent-audiobook: var(--color-warning, var(--color-primary-element));
+	--ac-accent-audiobook-text: var(--color-warning-text, var(--color-main-text));
+	--ac-accent-audiobook-soft: color-mix(in srgb, var(--ac-accent-audiobook) 16%, var(--color-main-background));
+	--ac-accent-auto: var(--color-text-maxcontrast, var(--color-main-text));
+	--ac-accent-auto-soft: color-mix(in srgb, var(--ac-accent-auto) 12%, var(--color-main-background));
+	--ac-danger-ink: var(--color-error-text, var(--color-error));
+	--ac-danger-bg: color-mix(in srgb, var(--ac-danger-ink) 16%, var(--color-main-background));
+	--ac-danger-bg-hover: color-mix(in srgb, var(--ac-danger-ink) 24%, var(--color-main-background));
+	--ac-danger-border: color-mix(in srgb, var(--ac-danger-ink) 44%, var(--color-border, var(--ac-border)));
+	--ac-favorite-ink: var(--ac-danger-ink);
+	--ac-text: var(--color-main-text);
+	--ac-tint-info: color-mix(in srgb, var(--color-primary-element) 14%, transparent);
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	align-items: stretch;
+	position: relative;
+	min-height: 0;
+	min-width: 0;
+	height: 100%;
+	overflow: hidden;
+	background: var(--color-main-background);
+	box-sizing: border-box;
+	color: var(--color-main-text);
+	color-scheme: light dark;
+	--ac-fs-xs: 0.875rem;
 }
 
 .ac-skip-link {
@@ -106,22 +157,6 @@
 	border-color: color-mix(in srgb, var(--color-success, var(--color-primary-element)) 44%, var(--ac-border));
 	background: color-mix(in srgb, var(--color-success, var(--color-primary-element)) 14%, var(--ac-bg-card));
 	color: var(--color-success-text, var(--color-main-text));
-}
-
-#app-content.ac-app {
-	display: flex;
-	flex: 1 1 auto;
-	flex-direction: column;
-	align-items: stretch;
-	position: relative;
-	min-height: 0;
-	min-width: 0;
-	height: 100%;
-	overflow: hidden;
-	background: var(--ac-bg-soft);
-	box-sizing: border-box;
-	color: var(--ac-text);
-	--ac-fs-xs: 0.875rem;
 }
 
 #app-content.ac-app #app-content-wrapper.ac-shell,
@@ -820,6 +855,14 @@
 	padding: var(--ac-space-5);
 	cursor: pointer;
 	list-style: none;
+}
+.ac-section-collapse__summary:focus-visible,
+.ac-media-folder-group__summary:focus-visible,
+.ac-music-folder-group__summary:focus-visible,
+.ac-facet-group__summary:focus-visible,
+.ac-now-sleep-details summary:focus-visible {
+	outline: 2px solid var(--color-primary-element, var(--ac-accent));
+	outline-offset: 2px;
 }
 .ac-section-collapse__summary::-webkit-details-marker { display: none; }
 .ac-section-collapse__summary::before {
@@ -1668,10 +1711,54 @@
 	align-self: center;
 }
 .ac-mini-player__volume {
-	display: none;
+	display: flex;
+	align-items: center;
+	min-width: 0;
 }
 .ac-mini-player__volume .ac-volume--compact {
 	max-width: none;
+}
+.ac-mini-player__volume .ac-volume-popover {
+	position: relative;
+}
+.ac-mini-player__volume .ac-volume-popover__toggle {
+	list-style: none;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: var(--ac-touch);
+	min-height: var(--ac-touch);
+	border-radius: var(--ac-radius-sm);
+}
+.ac-mini-player__volume .ac-volume-popover__toggle::-webkit-details-marker {
+	display: none;
+}
+.ac-mini-player__volume .ac-volume-popover__toggle:focus-visible {
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 2px;
+}
+	.ac-mini-player__volume .ac-volume-popover__panel {
+		display: none;
+		position: absolute;
+		right: 0;
+		bottom: calc(100% + var(--ac-space-2));
+		padding: var(--ac-space-2) var(--ac-space-3);
+		background: var(--ac-bg-card);
+		border: 1px solid var(--ac-border);
+		border-radius: var(--ac-radius-md);
+		box-shadow: var(--ac-shadow-raised);
+		min-width: 10rem;
+		z-index: 2;
+		gap: var(--ac-space-2);
+		align-items: center;
+	}
+.ac-mini-player__volume .ac-volume-popover[open] .ac-volume-popover__panel {
+	display: block;
+}
+.ac-mini-player__volume .ac-volume__slider {
+	width: 100%;
+	min-width: 8rem;
 }
 .ac-mini-player__open {
 	display: inline-flex;
@@ -1695,9 +1782,6 @@
 	display: block;
 	width: 1.25rem;
 	height: 1.25rem;
-}
-.ac-mini-player__volume .ac-volume__slider {
-	display: none;
 }
 .ac-seek {
 	flex: 1 1 auto;
@@ -3927,6 +4011,8 @@ body.ac-modal-open { overflow: hidden; }
 	height: var(--body-height, calc(100dvh - var(--header-height, 50px)));
 	max-height: var(--body-height, calc(100dvh - var(--header-height, 50px)));
 	overflow: hidden;
+	background: var(--color-main-background);
+	color: var(--color-main-text);
 }
 #content[class*="app-audiocheck"] > #app-content.ac-app {
 	flex: 1 1 auto;
@@ -4243,13 +4329,30 @@ body.ac-modal-open { overflow: hidden; }
 	.ac-mini-player__open-icon {
 		display: none;
 	}
+	.ac-mini-player__volume .ac-volume-popover {
+		display: flex;
+		align-items: center;
+		gap: var(--ac-space-2);
+	}
+	.ac-mini-player__volume .ac-volume-popover__panel {
+		position: static;
+		display: flex;
+		box-shadow: none;
+		border: none;
+		padding: 0;
+		min-width: 0;
+	}
+	.ac-mini-player__volume .ac-volume-popover__toggle {
+		display: none;
+	}
 	.ac-mini-player__volume .ac-volume__slider {
 		display: block;
+		max-width: 9rem;
 	}
 	.ac-mini-player__volume {
-		display: block;
+		display: flex;
 		min-width: 0;
-		max-width: 9rem;
+		max-width: 12rem;
 	}
 }
 
@@ -4745,7 +4848,9 @@ body.ac-modal-open { overflow: hidden; }
 }
 
 @media (prefers-contrast: more) {
-	:root {
+	body,
+	#content[class*="app-audiocheck"],
+	#app-content.ac-app {
 		--ac-muted: var(--color-main-text);
 		--ac-muted-strong: var(--color-main-text);
 		--ac-border: color-mix(in srgb, var(--color-main-text) 50%, transparent);

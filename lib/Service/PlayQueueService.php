@@ -6,6 +6,7 @@ namespace OCA\AudioCheck\Service;
 
 use OCA\AudioCheck\Exception\NotFoundException;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\DB\Exception as DBException;
 use OCP\IDBConnection;
 
 /**
@@ -130,7 +131,23 @@ class PlayQueueService
 		try {
 			$existing = $this->findQueue($userId);
 			if ($existing === null) {
-				$queueId = $this->insertQueue($userId, $currentIndex, $speed, $shuffle, $repeat, $now);
+				try {
+					$queueId = $this->insertQueue($userId, $currentIndex, $speed, $shuffle, $repeat, $now);
+				} catch (DBException $e) {
+					// Two tabs saving simultaneously can both see "no queue" and
+					// race on the user_id unique index; the loser updates instead.
+					if ($e->getReason() !== DBException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
+						throw $e;
+					}
+					$this->db->rollBack();
+					$this->db->beginTransaction();
+					$row = $this->findQueue($userId);
+					if ($row === null) {
+						throw $e;
+					}
+					$queueId = (int)$row['id'];
+					$this->updateQueue($queueId, $currentIndex, $speed, $shuffle, $repeat, $now);
+				}
 				$this->replaceItems($queueId, $clean);
 			} else {
 				$queueId = (int)$existing['id'];

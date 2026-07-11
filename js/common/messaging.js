@@ -38,11 +38,11 @@
 		const text = message == null ? '' : String(message);
 		if (!text) return;
 		const kind = type || 'info';
-		announce(text, kind === 'error' ? 'error' : (kind === 'warning' ? 'warning' : 'success'));
 		if (window.OC && OC.Notification && OC.Notification.showTemporary) {
 			OC.Notification.showTemporary(text, { type: kind });
 			return;
 		}
+		announce(text, kind === 'error' ? 'error' : (kind === 'warning' ? 'warning' : 'success'));
 		const container = ensureToastContainer();
 		const toast = document.createElement('div');
 		toast.className = 'ac-toast ac-toast--' + kind;
