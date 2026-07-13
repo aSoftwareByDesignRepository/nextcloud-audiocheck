@@ -172,6 +172,9 @@ body,
 	flex: 1 1 auto;
 	min-height: 0;
 	min-width: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
 }
 
 #app-content.ac-app .ac-page-header {
@@ -554,12 +557,10 @@ body,
 }
 
 .ac-main {
-	flex: 1 1 auto;
+	flex: 0 0 auto;
 	min-width: 0;
 	min-height: 0;
-	overflow-x: clip;
-	overflow-y: auto;
-	-webkit-overflow-scrolling: touch;
+	overflow: visible;
 	width: 100%;
 	max-width: none;
 	box-sizing: border-box;
@@ -1702,7 +1703,9 @@ body,
 }
 .ac-mini-player__side {
 	display: flex;
+	flex-direction: row;
 	align-items: center;
+	flex-wrap: nowrap;
 	gap: var(--ac-space-2);
 	min-width: 0;
 	grid-column: 2;
@@ -1738,23 +1741,25 @@ body,
 	outline: 2px solid var(--color-primary-element);
 	outline-offset: 2px;
 }
-	.ac-mini-player__volume .ac-volume-popover__panel {
-		display: none;
-		position: absolute;
-		right: 0;
-		bottom: calc(100% + var(--ac-space-2));
-		padding: var(--ac-space-2) var(--ac-space-3);
-		background: var(--ac-bg-card);
-		border: 1px solid var(--ac-border);
-		border-radius: var(--ac-radius-md);
-		box-shadow: var(--ac-shadow-raised);
-		min-width: 10rem;
-		z-index: 2;
-		gap: var(--ac-space-2);
-		align-items: center;
-	}
+.ac-mini-player__volume .ac-volume-popover__panel {
+	display: none;
+	position: absolute;
+	right: 0;
+	bottom: calc(100% + var(--ac-space-2));
+	padding: var(--ac-space-2) var(--ac-space-3);
+	background: var(--ac-bg-card);
+	border: 1px solid var(--ac-border);
+	border-radius: var(--ac-radius-md);
+	box-shadow: var(--ac-shadow-raised);
+	min-width: 10rem;
+	z-index: 2;
+	gap: var(--ac-space-2);
+	flex-direction: row;
+	flex-wrap: nowrap;
+	align-items: center;
+}
 .ac-mini-player__volume .ac-volume-popover[open] .ac-volume-popover__panel {
-	display: block;
+	display: flex;
 }
 .ac-mini-player__volume .ac-volume__slider {
 	width: 100%;
@@ -4002,7 +4007,7 @@ body.ac-modal-open { overflow: hidden; }
 	padding: var(--ac-space-5);
 }
 
-/* App shell fills viewport; only .ac-main scrolls (no dead zone below mini player). */
+/* App shell fills viewport; .ac-shell scrolls (header + main); mini-player stays pinned. */
 #content[class*="app-audiocheck"] {
 	display: flex;
 	flex-direction: row;
@@ -4026,14 +4031,14 @@ body.ac-modal-open { overflow: hidden; }
 #app-content.ac-app .ac-shell {
 	flex: 1 1 auto;
 	min-height: 0;
-	overflow: hidden;
+	overflow-x: hidden;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
 }
 #app-content.ac-app .ac-main {
-	flex: 1 1 auto;
+	flex: 0 0 auto;
 	min-height: 0;
-	overflow-y: auto;
-	overflow-x: hidden;
-	-webkit-overflow-scrolling: touch;
+	overflow: visible;
 }
 
 /* —— Mobile / tablet shell (<1024px): drawer nav + hide core NC toggle —— */
@@ -4275,6 +4280,13 @@ body.ac-modal-open { overflow: hidden; }
 	.ac-shell {
 		padding: var(--ac-space-5) var(--ac-space-6) var(--ac-space-7);
 	}
+	.ac-app--music #app-content-wrapper.ac-shell,
+	.ac-app--audiobooks #app-content-wrapper.ac-shell,
+	.ac-app--playlists #app-content-wrapper.ac-shell,
+	.ac-app--browse #app-content-wrapper.ac-shell,
+	.ac-app--playlist #app-content-wrapper.ac-shell {
+		padding: var(--ac-space-3) var(--ac-space-5);
+	}
 }
 
 @media (min-width: 1024px) {
@@ -4309,7 +4321,55 @@ body.ac-modal-open { overflow: hidden; }
 		overflow-y: auto;
 		border-inline-end: 1px solid var(--ac-border);
 	}
+}
 
+/* Mini-player: tablet 2-row (track + transport + volume popover | full-width seek) */
+@media (min-width: 768px) and (max-width: 1279px) {
+	.ac-mini-player__inner {
+		grid-template-columns: minmax(0, 1fr) auto auto;
+		grid-template-rows: auto auto;
+		gap: var(--ac-space-2) var(--ac-space-3);
+		padding: var(--ac-space-2) var(--ac-space-4);
+		align-items: center;
+	}
+	.ac-mini-player__track {
+		grid-column: 1;
+		grid-row: 1;
+		min-width: 0;
+	}
+	.ac-mini-player__transport {
+		grid-column: 2;
+		grid-row: 1;
+	}
+	.ac-mini-player__side {
+		grid-column: 3;
+		grid-row: 1;
+		justify-content: flex-end;
+	}
+	.ac-mini-player__seek {
+		grid-column: 1 / -1;
+		grid-row: 2;
+	}
+	.ac-mini-player__open {
+		display: none;
+	}
+	.ac-mini-player__volume .ac-volume-popover__toggle {
+		display: inline-flex;
+	}
+	.ac-mini-player__volume .ac-volume-popover__panel {
+		position: absolute;
+		display: none;
+		flex-direction: row;
+		flex-wrap: nowrap;
+		align-items: center;
+	}
+	.ac-mini-player__volume .ac-volume-popover[open] .ac-volume-popover__panel {
+		display: flex;
+	}
+}
+
+/* Mini-player: wide desktop single row with inline volume */
+@media (min-width: 1280px) {
 	.ac-mini-player__inner {
 		grid-template-columns: minmax(0, 11rem) auto minmax(0, 1fr) auto;
 		grid-template-rows: auto;
@@ -4329,6 +4389,9 @@ body.ac-modal-open { overflow: hidden; }
 	.ac-mini-player__open-icon {
 		display: none;
 	}
+	.ac-mini-player__open {
+		display: none;
+	}
 	.ac-mini-player__volume .ac-volume-popover {
 		display: flex;
 		align-items: center;
@@ -4337,6 +4400,9 @@ body.ac-modal-open { overflow: hidden; }
 	.ac-mini-player__volume .ac-volume-popover__panel {
 		position: static;
 		display: flex;
+		flex-direction: row;
+		flex-wrap: nowrap;
+		align-items: center;
 		box-shadow: none;
 		border: none;
 		padding: 0;
@@ -4584,6 +4650,114 @@ body.ac-modal-open { overflow: hidden; }
 	margin-top: 0;
 }
 
+/* Library browse pages — shell scrolls with header (no nested results region) */
+.ac-shell--library-browse .ac-main {
+	gap: var(--ac-space-3);
+}
+
+.ac-library-browse-page {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+}
+
+.ac-library-shell--browse {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ac-space-2);
+	overflow: visible;
+	flex: none;
+}
+
+.ac-library-shell__controls {
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--ac-space-2);
+}
+
+.ac-library-shell__scroll {
+	overflow: visible;
+	flex: none;
+	display: flex;
+	flex-direction: column;
+	gap: var(--ac-space-3);
+	border-top: 1px solid var(--ac-border);
+	padding-top: var(--ac-space-2);
+	margin-top: var(--ac-space-1);
+}
+
+.ac-library-shell--browse .ac-browse-tabs {
+	margin-bottom: 0;
+}
+
+.ac-library-shell--browse .ac-facet-browse-toolbar,
+.ac-library-shell--browse .ac-media-library-toolbar {
+	margin-bottom: 0;
+}
+
+.ac-library-shell--browse .ac-facet-browse-status,
+.ac-library-shell--browse .ac-media-library-status {
+	margin: 0;
+	font-size: var(--ac-fs-xs);
+}
+
+.ac-library-shell--browse .ac-library-filters {
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ac-space-2) var(--ac-space-3);
+}
+
+.ac-library-shell--browse .ac-library-filters__group {
+	flex: 0 1 auto;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ac-space-2);
+	min-width: 0;
+}
+
+.ac-library-shell--browse .ac-chip-row {
+	gap: var(--ac-space-1);
+}
+
+/* Wider content column on library browse views */
+.ac-app--music #app-content-wrapper.ac-shell,
+.ac-app--audiobooks #app-content-wrapper.ac-shell,
+.ac-app--playlists #app-content-wrapper.ac-shell,
+.ac-app--browse #app-content-wrapper.ac-shell,
+.ac-app--playlist #app-content-wrapper.ac-shell {
+	max-width: none;
+	padding-top: var(--ac-space-3);
+	padding-bottom: var(--ac-space-3);
+}
+
+.ac-app--music .ac-page-header,
+.ac-app--audiobooks .ac-page-header,
+.ac-app--playlists .ac-page-header,
+.ac-app--browse .ac-page-header,
+.ac-app--playlist .ac-page-header {
+	margin-bottom: var(--ac-space-3);
+	gap: var(--ac-space-2);
+}
+
+@media (min-width: 768px) {
+	.ac-facet-group__summary .ac-media-folder-group__name {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+	.ac-facet-group__summary .ac-playlist-group__actions {
+		flex: 0 1 auto;
+		order: 0;
+		margin-left: auto;
+	}
+	.ac-facet-group__summary .ac-facet-group__play {
+		order: 0;
+		margin-left: var(--ac-space-2);
+	}
+}
+
 /* Library browse pages — shared content shell (Music, Audiobooks, Browse, Playlists) */
 .ac-library-shell {
 	display: flex;
@@ -4595,9 +4769,20 @@ body.ac-modal-open { overflow: hidden; }
 	background: var(--ac-bg-card);
 	box-shadow: var(--ac-shadow-sm);
 }
+.ac-section.ac-card.ac-library-shell.ac-library-shell--browse,
+.ac-library-shell.ac-library-shell--browse {
+	flex: none;
+	overflow: visible;
+	gap: var(--ac-space-2);
+	padding: var(--ac-space-3);
+}
 .ac-media-library-page .ac-browse-tabs,
 .ac-facet-browse-page .ac-browse-tabs {
 	margin-bottom: var(--ac-space-3);
+}
+.ac-facet-browse-page .ac-library-shell--browse .ac-browse-tabs,
+.ac-media-library-page .ac-library-shell--browse .ac-browse-tabs {
+	margin-bottom: 0;
 }
 .ac-library-shell .ac-facet-browse-lead,
 .ac-library-shell .ac-media-library-lead {

@@ -60,7 +60,7 @@
 		AudioCheckRouter.register(config.viewId, {
 			render() {
 				const frag = document.createDocumentFragment();
-				const body = C.el('div', { className: 'ac-page-body ac-media-library-page ac-facet-browse-page' });
+				const body = C.el('div', { className: 'ac-page-body ac-media-library-page ac-facet-browse-page ac-library-browse-page' });
 
 				let activeTab = config.tabs[0].id;
 				let sort = 'title';
@@ -70,10 +70,8 @@
 				let tabButtons = [];
 				let panel = null;
 				let toolbar = null;
-				let leadEl = null;
 				let status = null;
 				let moreWrap = null;
-				let searchHintEl = null;
 				let playableCache = [];
 
 				const playAllBtn = C.el('button', {
@@ -135,9 +133,6 @@
 						btn.setAttribute('tabindex', on ? '0' : '-1');
 					});
 					if (panel) panel.setAttribute('aria-labelledby', idPrefix + '-tab-' + type);
-					if (leadEl && config.tabLeads[type]) {
-						leadEl.textContent = config.tabLeads[type];
-					}
 					if (window.AudioCheckPageChrome) {
 						if (type === 'tracks') AudioCheckPageChrome.setActions(playAllBtn);
 						else AudioCheckPageChrome.clearActions();
@@ -161,6 +156,7 @@
 							sort,
 							options: LPU().defaultSortOptions(sortArtistLabel),
 							groupLabel: t('audiocheck', 'Sort by'),
+							compact: true,
 							onChange: (nextSort) => {
 								sort = nextSort;
 								loadTab(tabId, true);
@@ -171,6 +167,7 @@
 						filtersRow.appendChild(LPU().buildHideListenedFilter({
 							idPrefix,
 							checked: hideListened,
+							compact: true,
 							onChange: (next) => {
 								hideListened = next;
 								loadTab(tabId, true);
@@ -182,12 +179,6 @@
 						toolbar.hidden = false;
 					} else {
 						toolbar.hidden = true;
-					}
-				}
-
-				function refreshSearchHint() {
-					if (searchHintEl && typeof searchHintEl.refresh === 'function') {
-						searchHintEl.refresh();
 					}
 				}
 
@@ -414,7 +405,6 @@
 				function loadTab(type, reset) {
 					setActiveTab(type);
 					updateToolbar(type);
-					refreshSearchHint();
 					if (reset) page = 1;
 					if (type === 'tracks') loadTracks(!!reset);
 					else if (type === 'folders') loadFolders(!!reset);
@@ -437,10 +427,6 @@
 						role: 'tabpanel',
 						'aria-labelledby': idPrefix + '-tab-' + activeTab,
 					},
-				});
-				leadEl = C.el('p', {
-					className: 'ac-section__lead ac-media-library-lead ac-facet-browse-lead',
-					text: config.tabLeads[activeTab] || '',
 				});
 				toolbar = C.el('div', { className: 'ac-toolbar ac-collection-toolbar ac-media-library-toolbar ac-facet-browse-toolbar' });
 				status = C.el('p', {
@@ -478,15 +464,15 @@
 					return btn;
 				});
 
-				const shell = LPU() ? LPU().createContentShell() : C.el('div', { className: 'ac-library-shell' });
-				searchHintEl = LPU() ? LPU().buildSearchHint(searchQuery) : null;
-				shell.appendChild(leadEl);
-				if (searchHintEl) shell.appendChild(searchHintEl);
-				shell.appendChild(toolbar);
-				shell.appendChild(status);
-				shell.appendChild(panel);
-				shell.appendChild(moreWrap);
-				body.appendChild(tabBar);
+				const browseParts = LPU() ? LPU().createBrowseShell(config.viewsAriaLabel) : null;
+				const shell = browseParts ? browseParts.shell : C.el('div', { className: 'ac-library-shell ac-library-shell--browse' });
+				const controls = browseParts ? browseParts.controls : shell;
+				const scroll = browseParts ? browseParts.scroll : shell;
+				controls.appendChild(tabBar);
+				controls.appendChild(toolbar);
+				controls.appendChild(status);
+				scroll.appendChild(panel);
+				scroll.appendChild(moreWrap);
 				body.appendChild(shell);
 				frag.appendChild(body);
 

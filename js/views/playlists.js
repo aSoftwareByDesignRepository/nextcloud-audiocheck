@@ -377,12 +377,10 @@
 			? t('audiocheck', 'All playlists')
 			: t('audiocheck', 'Your playlists');
 
-		const shell = LPU() ? LPU().createContentShell() : C.el('div', { className: 'ac-library-shell' });
-		const searchHint = LPU() ? LPU().buildSearchHint(searchQuery) : null;
-		const lead = C.el('p', {
-			className: 'ac-section__lead ac-facet-browse-lead',
-			text: t('audiocheck', 'Open a playlist to see its tracks. Use Play on a row or Play all on a group header.'),
-		});
+		const browseParts = LPU() ? LPU().createBrowseShell(t('audiocheck', 'Playlists')) : null;
+		const shell = browseParts ? browseParts.shell : C.el('div', { className: 'ac-library-shell ac-library-shell--browse' });
+		const controls = browseParts ? browseParts.controls : shell;
+		const scroll = browseParts ? browseParts.scroll : shell;
 		const status = C.el('p', {
 			className: 'ac-field__hint ac-facet-browse-status',
 			attrs: { role: 'status', 'aria-live': 'polite' },
@@ -390,10 +388,9 @@
 		const panel = C.el('div', { className: 'ac-media-library-panel ac-facet-browse-panel' });
 		const sectionsWrap = C.el('div', { className: 'ac-library-sections' });
 		panel.appendChild(sectionsWrap);
-		shell.appendChild(lead);
-		if (searchHint) shell.appendChild(searchHint);
-		shell.appendChild(status);
-		shell.appendChild(panel);
+		controls.appendChild(status);
+		scroll.appendChild(panel);
+		body.classList.add('ac-library-browse-page');
 		body.appendChild(shell);
 
 		function reloadPage() {
@@ -522,8 +519,11 @@
 			});
 		}
 
-		const body = C.el('div', { className: 'ac-page-body ac-playlists-page ac-facet-browse-page' });
-		const shell = LPU() ? LPU().createContentShell() : C.el('div', { className: 'ac-library-shell' });
+		const body = C.el('div', { className: 'ac-page-body ac-playlists-page ac-facet-browse-page ac-library-browse-page' });
+		const browseParts = LPU() ? LPU().createBrowseShell(t('audiocheck', 'Playlist tracks')) : null;
+		const shell = browseParts ? browseParts.shell : C.el('div', { className: 'ac-library-shell ac-library-shell--browse' });
+		const controls = browseParts ? browseParts.controls : shell;
+		const scroll = browseParts ? browseParts.scroll : shell;
 		const toolbar = C.el('div', { className: 'ac-toolbar ac-collection-toolbar ac-facet-browse-toolbar' });
 		const status = C.el('p', {
 			className: 'ac-field__hint ac-facet-browse-status',
@@ -531,10 +531,10 @@
 		});
 		const panel = C.el('div', { className: 'ac-media-library-panel ac-facet-browse-panel' });
 		const moreWrap = C.el('div', { className: 'ac-toolbar ac-toolbar--compact ac-facet-browse-more' });
-		shell.appendChild(toolbar);
-		shell.appendChild(status);
-		shell.appendChild(panel);
-		shell.appendChild(moreWrap);
+		controls.appendChild(toolbar);
+		controls.appendChild(status);
+		scroll.appendChild(panel);
+		scroll.appendChild(moreWrap);
 		body.appendChild(shell);
 		frag.appendChild(body);
 
@@ -570,6 +570,7 @@
 					sort,
 					options: LPU().defaultSortOptions(),
 					groupLabel: t('audiocheck', 'Sort by'),
+					compact: true,
 					onChange: (nextSort) => {
 						sort = nextSort;
 						loadTracks(true);
@@ -795,7 +796,7 @@
 			});
 			if (window.AudioCheckPageChrome) AudioCheckPageChrome.setActions(createBtn);
 
-			const body = C.el('div', { className: 'ac-page-body ac-playlists-page ac-facet-browse-page' });
+			const body = C.el('div', { className: 'ac-page-body ac-playlists-page ac-facet-browse-page ac-library-browse-page' });
 			body.appendChild(C.el('div', {
 				className: 'ac-playlists-loading',
 				attrs: { role: 'status', 'aria-live': 'polite' },

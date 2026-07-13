@@ -18,11 +18,15 @@
 	 * @param {string} [opts.groupLabel]
 	 * @param {(sort: string) => void} opts.onChange
 	 */
+	function filterLabelClass(compact) {
+		return 'ac-library-filters__label' + (compact ? ' ac-sr-only' : '');
+	}
+
 	function buildSortChipRow(opts) {
 		const wrap = C.el('div', { className: 'ac-library-filters__group' });
 		if (opts.groupLabel) {
 			wrap.appendChild(C.el('p', {
-				className: 'ac-library-filters__label',
+				className: filterLabelClass(!!opts.compact),
 				text: opts.groupLabel,
 			}));
 		}
@@ -68,9 +72,10 @@
 				opts.onChange(next);
 			},
 		});
+		const compact = !!opts.compact;
 		return C.el('div', { className: 'ac-library-filters__group' }, [
 			C.el('p', {
-				className: 'ac-library-filters__label',
+				className: filterLabelClass(compact),
 				text: t('audiocheck', 'Display'),
 			}),
 			C.el('div', {
@@ -107,6 +112,21 @@
 		});
 	}
 
+	/**
+	 * Library browse shell: fixed controls + dedicated scroll region for results.
+	 * @param {string} [ariaLabel]
+	 * @returns {{ shell: HTMLElement, controls: HTMLElement, scroll: HTMLElement }}
+	 */
+	function createBrowseShell(ariaLabel) {
+		const shell = createContentShell(ariaLabel);
+		shell.classList.add('ac-library-shell--browse');
+		const controls = C.el('div', { className: 'ac-library-shell__controls' });
+		const scroll = C.el('div', { className: 'ac-library-shell__scroll' });
+		shell.appendChild(controls);
+		shell.appendChild(scroll);
+		return { shell, controls, scroll };
+	}
+
 	function defaultSortOptions(artistLabel) {
 		return [
 			{ v: 'title', l: t('audiocheck', 'Title') },
@@ -122,6 +142,7 @@
 		buildHideListenedFilter,
 		buildSearchHint,
 		createContentShell,
+		createBrowseShell,
 		defaultSortOptions,
 	};
 })();

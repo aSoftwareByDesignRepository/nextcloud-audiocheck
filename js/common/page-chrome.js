@@ -46,6 +46,16 @@
 		detail.textContent = t('audiocheck', 'Your audio library in Nextcloud');
 	}
 
+	const LIBRARY_BROWSE_VIEWS = new Set(['music', 'audiobooks', 'playlists', 'browse', 'playlist']);
+
+	function updateScopeStripVisibility(viewId) {
+		const strip = document.getElementById('ac-scope-strip');
+		if (!strip) return;
+		const hide = LIBRARY_BROWSE_VIEWS.has(viewId);
+		strip.hidden = hide;
+		strip.setAttribute('aria-hidden', hide ? 'true' : 'false');
+	}
+
 	function update(viewId, overrides) {
 		const meta = readViewMeta();
 		const view = Object.assign({}, meta[viewId] || {}, overrides || {});
@@ -69,6 +79,7 @@
 
 		const lead = document.getElementById('ac-page-lead');
 		if (lead) lead.hidden = !help;
+		updateScopeStripVisibility(viewId);
 	}
 
 	function setActions(nodes) {

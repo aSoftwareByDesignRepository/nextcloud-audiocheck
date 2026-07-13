@@ -51,12 +51,21 @@
 		render(viewId, params || {});
 	}
 
+	const LIBRARY_BROWSE_VIEWS = new Set(['music', 'audiobooks', 'playlists', 'browse', 'playlist']);
+
+	function updateMainLayout(viewId) {
+		const shell = document.getElementById('app-content-wrapper');
+		if (!shell) return;
+		shell.classList.toggle('ac-shell--library-browse', LIBRARY_BROWSE_VIEWS.has(viewId));
+	}
+
 	function render(viewId, params) {
 		if (!root) return;
 		currentView = viewId;
 		root.dataset.acView = viewId;
 		const appContent = document.getElementById('app-content');
 		if (appContent) appContent.dataset.acView = viewId;
+		updateMainLayout(viewId);
 		if (window.AudioCheckPageChrome) {
 			AudioCheckPageChrome.clearActions();
 			AudioCheckPageChrome.update(viewId, params.pageChrome || null);
