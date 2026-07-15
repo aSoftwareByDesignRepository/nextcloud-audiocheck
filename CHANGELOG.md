@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## 1.2.9 - 2026-07-15
+
+### Fixed
+
+- **Favorites listing regression test** — unit and integration tests lock in hardened `loadFavoriteFileIds()` behavior (issue #3).
+- **Native widget scheme on forced themes** (issue #4 follow-up) — `color-scheme` is now bound to the applied Nextcloud theme (`body[data-theme-*]`) instead of a blanket `light dark`, so select dropdowns, spinners, and other browser-drawn widgets no longer render white on a forced dark theme when the OS prefers light (and vice versa). Modals and toasts, which portal onto `<body>`, get the same binding.
+- **Active sort chip contrast** — active filter chips paired `--color-primary-element-light` backgrounds with `--color-primary-element-text` ink, which is tuned for the solid primary color and became dark-on-dark (illegible) on dark themes; they now use `--color-primary-element-light-text`.
+- **Stale `theme-bind.css` after upgrades** — the late-loaded theme re-binding stylesheet is now versioned (`?v=<app version>`) so browsers pick up theming fixes on upgrade instead of serving a months-old cached copy.
+
 ## 1.2.8 - 2026-07-13
 
 ### Changed

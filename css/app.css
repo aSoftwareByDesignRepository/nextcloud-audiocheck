@@ -104,8 +104,35 @@ body,
 	background: var(--color-main-background);
 	box-sizing: border-box;
 	color: var(--color-main-text);
-	color-scheme: light dark;
 	--ac-fs-xs: 0.875rem;
+}
+
+/* Native widget scheme (scrollbars, select popups, spinners) must follow the
+ * applied Nextcloud theme, not the OS preference: a plain `light dark` here lets
+ * the OS pick, producing white scrollbars/dropdowns on a forced dark theme (and
+ * vice versa). NC only emits a color-scheme meta for forced light/dark — not for
+ * high-contrast or the system-default theme — so bind it to body[data-theme-*].
+ * Modals and toasts portal onto <body>, so they need the same binding. */
+#app-content.ac-app,
+.ac-modal,
+.ac-toast-fallback {
+	color-scheme: light dark; /* system-default theme follows the OS, like NC's media queries */
+}
+body[data-theme-light] #app-content.ac-app,
+body[data-theme-light] .ac-modal,
+body[data-theme-light] .ac-toast-fallback,
+body[data-theme-light-highcontrast] #app-content.ac-app,
+body[data-theme-light-highcontrast] .ac-modal,
+body[data-theme-light-highcontrast] .ac-toast-fallback {
+	color-scheme: light;
+}
+body[data-theme-dark] #app-content.ac-app,
+body[data-theme-dark] .ac-modal,
+body[data-theme-dark] .ac-toast-fallback,
+body[data-theme-dark-highcontrast] #app-content.ac-app,
+body[data-theme-dark-highcontrast] .ac-modal,
+body[data-theme-dark-highcontrast] .ac-toast-fallback {
+	color-scheme: dark;
 }
 
 .ac-skip-link {
@@ -4638,7 +4665,10 @@ body.ac-modal-open { overflow: hidden; }
 .ac-filter-chip[aria-pressed="true"] {
 	border-color: var(--color-primary-element);
 	background: var(--color-primary-element-light);
-	color: var(--color-primary-element-text);
+	/* -light backgrounds pair with -light-text; plain -text is tuned for the solid
+	 * primary and goes dark-on-dark on dark themes (illegible active chip). */
+	color: var(--color-primary-element-light-text, var(--color-main-text));
+	font-weight: 600;
 }
 
 .ac-filter-chip:focus-visible {
