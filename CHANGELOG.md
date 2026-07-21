@@ -5,7 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## 1.2.10 - 2026-07-21
+
+### Fixed
+
+- **Queue-wide listening speed** — changing speed on Now playing now sticks for the whole queue. The HTML media `load()` algorithm was resetting `playbackRate` to `1×` on every track change because only `playbackRate` (not `defaultPlaybackRate`) was set before `src`/`load()`. Both rates are kept in sync and re-applied after load/play; the UI reads the session speed via `getSpeed()` instead of the audio element.
+- **Keyboard speed shortcuts** — `[` / `]` now persist the new rate with the queue/session (same as the speed control).
+- **Settings default speed** — saving the default no longer overrides an active listening session mid-queue.
+
+### Changed
+
+- **Now playing speed control** — clearer “Listening speed” label with − / select / + controls, hint that speed applies to the whole queue, 44px touch targets, and WCAG-focused labels/descriptions.
 
 ## 1.2.9 - 2026-07-15
 

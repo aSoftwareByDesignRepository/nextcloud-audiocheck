@@ -450,13 +450,42 @@
 	function normalizeSpeed(centi) {
 		const presets = AudioCheckConstants.SPEED_PRESETS;
 		const n = Math.round(Number(centi));
+		if (!Number.isFinite(n) || n <= 0) return 100;
 		if (presets.includes(n)) return n;
-		return 100;
+		// Snap to nearest preset so the UI select and HTMLMediaElement stay aligned
+		// with values that may have been clamped (not snapped) on the server.
+		let best = 100;
+		let bestDist = Infinity;
+		for (let i = 0; i < presets.length; i++) {
+			const d = Math.abs(presets[i] - n);
+			if (d < bestDist) {
+				bestDist = d;
+				best = presets[i];
+			}
+		}
+		return best;
 	}
 
 	function defaultSpeedFromPrefs() {
 		const prefs = window.AudioCheckUserPrefs || {};
 		return normalizeSpeed(typeof prefs.defaultSpeed === 'number' ? prefs.defaultSpeed : 100);
+	}
+
+	/**
+	 * Apply session speed to the <audio> element.
+	 *
+	 * The HTML media element load algorithm resets playbackRate to
+	 * defaultPlaybackRate whenever src changes or load() runs. Setting only
+	 * playbackRate before load() is therefore wiped on every track change —
+	 * which made speed appear to apply to "this song only". Keep both in sync
+	 * and re-apply after load events as a belt-and-suspenders guard.
+	 */
+	function applyPlaybackRate(media) {
+		const a = media || audio();
+		if (!a) return;
+		const rate = speed / 100;
+		a.defaultPlaybackRate = rate;
+		a.playbackRate = rate;
 	}
 
 	const audio = () => document.getElementById('ac-audio');
@@ -786,11 +815,12 @@
 		const presets = AudioCheckConstants.SPEED_PRESETS;
 		let idx = presets.indexOf(speed);
 		if (idx < 0) idx = presets.indexOf(100);
+		if (idx < 0) idx = 0;
 		idx = Math.max(0, Math.min(presets.length - 1, idx + delta));
 		speed = presets[idx];
-		const a = audio();
-		if (a) a.playbackRate = speed / 100;
+		applyPlaybackRate();
 		announce(t('audiocheck', 'Speed: {speed}×', { speed: (speed / 100).toFixed(2) }));
+		if (!bootstrapRestoring) schedulePersistSession();
 		notify();
 	}
 
@@ -908,6 +938,9 @@
 		});
 		a.addEventListener('play', () => {
 			passiveLoad = false;
+			// Some browsers re-assert defaultPlaybackRate on play transitions;
+			// keep the session speed authoritative.
+			applyPlaybackRate(a);
 			updateMini(activeTrack(), { announce: false });
 			startProgressTimer();
 			notify();
@@ -1010,6 +1043,8 @@
 		});
 	}
 
+	let loadGeneration = 0;
+
 	function loadTrack(i, positionMs, autoplay) {
 		const track = queue[i];
 		if (!track) return;
@@ -1021,16 +1056,22 @@
 		index = i;
 		const a = audio();
 		const shouldPlay = autoplay !== false;
+		const gen = ++loadGeneration;
 
 		function beginPlayback(seekMs) {
+			if (gen !== loadGeneration) return;
 			passiveLoad = !shouldPlay;
+			// Set defaultPlaybackRate BEFORE src/load so the media element load
+			// algorithm restores our session rate instead of 1.0×.
+			applyPlaybackRate(a);
 			a.src = AudioCheckApi.streamUrl(track.fileId);
-			a.playbackRate = speed / 100;
 			a.load();
+			applyPlaybackRate(a);
 			if (shouldPlay) {
 				const playPromise = a.play();
 				if (playPromise && typeof playPromise.catch === 'function') {
 					playPromise.catch((err) => {
+						if (gen !== loadGeneration) return;
 						const name = err && err.name;
 						if (name === 'AbortError') return;
 						if (name === 'NotAllowedError') {
@@ -1045,18 +1086,18 @@
 					});
 				}
 			}
-			if (seekMs > 0) {
-				a.addEventListener('loadedmetadata', function onMeta() {
-					a.removeEventListener('loadedmetadata', onMeta);
-					a.currentTime = seekMs / 1000;
-				});
-			}
+			a.addEventListener('loadedmetadata', function onMeta() {
+				a.removeEventListener('loadedmetadata', onMeta);
+				if (gen !== loadGeneration || index !== i) return;
+				applyPlaybackRate(a);
+				const seek = Number(seekMs) || 0;
+				if (seek > 0) a.currentTime = seek / 1000;
+			});
 			if (!track.chapters) {
 				AudioCheckApi.get('/apps/audiocheck/api/playable/{fileId}', null, { params: { fileId: track.fileId } }).then((r) => {
-					if (r.track) {
-						queue[i] = Object.assign({}, track, r.track);
-						notify();
-					}
+					if (gen !== loadGeneration || index !== i || !r.track) return;
+					queue[i] = Object.assign({}, track, r.track);
+					notify();
 				}).catch(() => {});
 			}
 			updateMini(track);
@@ -1081,7 +1122,10 @@
 			beginPlayback(Number(positionMs) || 0);
 			return;
 		}
-		resolveTrackStartMs(i).then((seekMs) => beginPlayback(seekMs));
+		resolveTrackStartMs(i).then((seekMs) => {
+			if (gen !== loadGeneration) return;
+			beginPlayback(seekMs);
+		});
 	}
 
 	function toggle() {
@@ -1146,14 +1190,14 @@
 				const ni = nextIndex(start - 1);
 				start = ni >= 0 ? ni : 0;
 			}
-			let seekMs = 0;
-			if (arguments.length < 3) {
+			// Speed is session/queue-global (like volume): keep the current rate
+			// across track changes and when replacing the queue. Only an explicit
+			// option (or empty bootstrap) applies the user default.
+			if (opts.useDefaultSpeed) {
 				speed = defaultSpeedFromPrefs();
-			} else {
-				seekMs = Number(positionMs) || 0;
 			}
-			const a = audio();
-			if (a) a.playbackRate = speed / 100;
+			const seekMs = arguments.length >= 3 ? (Number(positionMs) || 0) : 0;
+			applyPlaybackRate();
 			loadTrack(start, seekMs, autoplay);
 			// Persist immediately when the user starts a queue — do not rely on
 			// debounced timers alone (F5 within 1–2s would lose everything).
@@ -1259,11 +1303,16 @@
 		canGoNext,
 		getRepeatMode() { return repeatMode; },
 		getShuffle() { return shuffle; },
+		getSpeed() { return speed; },
 		setSpeed(centi) {
 			speed = normalizeSpeed(centi);
-			const a = audio();
-			if (a) a.playbackRate = speed / 100;
+			applyPlaybackRate();
 			if (!bootstrapRestoring) schedulePersistSession();
+			notify();
+		},
+		nudgeSpeed(delta) {
+			cycleSpeed(typeof delta === 'number' ? delta : 1);
+			return speed;
 		},
 		setVolumePercent,
 		getVolumePercent() { const a = audio(); return a ? (a.muted ? 0 : Math.round(a.volume * 100)) : 100; },

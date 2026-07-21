@@ -3436,7 +3436,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 .ac-now-adjustments {
 	display: flex;
 	flex-direction: column;
-	gap: var(--ac-space-3);
+	gap: var(--ac-space-4);
 }
 
 .ac-now-field {
@@ -3451,9 +3451,74 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	color: var(--color-main-text);
 }
 
+.ac-now-field__hint {
+	margin: 0;
+	max-width: 28rem;
+	font-size: 0.8125rem;
+	line-height: 1.45;
+	color: var(--ac-muted);
+}
+
 .ac-now-field__control {
 	width: 100%;
 	max-width: 12rem;
+}
+
+.ac-now-field--speed {
+	gap: var(--ac-space-2);
+	padding: var(--ac-space-3);
+	border: 1px solid var(--ac-border);
+	border-radius: 0.75rem;
+	background: var(--color-main-background);
+}
+
+.ac-now-speed__controls {
+	display: flex;
+	align-items: stretch;
+	gap: var(--ac-space-2);
+	width: 100%;
+	max-width: 22rem;
+}
+
+.ac-now-speed__btn {
+	flex: 0 0 auto;
+	min-width: var(--ac-touch);
+	min-height: var(--ac-touch);
+	padding: 0;
+	font-size: 1.5rem;
+	font-weight: 700;
+	line-height: 1;
+	border-radius: 0.75rem;
+}
+
+.ac-now-speed__btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+
+.ac-now-speed__btn:focus-visible,
+.ac-now-speed__select:focus-visible {
+	outline: 2px solid var(--color-primary-element, var(--color-primary));
+	outline-offset: 2px;
+}
+
+.ac-now-speed__select {
+	flex: 1 1 auto;
+	max-width: none;
+	min-height: var(--ac-touch);
+	font-size: 1.125rem;
+	font-weight: 700;
+	text-align: center;
+}
+
+@media (max-width: 420px) {
+	.ac-now-speed__controls {
+		max-width: none;
+	}
+
+	.ac-now-speed__select {
+		font-size: 1rem;
+	}
 }
 
 .ac-now-field--volume .ac-volume {

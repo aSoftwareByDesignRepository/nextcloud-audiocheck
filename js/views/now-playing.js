@@ -103,6 +103,8 @@
 			let repeatRow = null;
 			let startModeRow = null;
 			let speed = null;
+			let speedSlowerBtn = null;
+			let speedFasterBtn = null;
 			let sleepBanner = null;
 			let sleepStatus = null;
 			let sleepCancel = null;
@@ -208,9 +210,46 @@
 				}));
 				const adjustments = C.el('div', { className: 'ac-now-adjustments' });
 
+				const speedField = C.el('div', {
+					className: 'ac-now-field ac-now-field--speed',
+					attrs: { role: 'group', 'aria-labelledby': 'ac-speed-label' },
+				});
+				speedField.appendChild(C.el('span', {
+					id: 'ac-speed-label',
+					className: 'ac-now-field__label',
+					text: t('audiocheck', 'Listening speed'),
+				}));
+				speedField.appendChild(C.el('p', {
+					id: 'ac-speed-hint',
+					className: 'ac-field__hint ac-now-field__hint',
+					text: t('audiocheck', 'Applies to every track in the queue — not just the current one.'),
+				}));
+				const speedControls = C.el('div', {
+					className: 'ac-now-speed__controls',
+					attrs: { role: 'group', 'aria-label': t('audiocheck', 'Listening speed') },
+				});
+				const slowerBtn = C.el('button', {
+					type: 'button',
+					className: 'ac-btn ac-now-speed__btn',
+					text: '−',
+					attrs: {
+						'aria-label': t('audiocheck', 'Slower'),
+						title: t('audiocheck', 'Slower'),
+					},
+					onClick: () => {
+						if (typeof AudioCheckPlayer.nudgeSpeed === 'function') {
+							AudioCheckPlayer.nudgeSpeed(-1);
+						}
+					},
+				});
+				speedSlowerBtn = slowerBtn;
 				speed = C.el('select', {
 					id: 'ac-speed-select',
-					className: 'ac-input ac-now-field__control',
+					className: 'ac-input ac-now-field__control ac-now-speed__select',
+					attrs: {
+						'aria-describedby': 'ac-speed-hint',
+						'aria-label': t('audiocheck', 'Listening speed'),
+					},
 				});
 				AudioCheckConstants.SPEED_PRESETS.forEach((s) => {
 					const o = document.createElement('option');
@@ -219,13 +258,26 @@
 					speed.appendChild(o);
 				});
 				speed.addEventListener('change', () => AudioCheckPlayer.setSpeed(parseInt(speed.value, 10)));
-				adjustments.appendChild(C.el('label', {
-					className: 'ac-now-field',
-					attrs: { for: 'ac-speed-select' },
-				}, [
-					C.el('span', { className: 'ac-now-field__label', text: t('audiocheck', 'Speed') }),
-					speed,
-				]));
+				const fasterBtn = C.el('button', {
+					type: 'button',
+					className: 'ac-btn ac-now-speed__btn',
+					text: '+',
+					attrs: {
+						'aria-label': t('audiocheck', 'Faster'),
+						title: t('audiocheck', 'Faster'),
+					},
+					onClick: () => {
+						if (typeof AudioCheckPlayer.nudgeSpeed === 'function') {
+							AudioCheckPlayer.nudgeSpeed(1);
+						}
+					},
+				});
+				speedFasterBtn = fasterBtn;
+				speedControls.appendChild(slowerBtn);
+				speedControls.appendChild(speed);
+				speedControls.appendChild(fasterBtn);
+				speedField.appendChild(speedControls);
+				adjustments.appendChild(speedField);
 
 				const volumeField = C.el('div', { className: 'ac-now-field ac-now-field--volume' });
 				volumeField.appendChild(C.el('span', { className: 'ac-now-field__label', text: t('audiocheck', 'Volume') }));
@@ -1056,10 +1108,14 @@
 					});
 				}
 				if (speed) {
-					const curSpeed = AudioCheckConstants.SPEED_PRESETS.includes(
-						Math.round((document.getElementById('ac-audio')?.playbackRate || 1) * 100)
-					) ? Math.round((document.getElementById('ac-audio')?.playbackRate || 1) * 100) : 100;
+					const curSpeed = typeof AudioCheckPlayer.getSpeed === 'function'
+						? AudioCheckPlayer.getSpeed()
+						: 100;
 					speed.value = String(curSpeed);
+					const presets = AudioCheckConstants.SPEED_PRESETS;
+					const idx = presets.indexOf(curSpeed);
+					if (speedSlowerBtn) speedSlowerBtn.disabled = idx <= 0;
+					if (speedFasterBtn) speedFasterBtn.disabled = idx < 0 || idx >= presets.length - 1;
 				}
 			}
 

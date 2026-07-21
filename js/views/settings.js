@@ -21,7 +21,7 @@
 				speed.appendChild(o);
 			});
 			speedRow.appendChild(speed);
-			speedRow.appendChild(C.el('p', { id: 'ac-speed-hint', className: 'ac-field__hint', text: t('audiocheck', 'Used when you start playing a new track.') }));
+			speedRow.appendChild(C.el('p', { id: 'ac-speed-hint', className: 'ac-field__hint', text: t('audiocheck', 'Used when AudioCheck starts with no saved queue. Changing speed while listening applies to the whole queue.') }));
 
 			const volumeRow = C.el('div', { className: 'ac-form-row' });
 			volumeRow.appendChild(C.el('label', { attrs: { for: 'ac-default-volume' }, text: t('audiocheck', 'Default volume') }));
@@ -127,7 +127,11 @@
 				})
 					.then((r) => {
 						window.AudioCheckUserPrefs = r.prefs || {};
-						AudioCheckPlayer.setSpeed(parseInt(speed.value, 10));
+						// Default speed is a preference for new sessions — do not
+						// override an active listening speed mid-queue.
+						if (!AudioCheckPlayer.getCurrentTrack()) {
+							AudioCheckPlayer.setSpeed(parseInt(speed.value, 10));
+						}
 						AudioCheckPlayer.setVolumePercent(vol, { persist: false });
 						AudioCheckMessaging.toast(t('audiocheck', 'Saved.'));
 					})

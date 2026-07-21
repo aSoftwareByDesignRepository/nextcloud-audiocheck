@@ -87,7 +87,7 @@ Deine MP3-, MP4-, M4A-, M4B- und weiteren Audiodateien liegen bereits in Dateien
 - PHP 8.2–8.5
 - MySQL oder PostgreSQL
 	]]></description>
-	<version>1.2.9</version>
+	<version>1.2.10</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Alexander Mäule</author>
 	<namespace>AudioCheck</namespace>
