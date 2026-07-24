@@ -1335,6 +1335,9 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	padding: var(--ac-space-3);
 	cursor: pointer;
 	transition: box-shadow 0.15s ease, transform 0.15s ease;
+	/* Grid items default to min-width:auto; without this, long unbreakable
+	   titles (e.g. filenames with underscores) overflow into neighbour cards. */
+	min-width: 0;
 }
 @media (prefers-reduced-motion: reduce) {
 	.ac-card--media { transition: none; }
@@ -1426,11 +1429,14 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	font-size: var(--ac-fs-sm);
 	font-weight: 600;
 	line-height: 1.3;
+	/* Break anywhere so long words/filenames cannot widen the card. */
+	overflow-wrap: anywhere;
 }
 .ac-card__subtitle {
 	margin: 0;
 	font-size: var(--ac-fs-xs);
 	color: var(--ac-muted-strong);
+	overflow-wrap: anywhere;
 }
 
 #app-content.ac-app button.ac-btn,
