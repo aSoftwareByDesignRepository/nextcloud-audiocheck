@@ -170,6 +170,7 @@ class PageController extends Controller
 			'views/now-playing',
 			'views/library',
 			'views/settings',
+			'common/support-us',
 			'views/app-settings',
 			'app',
 		] as $script) {

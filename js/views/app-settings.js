@@ -290,6 +290,13 @@
 				wirePickers();
 			}).catch((err) => AudioCheckMessaging.toast(err.message || t('audiocheck', 'Request failed.'), 'error'));
 
+			if (window.SbdSupportUs && typeof window.SbdSupportUs.render === 'function') {
+				const mount = document.createElement('div');
+				mount.className = 'ac-support-us-mount';
+				frag.appendChild(mount);
+				window.SbdSupportUs.render(mount, { appId: 'audiocheck' });
+			}
+
 			return frag;
 		},
 	});
