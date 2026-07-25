@@ -40,7 +40,10 @@
 			return false;
 		}
 		if (trimmed.charAt(0) === '/') {
-			return trimmed.indexOf('://') === -1 && trimmed.indexOf('@') === -1;
+			// "//host/..." is protocol-relative (external origin), not app-relative.
+			return trimmed.indexOf('//') !== 0
+				&& trimmed.indexOf('://') === -1
+				&& trimmed.indexOf('@') === -1;
 		}
 		if (trimmed.indexOf('https://') !== 0 && trimmed.indexOf('http://') !== 0) {
 			return false;
@@ -68,7 +71,7 @@
 			),
 			onboardingMailto: mailtoSubject(APP_NAME + ': Einrichtung / Schulung'),
 			featureMailto: mailtoSubject(APP_NAME + ': Feature-Auftrag'),
-			supportPageUrl: SITE_ORIGIN + (de ? '/de/support.html' : '/en/support.html'),
+			supportPageUrl: SITE_ORIGIN + (de ? '/de/support.html' : '/en/support.html') + '#packages',
 			appsPageUrl: SITE_ORIGIN + (de ? '/de/apps.html' : '/en/apps.html'),
 			sponsorsUrl: SPONSORS_URL,
 			contactMailto: 'mailto:' + CONTACT_EMAIL,
@@ -138,14 +141,16 @@
 		var shell = opts.shellPrefix || DEFAULT_SHELL_PREFIX || PREFIX;
 		var titleId = PREFIX + '-support-us-title';
 		var introId = PREFIX + '-support-us-intro';
+		var partnerTitleId = PREFIX + '-support-us-partner-title';
 		var primaryBtn = opts.primaryBtnClass || ('button primary ' + PREFIX + '-support-us__cta ' + PREFIX + '-support-us__cta--primary');
 		var secondaryBtn = opts.secondaryBtnClass || ('button ' + PREFIX + '-support-us__cta');
+		var hasMobile = !!(L.hasOfficialMobileLicenses && L.licensePageUrl);
 
-		var intro = t(
-			appId,
-			'%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, commissioned work — or the official mobile app:',
-			[APP_NAME]
-		);
+		// Match Block A to Block E: never mention mobile when the license CTA is hidden.
+		var introKey = hasMobile
+			? '%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice — or official mobile licenses — choose an option below:'
+			: '%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice, choose an option below:';
+		var intro = t(appId, introKey, [APP_NAME]);
 
 		var section = el('section', {
 			className: shell + '-card ' + shell + '-section ' + PREFIX + '-support-us',
@@ -170,15 +175,22 @@
 			])
 		]);
 
+		function ctaClass(base, withPrimaryMod) {
+			if (base.indexOf(PREFIX + '-support-us__cta') !== -1) {
+				return base;
+			}
+			return withPrimaryMod
+				? (base + ' ' + PREFIX + '-support-us__cta ' + PREFIX + '-support-us__cta--primary')
+				: (base + ' ' + PREFIX + '-support-us__cta');
+		}
+
 		var primaryCta = el('a', {
-			className: primaryBtn.indexOf(PREFIX + '-support-us__cta') === -1
-				? (primaryBtn + ' ' + PREFIX + '-support-us__cta ' + PREFIX + '-support-us__cta--primary')
-				: primaryBtn,
+			className: ctaClass(primaryBtn, true),
 			href: L.partnerMailto,
 			text: t(appId, 'Ask for a partner offer')
 		});
 		var hint = el('p', { className: PREFIX + '-support-us__hint' });
-		hint.appendChild(document.createTextNode(t(appId, 'Annual hour pack + priority response — details in the offer / on our site.') + ' '));
+		hint.appendChild(document.createTextNode(t(appId, 'Packages and terms:') + ' '));
 		hint.appendChild(el('a', {
 			href: L.supportPageUrl,
 			target: '_blank',
@@ -186,38 +198,65 @@
 			text: t(appId, 'Open support page')
 		}));
 
-		var primary = el('div', { className: PREFIX + '-support-us__primary' }, [primaryCta, hint]);
+		var primary = el('div', {
+			className: PREFIX + '-support-us__primary',
+			'aria-labelledby': partnerTitleId
+		}, [
+			el('h3', {
+				id: partnerTitleId,
+				className: PREFIX + '-support-us__offer-title',
+				text: t(appId, 'Check Partner')
+			}),
+			el('p', {
+				className: PREFIX + '-support-us__benefit',
+				text: t(appId, 'Annual hour packs — Small, Standard, or Premium — with priority email for your organisation. This is invoiceable service — not a donation. See packages on our support page.')
+			}),
+			el('p', {
+				className: PREFIX + '-support-us__coverage',
+				text: t(appId, 'List prices on our site apply to published Check apps. For this app, ask for an individual partner offer — we invoice only after you accept a quote.')
+			}),
+			primaryCta,
+			hint
+		]);
+
+		function optionCard(href, label, hintText) {
+			return el('div', { className: PREFIX + '-support-us__option' }, [
+				el('a', {
+					className: ctaClass(secondaryBtn, false),
+					href: href,
+					text: label
+				}),
+				el('p', {
+					className: PREFIX + '-support-us__option-hint',
+					text: hintText
+				})
+			]);
+		}
 
 		var secondaryChildren = [
-			el('a', {
-				className: secondaryBtn.indexOf(PREFIX + '-support-us__cta') === -1
-					? (secondaryBtn + ' ' + PREFIX + '-support-us__cta')
-					: secondaryBtn,
-				href: L.onboardingMailto,
-				text: t(appId, 'Ask about setup or training')
-			}),
-			el('a', {
-				className: secondaryBtn.indexOf(PREFIX + '-support-us__cta') === -1
-					? (secondaryBtn + ' ' + PREFIX + '-support-us__cta')
-					: secondaryBtn,
-				href: L.featureMailto,
-				text: t(appId, 'Request a commissioned feature')
-			})
+			optionCard(
+				L.onboardingMailto,
+				t(appId, 'Ask about setup or training'),
+				t(appId, 'Remote onboarding or a workshop so your team can roll out cleanly — billed as a service.')
+			),
+			optionCard(
+				L.featureMailto,
+				t(appId, 'Request a commissioned feature'),
+				t(appId, 'A scoped change with acceptance criteria and a delivery date — billed as project work.')
+			)
 		];
-		if (L.hasOfficialMobileLicenses && L.licensePageUrl) {
-			secondaryChildren.push(el('a', {
-				className: secondaryBtn.indexOf(PREFIX + '-support-us__cta') === -1
-					? (secondaryBtn + ' ' + PREFIX + '-support-us__cta')
-					: secondaryBtn,
-				href: L.licensePageUrl,
-				text: t(appId, 'Official mobile & terminal licenses')
-			}));
+		if (hasMobile) {
+			secondaryChildren.push(optionCard(
+				L.licensePageUrl,
+				t(appId, 'Official mobile & terminal licenses'),
+				t(appId, 'Named seats for the official apps — a software licence on invoice.')
+			));
 		}
 
 		var secondary = el('div', {
 			className: PREFIX + '-support-us__secondary',
 			role: 'group',
-			'aria-label': t(appId, 'Additional support options')
+			'aria-label': t(appId, 'Additional invoiceable options')
 		}, secondaryChildren);
 
 		var more = el('p', { className: PREFIX + '-support-us__more' });

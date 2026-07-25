@@ -60,14 +60,22 @@ assert.equal(typeof api.linksFor, 'function');
 assert.equal(typeof api.render, 'function');
 assert.equal(api.isGermanLocale('de_DE'), true);
 assert.equal(api.isGermanLocale('den'), false);
+assert.equal(api.isSafeLicenseUrl('/apps/audiocheck/license'), true);
+assert.equal(api.isSafeLicenseUrl('//evil.example/phish'), false, 'protocol-relative must be rejected');
+assert.equal(api.isSafeLicenseUrl('javascript:alert(1)'), false);
+assert.throws(() => api.linksFor('en', {
+	hasOfficialMobileLicenses: true,
+	licensePageUrl: '//evil.example/phish',
+}));
 
 const de = api.linksFor('de_DE');
 const en = api.linksFor('en');
 assert.match(de.partnerMailto, /^mailto:info@software-by-design\.de\?subject=/);
 assert.ok(de.partnerMailto.includes(encodeURIComponent('AudioCheck: Partner / Care Retainer')));
 assert.ok(en.partnerMailto.includes(encodeURIComponent('AudioCheck: partner / care retainer')));
-assert.equal(de.supportPageUrl, 'https://nextcloud.software-by-design.de/de/support.html');
+assert.equal(de.supportPageUrl, 'https://nextcloud.software-by-design.de/de/support.html#packages');
 assert.equal(en.appsPageUrl, 'https://nextcloud.software-by-design.de/en/apps.html');
+assert.equal(en.supportPageUrl, 'https://nextcloud.software-by-design.de/en/support.html#packages');
 assert.equal(de.sponsorsUrl, 'https://github.com/sponsors/aSoftwareByDesignRepository');
 assert.ok(!JSON.stringify(de).includes('490'));
 assert.ok(!JSON.stringify(en).includes('€'));
@@ -88,6 +96,22 @@ assert.ok(String(section.className).includes('ac-card'));
 assert.ok(String(section.className).includes('ac-support-us'));
 assert.equal(api.render(mount, { appId: 'audiocheck' }), null, 'double-mount must no-op');
 
+function collectText(node) {
+	let out = String(node.textContent || '');
+	for (const c of node.children || []) {
+		out += collectText(c);
+	}
+	return out;
+}
+const noMobileText = collectText(section);
+assert.ok(noMobileText.includes('Check Partner'));
+assert.ok(noMobileText.includes('invoiceable service'));
+assert.ok(noMobileText.includes('individual partner offer'));
+assert.ok(noMobileText.includes('bookable help on an invoice, choose an option below'));
+assert.ok(noMobileText.includes('billed as a service'));
+assert.ok(noMobileText.includes('billed as project work'));
+assert.ok(!noMobileText.includes('official mobile licenses'));
+
 const mobileMount = document.createElement('div');
 api.render(mobileMount, {
 	appId: 'audiocheck',
@@ -102,5 +126,9 @@ const walked = [];
 	(n.children || []).forEach(walk);
 })(mobileMount);
 assert.ok(walked.includes('/apps/audiocheck/license'));
+const mobileText = collectText(mobileMount);
+assert.ok(mobileText.includes('official mobile licenses'));
+assert.ok(mobileText.includes('software licence on invoice'));
+assert.ok(!mobileText.includes('bookable help on an invoice, choose an option below'));
 
 console.log('support-us.js contract OK (audiocheck)');
