@@ -13,6 +13,14 @@ body,
 	--ac-muted: var(--color-text-maxcontrast, color-mix(in srgb, var(--color-main-text) 62%, transparent));
 	--ac-muted-strong: color-mix(in srgb, var(--color-main-text) 82%, var(--color-text-maxcontrast, transparent));
 	--ac-text: var(--color-main-text);
+	--ac-accent: var(--color-primary-element);
+	--ac-tint-info: color-mix(in srgb, var(--color-primary-element) 16%, var(--color-main-background));
+	--ac-tint-success: color-mix(in srgb, var(--color-success-text, var(--color-success)) 18%, var(--color-main-background));
+	--ac-tint-warning: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 22%, var(--color-main-background));
+	--ac-tint-danger: color-mix(in srgb, var(--color-error-text, var(--color-error)) 18%, var(--color-main-background));
+	--ac-danger-ink: var(--color-error-text, var(--color-error));
+	--ac-danger-bg: color-mix(in srgb, var(--ac-danger-ink) 16%, var(--color-main-background));
+	--ac-favorite-ink: var(--ac-danger-ink);
 }
 
 #content[class*="app-audiocheck"],

@@ -30,6 +30,11 @@ jobs:
       - name: Frontend checks
         run: npm test
 
+      - name: Theme & colour gates
+        run: |
+          bash scripts/check-theme-tokens.sh
+          bash scripts/check-hardcoded-colors.sh
+
   lint:
     name: Lint & security audit
     runs-on: ubuntu-latest

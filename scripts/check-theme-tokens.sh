@@ -25,12 +25,17 @@ theme_blocks=$(awk '
 	/^\}/ && inblock { print block; inblock=0; block="" }
 ' "$CSS")
 
-for token in --ac-bg-soft --ac-bg-card --ac-surface --ac-muted --ac-text; do
+for token in --ac-bg-soft --ac-bg-card --ac-surface --ac-muted --ac-text --ac-tint-info --ac-accent; do
 	if ! echo "$theme_blocks" | grep -F -q -- "$token"; then
 		echo "check-theme-tokens: theme scope missing $token" >&2
 		exit 1
 	fi
 done
+
+if ! echo "$theme_blocks" | grep -qE -- '--ac-tint-info:.*main-background'; then
+	echo "check-theme-tokens: --ac-tint-info must mix into --color-main-background" >&2
+	exit 1
+fi
 
 root_block=$(awk '/^:root \{/,/^\}/' "$CSS")
 if echo "$root_block" | grep -qE '^\s*--ac-(bg|muted|text|surface|border|shadow)'; then

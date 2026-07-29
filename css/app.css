@@ -17,6 +17,7 @@
 	--ac-radius-sm: 6px;
 	--ac-radius-md: 12px;
 	--ac-radius-lg: 16px;
+	--ac-radius-pill: 999px;
 	--ac-fs-xs: 0.875rem;
 	--ac-fs-sm: 0.9375rem;
 	--ac-fs-base: 1rem;
@@ -26,10 +27,17 @@
 	--ac-fs-2xl: 1.875rem;
 	--ac-line-tight: 1.2;
 	--ac-line-base: 1.45;
+	--ac-icon-sm: 1rem;
+	--ac-icon-md: 1.125rem;
+	--ac-icon-lg: 1.375rem;
+	--ac-icon-well: 2.25rem;
 	--ac-player-clearance: 0px;
+	--ac-player-h: 0px;
 	--ac-nav-w: 260px;
+	--ac-content-max: min(75rem, 100%);
 	--ac-touch: 44px;
 	/* Nextcloud breakpoints (literal values in @media — vars document intent only) */
+	--ac-bp-sm: 480px;
 	--ac-bp-tablet: 768px;
 	--ac-bp-desktop: 1024px;
 }
@@ -62,7 +70,12 @@ body,
 	--ac-danger-border: color-mix(in srgb, var(--ac-danger-ink) 44%, var(--color-border, var(--ac-border)));
 	--ac-favorite-ink: var(--ac-danger-ink);
 	--ac-text: var(--color-main-text);
-	--ac-tint-info: color-mix(in srgb, var(--color-primary-element) 14%, transparent);
+	/* Mix INTO main-background so tints stay visible on every NC theme */
+	--ac-tint-info: color-mix(in srgb, var(--color-primary-element) 16%, var(--color-main-background));
+	--ac-tint-success: color-mix(in srgb, var(--color-success-text, var(--color-success)) 18%, var(--color-main-background));
+	--ac-tint-warning: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 22%, var(--color-main-background));
+	--ac-tint-danger: color-mix(in srgb, var(--color-error-text, var(--color-error)) 18%, var(--color-main-background));
+	--ac-accent: var(--color-primary-element);
 }
 
 /* Re-bind theme tokens on the main pane so backgrounds track ink even when NC
@@ -91,7 +104,11 @@ body,
 	--ac-danger-border: color-mix(in srgb, var(--ac-danger-ink) 44%, var(--color-border, var(--ac-border)));
 	--ac-favorite-ink: var(--ac-danger-ink);
 	--ac-text: var(--color-main-text);
-	--ac-tint-info: color-mix(in srgb, var(--color-primary-element) 14%, transparent);
+	--ac-tint-info: color-mix(in srgb, var(--color-primary-element) 16%, var(--color-main-background));
+	--ac-tint-success: color-mix(in srgb, var(--color-success-text, var(--color-success)) 18%, var(--color-main-background));
+	--ac-tint-warning: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 22%, var(--color-main-background));
+	--ac-tint-danger: color-mix(in srgb, var(--color-error-text, var(--color-error)) 18%, var(--color-main-background));
+	--ac-accent: var(--color-primary-element);
 	display: flex;
 	flex: 1 1 auto;
 	flex-direction: column;
@@ -192,9 +209,10 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	flex-direction: column;
 	align-items: stretch;
 	width: 100%;
-	max-width: 1200px;
+	max-width: var(--ac-content-max);
 	margin: 0 auto;
 	padding: var(--ac-space-4) var(--ac-space-4) var(--ac-space-6);
+	padding-bottom: max(var(--ac-space-6), calc(var(--ac-space-4) + env(safe-area-inset-bottom, 0px)));
 	box-sizing: border-box;
 	flex: 1 1 auto;
 	min-height: 0;
@@ -454,7 +472,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 }
 .ac-nav__item.is-active .ac-nav__link,
 .ac-nav__link--active {
-	background: color-mix(in srgb, var(--color-primary-element) 14%, transparent);
+	background: color-mix(in srgb, var(--color-primary-element) 14%, var(--color-main-background));
 	font-weight: 600;
 }
 .ac-nav__link {
@@ -493,9 +511,9 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	align-items: center;
 	justify-content: center;
 	flex-shrink: 0;
-	width: 2.25rem;
-	height: 2.25rem;
-	border-radius: 0.625rem;
+	width: var(--ac-icon-well);
+	height: var(--ac-icon-well);
+	border-radius: var(--ac-radius-sm);
 	background: linear-gradient(
 		145deg,
 		var(--color-primary-element) 0%,
@@ -1484,9 +1502,9 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 #app-content.ac-app button.ac-btn--success,
 .ac-modal button.ac-btn--success,
 .ac-mini-player button.ac-btn--success {
-	background-color: color-mix(in srgb, var(--color-success, #2e7d32) 14%, var(--ac-bg-card));
-	color: var(--color-success-text, var(--color-success, #2e7d32));
-	border-color: var(--color-success, #2e7d32);
+	background-color: var(--ac-tint-success);
+	color: var(--color-success-text, var(--color-success));
+	border-color: var(--color-success);
 }
 #app-content.ac-app button.ac-btn--success:not(:disabled):hover,
 #app-content.ac-app button.ac-btn--success:not(:disabled):focus-visible,
@@ -1494,7 +1512,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 .ac-modal button.ac-btn--success:not(:disabled):focus-visible,
 .ac-mini-player button.ac-btn--success:not(:disabled):hover,
 .ac-mini-player button.ac-btn--success:not(:disabled):focus-visible {
-	background-color: color-mix(in srgb, var(--color-success, #2e7d32) 22%, var(--ac-bg-card));
+	background-color: color-mix(in srgb, var(--color-success-text, var(--color-success)) 26%, var(--color-main-background));
 }
 #app-content.ac-app button.ac-btn--icon,
 .ac-modal button.ac-btn--icon,
@@ -1889,10 +1907,11 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	justify-content: center;
 	flex-shrink: 0;
 	padding: 0;
-	width: 2.75rem;
-	height: 2.75rem;
-	min-width: 2.75rem;
-	min-height: 2.75rem;
+	box-sizing: border-box;
+	width: var(--ac-touch);
+	height: var(--ac-touch);
+	min-width: var(--ac-touch);
+	min-height: var(--ac-touch);
 	border-radius: 50%;
 	border: 2px solid var(--ac-border-strong);
 	background-color: var(--ac-bg-card);
@@ -2034,6 +2053,27 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	grid-template-columns: auto 1fr;
 	gap: var(--ac-space-2) var(--ac-space-4);
 	margin: 0 0 var(--ac-space-4);
+	padding: 0;
+}
+/*
+ * Neutralise Nextcloud core apps.css definition-list chrome
+ * (dt { width: 130px; text-align: end } / inline-block + padding).
+ */
+#app-content.ac-app .ac-controls-ref__list dt,
+#app-content.ac-app .ac-controls-ref__list dd,
+#app-content.ac-app .ac-shortcuts__list dt,
+#app-content.ac-app .ac-shortcuts__list dd,
+.ac-app .ac-controls-ref__list dt,
+.ac-app .ac-controls-ref__list dd,
+.ac-app .ac-shortcuts__list dt,
+.ac-app .ac-shortcuts__list dd {
+	display: block;
+	float: none;
+	width: auto;
+	max-width: 100%;
+	padding: 0;
+	text-align: start;
+	white-space: normal;
 }
 .ac-controls-ref__list dt { font-weight: 600; margin: 0; }
 .ac-controls-ref__list dd { margin: 0; color: var(--ac-muted); }
@@ -2057,7 +2097,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	color: var(--ac-muted);
 }
 .ac-track-list__item--listened {
-	background: color-mix(in srgb, var(--color-success, #2d7a46) 6%, var(--color-main-background));
+	background: color-mix(in srgb, var(--color-success-text, var(--color-success)) 8%, var(--color-main-background));
 }
 .ac-track-list__item--listened .ac-track-list__title {
 	padding-inline-start: 0;
@@ -2066,10 +2106,10 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	align-self: flex-start;
 }
 .ac-track-list__listened.ac-btn--icon {
-	color: var(--color-success, #2d7a46);
+	color: var(--color-success-text, var(--color-success));
 }
 .ac-track-list__listened.ac-btn--success {
-	background: color-mix(in srgb, var(--color-success, #2d7a46) 14%, transparent);
+	background: var(--ac-tint-success);
 }
 .ac-now-card__listened-badge {
 	margin-top: var(--ac-space-1);
@@ -2112,7 +2152,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	white-space: nowrap;
 }
 .ac-track-list__play.ac-btn--icon {
-	background: color-mix(in srgb, var(--color-primary-element) 14%, transparent);
+	background: var(--ac-tint-info);
 	color: var(--color-primary-element);
 	border-color: color-mix(in srgb, var(--color-primary-element) 25%, var(--ac-border));
 }
@@ -2134,8 +2174,8 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	color: var(--color-main-text);
 }
 .ac-track-list__actions .ac-btn--icon:not(.ac-track-list__play).ac-btn--success {
-	background: color-mix(in srgb, var(--color-success, #2d7a46) 14%, transparent);
-	color: var(--color-success, #2d7a46);
+	background: var(--ac-tint-success);
+	color: var(--color-success-text, var(--color-success));
 }
 
 /* Mobile card-list layout for library track rows (MobilityCheck-style) */
@@ -2351,8 +2391,18 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	height: 1.125rem;
 	min-width: 1.125rem;
 	min-height: 1.125rem;
+	max-width: 1.125rem;
+	max-height: 1.125rem;
 	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
 	accent-color: var(--color-primary-element);
+	background-color: var(--ac-bg-card, var(--color-main-background, #fff));
+	border: 1px solid var(--ac-border-strong, var(--color-border-dark, #999));
+	border-radius: 3px;
+	color-scheme: inherit;
+	appearance: auto;
+	-webkit-appearance: auto;
 }
 .ac-field--boolean > span {
 	flex: 1 1 auto;
@@ -2608,7 +2658,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	margin: var(--ac-space-1) 0 0;
 	font-size: var(--ac-fs-sm);
 	font-weight: 600;
-	color: var(--color-success, #2e7d32);
+	color: var(--color-success-text, var(--color-success));
 	line-height: 1.4;
 }
 .ac-collection-detail__track-title {
@@ -2740,10 +2790,10 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 }
 .ac-folder-listened__toggle.ac-btn--icon {
 	flex: 0 0 auto;
-	color: var(--color-success, #2d7a46);
+	color: var(--color-success-text, var(--color-success));
 }
 .ac-folder-listened__toggle.ac-btn--success {
-	background: color-mix(in srgb, var(--color-success, #2d7a46) 14%, transparent);
+	background: var(--ac-tint-success);
 }
 .ac-folder-listened__toggle.ac-btn--icon:not(:disabled):focus-visible {
 	outline: 2px solid var(--color-primary-element);
@@ -3407,7 +3457,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 
 .ac-playback-option:not(:disabled):hover,
 .ac-playback-option:not(:disabled):focus-visible {
-	background: color-mix(in srgb, var(--color-primary-element) 8%, transparent);
+	background: color-mix(in srgb, var(--color-primary-element) 8%, var(--color-main-background));
 }
 
 .ac-playback-option--active .ac-playback-option__value,
@@ -4284,7 +4334,11 @@ body.ac-modal-open { overflow: hidden; }
 		margin: 0;
 		padding: var(--ac-space-3) var(--ac-space-4);
 		width: 100%;
+		box-sizing: border-box;
 		min-height: var(--ac-touch);
+		/* Beat NC core button height shrink so the bar stays ≥44px touch-friendly */
+		height: auto;
+		line-height: 1.25;
 		border: none;
 		border-bottom: 2px solid var(--ac-border-strong);
 		background: var(--ac-bg-card);
@@ -4292,6 +4346,18 @@ body.ac-modal-open { overflow: hidden; }
 		font-weight: 600;
 		cursor: pointer;
 		touch-action: manipulation;
+	}
+	#content[class*="app-audiocheck"] #app-content.ac-app button#ac-nav-toggle.ac-nav-toggle,
+	#app-content.ac-app button#ac-nav-toggle.ac-nav-toggle {
+		box-sizing: border-box;
+		min-height: var(--ac-touch);
+		height: auto;
+		max-height: none;
+		padding-block: max(var(--ac-space-3), 0.75rem);
+		/* NC core button rules shrink native <button> height — keep WCAG 2.5.5 target */
+		min-height: 44px !important;
+		min-height: var(--ac-touch) !important;
+		height: auto !important;
 	}
 	.ac-nav-toggle[aria-expanded='true'] {
 		background: color-mix(in srgb, var(--color-primary-element) 12%, var(--ac-bg-card));
@@ -4544,6 +4610,7 @@ body.ac-modal-open { overflow: hidden; }
 	grid-template-columns: auto 1fr;
 	gap: var(--ac-space-2) var(--ac-space-4);
 	margin: 0;
+	padding: 0;
 }
 
 .ac-shortcuts__list dt {
@@ -4615,7 +4682,7 @@ body.ac-modal-open { overflow: hidden; }
 	min-height: var(--ac-touch);
 	padding: var(--ac-space-1) var(--ac-space-2);
 	border: 1px solid var(--ac-border);
-	border-radius: var(--ac-radius);
+	border-radius: var(--ac-radius-sm);
 	background: var(--ac-surface);
 }
 
@@ -4633,9 +4700,9 @@ body.ac-modal-open { overflow: hidden; }
 
 .ac-sleep-timer-banner {
 	padding: var(--ac-space-3);
-	border-radius: var(--ac-radius);
+	border-radius: var(--ac-radius-md);
 	border: 1px solid var(--color-warning);
-	background: color-mix(in srgb, var(--color-warning) 12%, transparent);
+	background: var(--ac-tint-warning);
 	color: var(--color-main-text);
 	font-weight: 600;
 	margin-bottom: var(--ac-space-2);
@@ -4667,7 +4734,7 @@ body.ac-modal-open { overflow: hidden; }
 	min-height: var(--ac-touch);
 	padding: var(--ac-space-1) var(--ac-space-3);
 	border: 1px solid var(--ac-border);
-	border-radius: var(--ac-radius);
+	border-radius: var(--ac-radius-sm);
 	background: var(--ac-surface);
 	cursor: pointer;
 }
@@ -4680,18 +4747,37 @@ body.ac-modal-open { overflow: hidden; }
 
 .ac-global-search__inner {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
 	gap: var(--ac-space-2);
 	max-width: 36rem;
+	width: 100%;
+	min-width: 0;
 }
 
 .ac-global-search__input {
-	flex: 1 1 auto;
+	flex: 1 1 12rem;
 	min-width: 0;
+	min-height: var(--ac-touch);
+}
+
+.ac-global-search__clear {
+	flex: 0 0 auto;
+	min-height: var(--ac-touch);
 }
 
 .ac-global-search__clear[hidden] {
 	display: none;
+}
+
+@media (max-width: 480px) {
+	.ac-global-search__inner {
+		flex-direction: column;
+		align-items: stretch;
+	}
+	.ac-global-search__clear {
+		width: 100%;
+	}
 }
 
 /* Facet group inline controls */
@@ -5205,46 +5291,46 @@ body.ac-modal-open { overflow: hidden; }
 /**
  * Support & Us — shared family styles (WCAG 2.1 AA, responsive).
  * Prefix: ac
- * Uses Nextcloud CSS variables only (no hardcoded brand purple / cream biases).
+ * Uses Nextcloud CSS variables + --ac-* tokens only.
  */
 
 .ac-support-us {
-	margin-block-start: 1.5rem;
+	margin-block-start: var(--ac-space-5);
 }
 
 .ac-support-us__header {
-	margin-block-end: 1rem;
+	margin-block-end: var(--ac-space-4);
 }
 
 .ac-support-us__title {
-	margin: 0 0 0.35rem;
-	font-size: 1.25rem;
-	line-height: 1.35;
+	margin: 0 0 var(--ac-space-1);
+	font-size: var(--ac-fs-lg);
+	line-height: var(--ac-line-tight);
 	color: var(--color-main-text);
 }
 
 .ac-support-us__intro {
 	margin: 0;
 	max-width: 48rem;
-	font-size: 0.95rem;
-	line-height: 1.55;
-	color: var(--color-text-maxcontrast);
+	font-size: var(--ac-fs-sm);
+	line-height: var(--ac-line-base);
+	color: var(--color-text-maxcontrast, var(--ac-muted));
 }
 
 .ac-support-us__body {
 	display: flex;
 	flex-direction: column;
-	gap: 1.25rem;
+	gap: var(--ac-space-5);
 }
 
 .ac-support-us__primary {
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
-	gap: 0.55rem;
-	padding: 1rem 1.1rem;
-	border: 1px solid var(--color-border-maxcontrast, var(--color-border));
-	border-radius: var(--border-radius-large, var(--border-radius, 8px));
+	gap: var(--ac-space-2);
+	padding: var(--ac-space-4);
+	border: 1px solid var(--color-border-maxcontrast, var(--ac-border-strong));
+	border-radius: var(--ac-radius-md, var(--border-radius-large, 12px));
 	background:
 		linear-gradient(
 			160deg,
@@ -5255,17 +5341,17 @@ body.ac-modal-open { overflow: hidden; }
 
 .ac-support-us__offer-title {
 	margin: 0;
-	font-size: 1.05rem;
+	font-size: var(--ac-fs-md);
 	font-weight: 600;
-	line-height: 1.35;
+	line-height: var(--ac-line-tight);
 	color: var(--color-main-text);
 }
 
 .ac-support-us__benefit {
 	margin: 0;
 	max-width: 42rem;
-	font-size: 0.95rem;
-	line-height: 1.5;
+	font-size: var(--ac-fs-sm);
+	line-height: var(--ac-line-base);
 	/* On the primary-tinted panel: main-text keeps WCAG AA contrast. */
 	color: var(--color-main-text);
 }
@@ -5273,16 +5359,16 @@ body.ac-modal-open { overflow: hidden; }
 .ac-support-us__coverage {
 	margin: 0;
 	max-width: 42rem;
-	font-size: 0.875rem;
-	line-height: 1.45;
+	font-size: var(--ac-fs-sm);
+	line-height: var(--ac-line-base);
 	color: var(--color-main-text);
 }
 
 .ac-support-us__hint {
 	margin: 0;
 	max-width: 40rem;
-	font-size: 0.875rem;
-	line-height: 1.5;
+	font-size: var(--ac-fs-sm);
+	line-height: var(--ac-line-base);
 	color: var(--color-main-text);
 }
 
@@ -5294,35 +5380,36 @@ body.ac-modal-open { overflow: hidden; }
 
 .ac-support-us__secondary {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-	gap: 0.85rem;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+	gap: var(--ac-space-3);
 }
 
 .ac-support-us__option {
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
-	gap: 0.45rem;
-	padding: 0.85rem 1rem;
-	border: 1px solid var(--color-border);
-	border-radius: var(--border-radius-large, var(--border-radius, 8px));
+	gap: var(--ac-space-2);
+	padding: var(--ac-space-3) var(--ac-space-4);
+	border: 1px solid var(--color-border, var(--ac-border));
+	border-radius: var(--ac-radius-md, var(--border-radius-large, 12px));
 	background: var(--color-main-background);
 	box-sizing: border-box;
+	min-width: 0;
 }
 
 .ac-support-us__option-hint {
 	margin: 0;
-	font-size: 0.875rem;
-	line-height: 1.45;
-	color: var(--color-text-maxcontrast);
+	font-size: var(--ac-fs-sm);
+	line-height: var(--ac-line-base);
+	color: var(--color-text-maxcontrast, var(--ac-muted));
 }
 
 .ac-support-us__cta {
-	min-height: 2.75rem;
+	min-height: var(--ac-touch);
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	padding-inline: 1rem;
+	padding-inline: var(--ac-space-4);
 	text-align: center;
 	text-decoration: none;
 	box-sizing: border-box;
@@ -5332,24 +5419,24 @@ body.ac-modal-open { overflow: hidden; }
 .ac-support-us__hint a:focus-visible,
 .ac-support-us__more a:focus-visible,
 .ac-support-us__contact a:focus-visible {
-	outline: 2px solid var(--color-main-text);
+	outline: 2px solid var(--color-primary-element, var(--color-main-text));
 	outline-offset: 2px;
 }
 
 .ac-support-us__tertiary {
 	display: flex;
 	flex-direction: column;
-	gap: 0.35rem;
-	padding-block-start: 0.25rem;
-	border-block-start: 1px solid var(--color-border);
+	gap: var(--ac-space-1);
+	padding-block-start: var(--ac-space-1);
+	border-block-start: 1px solid var(--color-border, var(--ac-border));
 }
 
 .ac-support-us__more,
 .ac-support-us__contact {
 	margin: 0;
-	font-size: 0.875rem;
-	line-height: 1.5;
-	color: var(--color-text-maxcontrast);
+	font-size: var(--ac-fs-sm);
+	line-height: var(--ac-line-base);
+	color: var(--color-text-maxcontrast, var(--ac-muted));
 }
 
 .ac-support-us__more a,

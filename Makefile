@@ -11,7 +11,7 @@ SIGN_KEY := $(if $(strip $(APP_CERT_KEY_PATH)),$(APP_CERT_KEY_PATH),$(HOME)/.nex
 SIGN_CRT := $(if $(strip $(APP_CERT_CRT_PATH)),$(APP_CERT_CRT_PATH),$(HOME)/.nextcloud/certificates/$(app_name).crt)
 ready2publish_sign = ../../ready2publish/scripts/sign-nextcloud-appstore-archive.sh
 
-.PHONY: release verify-release verify-signature-manifest sign-release release-signed sign-tarball clean test test-docker
+.PHONY: release verify-release verify-signature-manifest sign-release release-signed sign-tarball clean test test-ui test-docker
 
 release:
 	@echo "Building $(app_name) v$(version)..."
@@ -73,8 +73,12 @@ clean:
 	./vendor/bin/phpunit
 	npm test
 	bash scripts/check-theme-tokens.sh
+	bash scripts/check-hardcoded-colors.sh
 	bash scripts/check-file-access-gate.sh
 	bash scripts/check-no-outbound-http.sh
+
+test-ui:
+	set -a; [ -f e2e/.env ] && . ./e2e/.env; set +a; npm run test:ui:gauntlet
 
 test-docker:
 	bash scripts/run-docker-tests.sh
