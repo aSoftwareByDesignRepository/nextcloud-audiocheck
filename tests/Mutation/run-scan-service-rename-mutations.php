@@ -66,6 +66,10 @@ $mutations = [
 		'from' => "\t\tif (\$target instanceof Folder) {\n\t\t\t\$this->rewritePathsAfterFolderMove(\$userId, \$source, \$target);\n\t\t\treturn;\n\t\t}",
 		'to' => "\t\tif (false && \$target instanceof Folder) {\n\t\t\t\$this->rewritePathsAfterFolderMove(\$userId, \$source, \$target);\n\t\t\treturn;\n\t\t}",
 	],
+	'defer_library_id_to_scan' => [
+		'from' => "\t\t\$this->rewriteLibraryPathPrefixes(\$userId, \$oldRel, \$newRel, \$targetId);\n\t\t\$this->rewriteTrackPathsAndLibraryIds(\$userId, \$oldRel, \$newRel);\n\n\t\t// Discover audio that entered a library via the move (no prior ac_tracks row).\n\t\tif (\$target instanceof Folder) {\n\t\t\t\$this->indexFolderIntoLibraries(\$userId, \$target);\n\t\t}",
+		'to' => "\t\t\$this->rewriteLibraryPathPrefixes(\$userId, \$oldRel, \$newRel, \$targetId);\n\t\t\$this->rewriteTrackPathsAndLibraryIds(\$userId, \$oldRel, \$newRel);\n\t\t\$this->queueScan(\$userId);",
+	],
 	'ignore_empty_user_gate' => [
 		'from' => "\t\tif (\$userId === '') {\n\t\t\treturn;\n\t\t}\n\n\t\tif (\$target instanceof Folder) {",
 		'to' => "\t\tif (\$target instanceof Folder) {",
