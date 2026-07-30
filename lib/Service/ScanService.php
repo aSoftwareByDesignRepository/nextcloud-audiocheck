@@ -251,13 +251,11 @@ class ScanService
 			return;
 		}
 		if ($event === 'deleted') {
-			$fileId = (int)$node->getId();
-			$qb = $this->db->getQueryBuilder();
-			$qb->delete('ac_tracks')
-				->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
-				->andWhere($qb->expr()->eq('file_id', $qb->createNamedParameter($fileId, \PDO::PARAM_INT)));
-			$qb->executeStatement();
-			$this->purgeFileReferences($userId, $fileId);
+			$fileId = $this->safeNodeId($node);
+			if ($fileId === null) {
+				return;
+			}
+			$this->deleteTrackForFile($userId, $fileId);
 			return;
 		}
 		if ($node instanceof File && $this->fileAccess->isAllowedAudioFile($node)) {
@@ -268,6 +266,59 @@ class ScanService
 				? (string)($library['content_kind'] ?? LibraryService::CONTENT_KIND_AUTO)
 				: LibraryService::CONTENT_KIND_AUTO;
 			$this->upsertTrack($userId, $node, $libraryId !== null && $libraryId > 0 ? $libraryId : null, $now, $now, true, $contentKind);
+		}
+	}
+
+	/**
+	 * Index maintenance after a rename/move.
+	 *
+	 * Same-storage moves keep file_id: upsert the target so rel_path/file_name update
+	 * in place (preserves added_at). Cross-storage moves can change file_id: purge the
+	 * source id then index the target. Non-audio targets drop any matching index rows
+	 * so extension/path changes cannot leave stale tracks.
+	 */
+	public function handleRename(string $userId, Node $source, Node $target): void
+	{
+		if ($userId === '') {
+			return;
+		}
+
+		$sourceId = $this->safeNodeId($source);
+		$targetId = $this->safeNodeId($target);
+
+		if ($target instanceof File && $this->fileAccess->isAllowedAudioFile($target)) {
+			if ($sourceId !== null && $targetId !== null && $sourceId !== $targetId) {
+				$this->deleteTrackForFile($userId, $sourceId);
+			}
+			$this->handleNodeEvent($userId, $target, 'written');
+			return;
+		}
+
+		if ($sourceId !== null) {
+			$this->deleteTrackForFile($userId, $sourceId);
+		}
+		if ($targetId !== null && $targetId !== $sourceId) {
+			$this->deleteTrackForFile($userId, $targetId);
+		}
+	}
+
+	/** @internal Overridable in unit tests (partial mock). */
+	protected function deleteTrackForFile(string $userId, int $fileId): void
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete('ac_tracks')
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->andWhere($qb->expr()->eq('file_id', $qb->createNamedParameter($fileId, \PDO::PARAM_INT)));
+		$qb->executeStatement();
+		$this->purgeFileReferences($userId, $fileId);
+	}
+
+	protected function safeNodeId(Node $node): ?int
+	{
+		try {
+			return (int)$node->getId();
+		} catch (\Throwable) {
+			return null;
 		}
 	}
 
