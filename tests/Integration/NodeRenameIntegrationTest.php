@@ -133,6 +133,49 @@ final class NodeRenameIntegrationTest extends TestCase
 		$this->assertFalse($src->nodeExists('photo.png'));
 	}
 
+	public function testFolderRenameRewritesDescendantTrackPaths(): void
+	{
+		/** @var IUserManager $userManager */
+		$userManager = \OC::$server->get(IUserManager::class);
+		$userManager->createUser(self::USER, self::PASSWORD);
+
+		/** @var FileAccessService $access */
+		$access = \OC::$server->get(FileAccessService::class);
+		$home = $access->getUserFolder(self::USER);
+		/** @var Folder $book */
+		$book = $home->newFolder('BookOld');
+		/** @var File $file */
+		$file = $book->newFile('ch1.mp3');
+		$file->putContent($this->minimalMp3Bytes());
+		$fileId = (int)$file->getId();
+
+		/** @var ScanService $scan */
+		$scan = \OC::$server->get(ScanService::class);
+		$scan->handleNodeEvent(self::USER, $file, 'written');
+		$before = $this->trackRelPath(self::USER, $fileId);
+		$this->assertNotNull($before);
+		$this->assertStringContainsString('BookOld', (string)$before);
+
+		$oldBookPath = $book->getPath();
+		$book->move($home->getPath() . '/BookNew');
+		/** @var Folder $renamed */
+		$renamed = $home->get('BookNew');
+		$this->assertInstanceOf(Folder::class, $renamed);
+
+		// Supply vacated source that still exposes the old path (NonExistingFile shape).
+		$sourceWithPath = $this->createMock(Node::class);
+		$sourceWithPath->method('getId')->willThrowException(new NotFoundException());
+		$sourceWithPath->method('getPath')->willReturn($oldBookPath);
+		$sourceWithPath->method('getOwner')->willThrowException(new NotFoundException());
+
+		$scan->handleRename(self::USER, $sourceWithPath, $renamed);
+
+		$after = $this->trackRelPath(self::USER, $fileId);
+		$this->assertNotNull($after);
+		$this->assertStringContainsString('BookNew', (string)$after);
+		$this->assertStringNotContainsString('BookOld', (string)$after);
+	}
+
 	/**
 	 * Post-rename source path is gone; getId()/getOwner() throw — mirrors NonExistingFile.
 	 */

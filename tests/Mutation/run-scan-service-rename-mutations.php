@@ -59,12 +59,16 @@ $mutations = [
 		'to' => "\t\tif (\$target instanceof File && \$this->fileAccess->isAllowedAudioFile(\$target)) {\n\t\t\t\$this->handleNodeEvent(\$userId, \$target, 'written');\n\t\t\treturn;\n\t\t}",
 	],
 	'never_delete_non_audio' => [
-		'from' => "\t\tif (\$sourceId !== null) {\n\t\t\t\$this->deleteTrackForFile(\$userId, \$sourceId);\n\t\t}\n\t\tif (\$targetId !== null && \$targetId !== \$sourceId) {\n\t\t\t\$this->deleteTrackForFile(\$userId, \$targetId);\n\t\t}",
+		'from' => "\t\t// Non-audio file: drop any index rows for the involved file id(s).\n\t\tif (\$sourceId !== null) {\n\t\t\t\$this->deleteTrackForFile(\$userId, \$sourceId);\n\t\t}\n\t\tif (\$targetId !== null && \$targetId !== \$sourceId) {\n\t\t\t\$this->deleteTrackForFile(\$userId, \$targetId);\n\t\t}",
 		'to' => "\t\treturn;",
 	],
+	'folder_falls_through_to_delete' => [
+		'from' => "\t\tif (\$target instanceof Folder) {\n\t\t\t\$this->rewritePathsAfterFolderMove(\$userId, \$source, \$target);\n\t\t\treturn;\n\t\t}",
+		'to' => "\t\tif (false && \$target instanceof Folder) {\n\t\t\t\$this->rewritePathsAfterFolderMove(\$userId, \$source, \$target);\n\t\t\treturn;\n\t\t}",
+	],
 	'ignore_empty_user_gate' => [
-		'from' => "\t\tif (\$userId === '') {\n\t\t\treturn;\n\t\t}\n\n\t\t\$sourceId = \$this->safeNodeId(\$source);",
-		'to' => "\t\t\$sourceId = \$this->safeNodeId(\$source);",
+		'from' => "\t\tif (\$userId === '') {\n\t\t\treturn;\n\t\t}\n\n\t\tif (\$target instanceof Folder) {",
+		'to' => "\t\tif (\$target instanceof Folder) {",
 	],
 ];
 

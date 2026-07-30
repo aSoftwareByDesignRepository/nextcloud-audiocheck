@@ -8,12 +8,14 @@ use OCA\AudioCheck\Service\AccessControlService;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
 use OCP\Group\Events\GroupDeletedEvent;
+use Psr\Log\LoggerInterface;
 
 /** @template-implements IEventListener<Event> */
 class GroupDeletedListener implements IEventListener
 {
 	public function __construct(
 		private AccessControlService $access,
+		private LoggerInterface $logger,
 	) {
 	}
 
@@ -22,6 +24,10 @@ class GroupDeletedListener implements IEventListener
 		if (!$event instanceof GroupDeletedEvent) {
 			return;
 		}
-		$this->access->purgeGroup($event->getGroup()->getGID());
+		try {
+			$this->access->purgeGroup($event->getGroup()->getGID());
+		} catch (\Throwable $e) {
+			$this->logger->error('AudioCheck group-deleted cleanup failed', ['exception' => $e]);
+		}
 	}
 }

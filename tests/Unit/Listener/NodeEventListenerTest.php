@@ -7,6 +7,7 @@ namespace OCA\AudioCheck\Tests\Unit\Listener;
 use OCA\AudioCheck\Listener\NodeEventListener;
 use OCA\AudioCheck\Service\ScanService;
 use OCP\EventDispatcher\Event;
+use OCP\Files\Events\Node\NodeCopiedEvent;
 use OCP\Files\Events\Node\NodeCreatedEvent;
 use OCP\Files\Events\Node\NodeDeletedEvent;
 use OCP\Files\Events\Node\NodeRenamedEvent;
@@ -19,8 +20,8 @@ use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 
 /**
- * AC-TST-NODE-01: NodeRenamedEvent must use getSource/getTarget — never getNode().
- * Listener failures must never escape (DAV MOVE must not abort).
+ * AC-TST-NODE-01: AbstractNodesEvent must use getSource/getTarget — never getNode().
+ * Listener failures must never escape (DAV MOVE/COPY must not abort).
  */
 final class NodeEventListenerTest extends TestCase
 {
@@ -47,8 +48,26 @@ final class NodeEventListenerTest extends TestCase
 			->method('handleRename')
 			->with('alice', $source, $target);
 		$this->scan->expects($this->never())->method('handleNodeEvent');
+		$this->scan->expects($this->never())->method('handleCopy');
 
 		$this->listener->handle(new NodeRenamedEvent($source, $target));
+	}
+
+	public function testCopiedUsesHandleCopyNotGetNode(): void
+	{
+		$source = $this->createMock(Node::class);
+		$target = $this->createMock(File::class);
+		$owner = $this->createMock(IUser::class);
+		$owner->method('getUID')->willReturn('alice');
+		$target->method('getOwner')->willReturn($owner);
+
+		$this->scan->expects($this->once())
+			->method('handleCopy')
+			->with('alice', $source, $target);
+		$this->scan->expects($this->never())->method('handleRename');
+		$this->scan->expects($this->never())->method('handleNodeEvent');
+
+		$this->listener->handle(new NodeCopiedEvent($source, $target));
 	}
 
 	public function testRenamedFallsBackToSourceOwnerWhenTargetOwnerMissing(): void
@@ -75,6 +94,7 @@ final class NodeEventListenerTest extends TestCase
 		$source->method('getOwner')->willReturn(null);
 
 		$this->scan->expects($this->never())->method('handleRename');
+		$this->scan->expects($this->never())->method('handleCopy');
 		$this->scan->expects($this->never())->method('handleNodeEvent');
 
 		$this->listener->handle(new NodeRenamedEvent($source, $target));
@@ -117,6 +137,7 @@ final class NodeEventListenerTest extends TestCase
 	{
 		$this->scan->expects($this->never())->method('handleNodeEvent');
 		$this->scan->expects($this->never())->method('handleRename');
+		$this->scan->expects($this->never())->method('handleCopy');
 		$this->listener->handle(new Event());
 	}
 
@@ -141,26 +162,38 @@ final class NodeEventListenerTest extends TestCase
 		$this->addToAssertionCount(1);
 	}
 
-	public function testSourceDoesNotCallDeprecatedGetNodeApi(): void
+	public function testSourceDoesNotCallGetNodeOnAbstractNodesEvents(): void
 	{
 		$source = file_get_contents(dirname(__DIR__, 3) . '/lib/Listener/NodeEventListener.php');
 		$this->assertIsString($source);
 		$this->assertStringContainsString('getSource()', $source);
 		$this->assertStringContainsString('getTarget()', $source);
 		$this->assertStringContainsString('handleRename', $source);
-		// Guard against the exact regression from issue #7.
+		$this->assertStringContainsString('handleCopy', $source);
+		$this->assertStringContainsString('NodeCopiedEvent', $source);
 		$this->assertStringNotContainsString(
 			'NodeRenamedEvent => $event->getNode()',
+			$source,
+		);
+		$this->assertStringNotContainsString(
+			'NodeCopiedEvent => $event->getNode()',
 			$source,
 		);
 		$this->assertDoesNotMatchRegularExpression(
 			'/instanceof\s+NodeRenamedEvent\s*=>\s*\$event->getNode\s*\(/',
 			$source,
 		);
-		$this->assertMatchesRegularExpression(
-			'/function\s+handleRenamed\s*\(\s*NodeRenamedEvent\b/',
+		$this->assertDoesNotMatchRegularExpression(
+			'/instanceof\s+NodeCopiedEvent\s*=>\s*\$event->getNode\s*\(/',
 			$source,
 		);
+	}
+
+	public function testApplicationRegistersCopiedEvent(): void
+	{
+		$source = file_get_contents(dirname(__DIR__, 3) . '/lib/AppInfo/Application.php');
+		$this->assertIsString($source);
+		$this->assertStringContainsString('NodeCopiedEvent::class, NodeEventListener::class', $source);
 	}
 
 	private function ownedFile(string $uid, int $id): File&MockObject

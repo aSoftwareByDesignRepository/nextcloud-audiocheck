@@ -36,6 +36,7 @@ use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
+use OCP\Files\Events\Node\NodeCopiedEvent;
 use OCP\Files\Events\Node\NodeCreatedEvent;
 use OCP\Files\Events\Node\NodeDeletedEvent;
 use OCP\Files\Events\Node\NodeRenamedEvent;
@@ -223,6 +224,7 @@ class Application extends App implements IBootstrap
 		$context->registerEventListener(NodeWrittenEvent::class, NodeEventListener::class);
 		$context->registerEventListener(NodeDeletedEvent::class, NodeEventListener::class);
 		$context->registerEventListener(NodeRenamedEvent::class, NodeEventListener::class);
+		$context->registerEventListener(NodeCopiedEvent::class, NodeEventListener::class);
 
 		$context->registerService(ScanCommand::class, fn ($c) => new ScanCommand(
 			$c->query(ScanService::class),
