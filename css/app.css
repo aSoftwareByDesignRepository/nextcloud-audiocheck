@@ -2397,8 +2397,8 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	padding: 0;
 	box-sizing: border-box;
 	accent-color: var(--color-primary-element);
-	background-color: var(--ac-bg-card, var(--color-main-background, #fff));
-	border: 1px solid var(--ac-border-strong, var(--color-border-dark, #999));
+	background-color: var(--ac-bg-card, var(--color-main-background));
+	border: 1px solid var(--ac-border-strong, var(--color-border-dark));
 	border-radius: 3px;
 	color-scheme: inherit;
 	appearance: auto;
@@ -2992,9 +2992,62 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: var(--ac-space-4);
+	gap: var(--ac-space-3);
 	flex-wrap: nowrap;
 	width: 100%;
+}
+@media (max-width: 379px) {
+	.ac-now-transport {
+		gap: var(--ac-space-1);
+	}
+	#app-content.ac-app button.ac-btn.ac-transport-btn--jump,
+	.ac-now-transport .ac-transport-btn--jump {
+		min-width: 44px;
+		min-height: 44px;
+		padding-inline: 0.15rem;
+	}
+}
+#app-content.ac-app button.ac-btn.ac-transport-btn--jump,
+.ac-now-transport .ac-transport-btn--jump {
+	min-width: var(--ac-touch);
+	min-height: var(--ac-touch);
+	flex-direction: column;
+	gap: 0;
+	border-radius: 999px;
+}
+#app-content.ac-app button.ac-btn.ac-transport-btn--jump:disabled,
+.ac-now-transport .ac-transport-btn--jump:disabled {
+	opacity: 0.45;
+}
+.ac-transport-jump {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+	gap: 0;
+}
+.ac-transport-jump .ac-icon {
+	width: 1.35rem;
+	height: 1.35rem;
+}
+.ac-transport-jump__secs {
+	font-size: 0.75rem;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.02em;
+	margin-top: -0.1rem;
+	color: inherit;
+	line-height: 1;
+	min-width: 1.25rem;
+	text-align: center;
+}
+/* Keep jump controls visually peer to prev/next, never competing with play. */
+#app-content.ac-app button.ac-btn.ac-transport-btn--jump:not(:disabled):hover,
+#app-content.ac-app button.ac-btn.ac-transport-btn--jump:not(:disabled):focus-visible,
+.ac-now-transport .ac-transport-btn--jump:not(:disabled):hover,
+.ac-now-transport .ac-transport-btn--jump:not(:disabled):focus-visible {
+	transform: none;
 }
 .ac-now-seek {
 	width: 100%;

@@ -157,6 +157,7 @@ class PageController extends Controller
 			'common/library-page-ui',
 			'common/sleep-timer',
 			'common/page-chrome',
+			'common/seek-jump',
 			'common/router',
 			'common/player',
 			'common/media-library-page',

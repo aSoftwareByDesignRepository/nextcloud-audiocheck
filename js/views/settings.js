@@ -161,7 +161,7 @@
 			const refList = C.el('dl', { className: 'ac-controls-ref__list' });
 			[
 				[t('audiocheck', 'Mini player (bottom bar)'), t('audiocheck', 'Play, pause, previous, next, seek, volume, and open Now playing.')],
-				[t('audiocheck', 'Now playing'), t('audiocheck', 'Full player with cover, seek bar, shuffle, repeat, speed, volume, queue, and chapters.')],
+				[t('audiocheck', 'Now playing'), t('audiocheck', 'Full player with cover, seek bar, jump back/forward 30 seconds, shuffle, repeat, speed, volume, queue, and chapters.')],
 				[t('audiocheck', 'This page'), t('audiocheck', 'Default speed, volume, and resume preferences.')],
 			].forEach(([where, what]) => {
 				refList.appendChild(C.el('dt', { text: where }));
@@ -184,7 +184,7 @@
 			[
 				[t('audiocheck', 'Space or K'), t('audiocheck', 'Play / pause')],
 				[t('audiocheck', 'M'), t('audiocheck', 'Mute / unmute')],
-				[t('audiocheck', '← / →'), t('audiocheck', 'Seek 10 seconds')],
+				[t('audiocheck', '← / →'), t('audiocheck', 'Seek 30 seconds')],
 				[t('audiocheck', 'Shift + ← / →'), t('audiocheck', 'Previous / next track')],
 				[t('audiocheck', '↑ / ↓'), t('audiocheck', 'Volume up / down')],
 				[t('audiocheck', '[ / ]'), t('audiocheck', 'Slower / faster')],

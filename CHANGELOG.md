@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- **Jump back / forward 30 seconds** on Now Playing — podcast-style −30 / +30 beside play (issue #6). Mini player stays simple; open Now Playing for jumps. Keyboard ←/→ and MediaSession seek use 30 seconds.
+
+### Fixed
+
+- **Rapid ±30 seek race (web + mobile)** — relative seeks accumulate against a pending target so double-taps cannot both read a stale clock and land on the same position; absolute scrub / track change cancels in-flight relative seeks.
+- **MediaSession seek offset** — OS/browser often advertises 10s; product hard-locks seekbackward/seekforward to 30s to match on-screen controls.
+
 ## 1.2.11 - 2026-07-30
 
 ### Fixed

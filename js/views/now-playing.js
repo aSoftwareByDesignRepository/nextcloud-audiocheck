@@ -56,6 +56,29 @@
 		return btn;
 	}
 
+	/** Podcast-style ±30 jump: curved arrow + visible “30” numeral. */
+	function jumpBtn(label, direction, onClick) {
+		const btn = C.el('button', {
+			type: 'button',
+			className: 'ac-btn ac-transport-btn ac-transport-btn--jump',
+			attrs: { 'aria-label': label },
+			onClick,
+		});
+		const stack = C.el('span', {
+			className: 'ac-transport-jump',
+			attrs: { 'aria-hidden': 'true' },
+		});
+		if (window.AudioCheckIcons) {
+			stack.appendChild(AudioCheckIcons.createSvg(direction === 'back' ? 'rotate-ccw' : 'rotate-cw'));
+		}
+		stack.appendChild(C.el('span', {
+			className: 'ac-transport-jump__secs',
+			text: String(AudioCheckPlayer.SEEK_JUMP_SEC || 30),
+		}));
+		btn.appendChild(stack);
+		return btn;
+	}
+
 	function trackActionBtn(label, iconName, onClick, options) {
 		const opts = options || {};
 		const btn = C.el('button', {
@@ -636,6 +659,8 @@
 				const a = document.getElementById('ac-audio');
 				const playing = !!(a && !a.paused);
 				const waiting = !!(a && a.readyState < 3 && !a.paused);
+				const track = AudioCheckPlayer.getCurrentTrack();
+				const jumpBlocked = !track || !!track.unavailable || track.browserPlayable === false;
 				if (playBtn) {
 					playBtn.setAttribute('aria-label', playing ? t('audiocheck', 'Pause') : t('audiocheck', 'Play'));
 					playBtn.setAttribute('aria-pressed', playing ? 'true' : 'false');
@@ -645,8 +670,12 @@
 				}
 				const prevBtn = document.getElementById('ac-now-prev');
 				const nextBtn = document.getElementById('ac-now-next');
+				const backBtn = document.getElementById('ac-now-jump-back');
+				const fwdBtn = document.getElementById('ac-now-jump-forward');
 				if (prevBtn) prevBtn.disabled = !AudioCheckPlayer.canGoPrev();
 				if (nextBtn) nextBtn.disabled = !AudioCheckPlayer.canGoNext();
+				if (backBtn) backBtn.disabled = jumpBlocked;
+				if (fwdBtn) fwdBtn.disabled = jumpBlocked;
 				if (statusText) {
 					if (waiting) {
 						statusText.textContent = t('audiocheck', 'Buffering');
@@ -872,6 +901,9 @@
 				seekInput.addEventListener('input', (e) => {
 					const a = document.getElementById('ac-audio');
 					const ms = parseInt(e.target.value, 10);
+					if (window.AudioCheckPlayer && typeof window.AudioCheckPlayer.clearSeekJumpPending === 'function') {
+						window.AudioCheckPlayer.clearSeekJumpPending();
+					}
 					if (a && a.duration) a.currentTime = ms / 1000;
 					const posText = AudioCheckTime.formatMs(ms);
 					if (posEl) posEl.textContent = posText;
@@ -897,14 +929,29 @@
 					className: 'ac-now-transport',
 					attrs: { role: 'group', 'aria-label': t('audiocheck', 'Playback controls') },
 				});
+				const jumpSec = AudioCheckPlayer.SEEK_JUMP_SEC || 30;
 				const prevBtn = transportBtn(t('audiocheck', 'Previous'), 'previous', false, () => AudioCheckPlayer.prev());
 				prevBtn.id = 'ac-now-prev';
+				const backBtn = jumpBtn(
+					t('audiocheck', 'Jump back {seconds} seconds', { seconds: String(jumpSec) }),
+					'back',
+					() => AudioCheckPlayer.seekBySec(-jumpSec),
+				);
+				backBtn.id = 'ac-now-jump-back';
 				playBtn = transportBtn(t('audiocheck', 'Play'), 'play', true, () => AudioCheckPlayer.toggle());
 				playBtn.id = 'ac-now-play';
+				const fwdBtn = jumpBtn(
+					t('audiocheck', 'Jump forward {seconds} seconds', { seconds: String(jumpSec) }),
+					'forward',
+					() => AudioCheckPlayer.seekBySec(jumpSec),
+				);
+				fwdBtn.id = 'ac-now-jump-forward';
 				const nextBtn = transportBtn(t('audiocheck', 'Next'), 'next', false, () => AudioCheckPlayer.next());
 				nextBtn.id = 'ac-now-next';
 				transport.appendChild(prevBtn);
+				transport.appendChild(backBtn);
 				transport.appendChild(playBtn);
+				transport.appendChild(fwdBtn);
 				transport.appendChild(nextBtn);
 				section.appendChild(transport);
 				return section;

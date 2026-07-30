@@ -1,6 +1,20 @@
 (function () {
 	'use strict';
 
+	/** Relative jump for −/+ buttons, ←/→, and MediaSession seek (seconds). */
+	const SEEK_JUMP_SEC = (window.AudioCheckSeekJump && window.AudioCheckSeekJump.SEEK_JUMP_SEC) || 30;
+
+	/** Rapid-tap race: last planned absolute seek until audio catches up / absolute seek wins. */
+	let seekJumpPendingSec = null;
+	let seekJumpPendingKey = null;
+	let seekJumpSeq = 0;
+
+	function clearSeekJumpPending() {
+		seekJumpPendingSec = null;
+		seekJumpPendingKey = null;
+		seekJumpSeq += 1;
+	}
+
 	const queue = [];
 	let index = -1;
 	let repeatMode = AudioCheckConstants.REPEAT_OFF;
@@ -807,8 +821,72 @@
 		const ms = Math.floor(a.currentTime * 1000);
 		const cur = chapterAt(ms, track.chapters);
 		const next = Math.max(0, Math.min(track.chapters.length - 1, cur + delta));
+		clearSeekJumpPending();
 		a.currentTime = (track.chapters[next].start_ms || 0) / 1000;
 		announce(t('audiocheck', 'Chapter: {title}', { title: track.chapters[next].title || '' }));
+	}
+
+	/**
+	 * Relative seek within the current track only (never prev/next).
+	 * Clamps to [0, duration]. Used by −30/+30 buttons, ←/→, and MediaSession.
+	 * Accumulates rapid taps via pending target when currentTime readback lags.
+	 * @param {number} deltaSec
+	 * @param {{ announce?: boolean }} [options]
+	 */
+	function seekBySec(deltaSec, options) {
+		const a = audio();
+		const track = currentTrack();
+		if (!a || !track) return;
+		if (track.unavailable || track.browserPlayable === false) return;
+		const delta = Number(deltaSec) || 0;
+		if (delta === 0) return;
+		const trackKey = String(track.fileId) + ':' + String(index);
+		if (seekJumpPendingKey !== trackKey) {
+			seekJumpPendingKey = trackKey;
+			seekJumpPendingSec = null;
+		}
+		const dur = Number.isFinite(a.duration) && a.duration > 0 ? a.duration : 0;
+		const cur = Number.isFinite(a.currentTime) ? a.currentTime : 0;
+		let nextSec;
+		if (window.AudioCheckSeekJump && typeof window.AudioCheckSeekJump.resolveSeekByTarget === 'function') {
+			const planned = window.AudioCheckSeekJump.resolveSeekByTarget({
+				pendingTargetSec: seekJumpPendingSec,
+				positionSec: cur,
+				deltaSec: delta,
+				durationSec: dur,
+			});
+			nextSec = planned.nextSec;
+			seekJumpPendingSec = planned.pendingTargetSec;
+		} else {
+			const clamp = (window.AudioCheckSeekJump && window.AudioCheckSeekJump.clampSeekBySeconds)
+				? window.AudioCheckSeekJump.clampSeekBySeconds
+				: function (pos, d, duration) {
+					let next = (Number.isFinite(pos) ? pos : 0) + (Number.isFinite(d) ? d : 0);
+					if (next < 0) next = 0;
+					if (Number.isFinite(duration) && duration > 0 && next > duration) next = duration;
+					return next;
+				};
+			nextSec = clamp(cur, delta, dur);
+			seekJumpPendingSec = nextSec;
+		}
+		const seq = ++seekJumpSeq;
+		a.currentTime = nextSec;
+		const clearIfLatest = () => {
+			if (seq === seekJumpSeq) {
+				seekJumpPendingSec = null;
+			}
+		};
+		a.addEventListener('seeked', clearIfLatest, { once: true });
+		window.setTimeout(clearIfLatest, 750);
+		updateMiniSeek();
+		saveProgress(false, false);
+		notify();
+		if (options && options.announce === false) return;
+		const jumped = Math.round(Math.abs(delta));
+		const label = delta < 0
+			? t('audiocheck', 'Jumped back {seconds} seconds', { seconds: String(jumped) })
+			: t('audiocheck', 'Jumped forward {seconds} seconds', { seconds: String(jumped) });
+		announce(label);
 	}
 
 	function cycleSpeed(delta) {
@@ -978,6 +1056,7 @@
 		document.getElementById('ac-mini-next')?.addEventListener('click', next);
 		document.getElementById('ac-mini-seek')?.addEventListener('input', (e) => {
 			const ms = parseInt(e.target.value, 10);
+			clearSeekJumpPending();
 			if (a.duration) a.currentTime = ms / 1000;
 			const posEl = document.getElementById('ac-mini-pos');
 			const posText = AudioCheckTime.formatMs(ms);
@@ -996,13 +1075,13 @@
 			if (e.key === 'ArrowLeft' && track) {
 				e.preventDefault();
 				if (e.shiftKey) prev();
-				else a.currentTime = Math.max(0, a.currentTime - 10);
+				else seekBySec(-SEEK_JUMP_SEC);
 				return;
 			}
 			if (e.key === 'ArrowRight' && track) {
 				e.preventDefault();
 				if (e.shiftKey) next();
-				else a.currentTime = Math.min(a.duration || 0, a.currentTime + 10);
+				else seekBySec(SEEK_JUMP_SEC);
 				return;
 			}
 			if (e.key === 'ArrowUp') {
@@ -1027,6 +1106,22 @@
 			navigator.mediaSession.setActionHandler('pause', () => a.pause());
 			navigator.mediaSession.setActionHandler('previoustrack', prev);
 			navigator.mediaSession.setActionHandler('nexttrack', next);
+			try {
+				navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+					const delta = (window.AudioCheckSeekJump && window.AudioCheckSeekJump.resolveMediaSessionDeltaSec)
+						? window.AudioCheckSeekJump.resolveMediaSessionDeltaSec(details, SEEK_JUMP_SEC)
+						: SEEK_JUMP_SEC;
+					seekBySec(-delta, { announce: false });
+				});
+				navigator.mediaSession.setActionHandler('seekforward', (details) => {
+					const delta = (window.AudioCheckSeekJump && window.AudioCheckSeekJump.resolveMediaSessionDeltaSec)
+						? window.AudioCheckSeekJump.resolveMediaSessionDeltaSec(details, SEEK_JUMP_SEC)
+						: SEEK_JUMP_SEC;
+					seekBySec(delta, { announce: false });
+				});
+			} catch (err) {
+				// Some browsers reject seekbackward/seekforward; buttons + keyboard still work.
+			}
 		}
 		window.addEventListener('beforeunload', () => {
 			saveProgress(true, false);
@@ -1053,6 +1148,7 @@
 			if (ni >= 0 && ni !== i) loadTrack(ni, undefined, autoplay);
 			return;
 		}
+		clearSeekJumpPending();
 		index = i;
 		const a = audio();
 		const shouldPlay = autoplay !== false;
@@ -1344,7 +1440,20 @@
 		},
 		seekChapter,
 		chapterAt,
-		seekToMs(ms) { const a = audio(); if (a) a.currentTime = ms / 1000; },
+		SEEK_JUMP_SEC,
+		seekBySec,
+		clearSeekJumpPending,
+		seekToMs(ms) {
+			const a = audio();
+			if (!a) return;
+			clearSeekJumpPending();
+			const dur = Number.isFinite(a.duration) ? a.duration : 0;
+			const nextSec = Math.max(0, Math.min(dur > 0 ? dur : Number.POSITIVE_INFINITY, (Number(ms) || 0) / 1000));
+			a.currentTime = nextSec;
+			updateMiniSeek();
+			saveProgress(false, false);
+			notify();
+		},
 		subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
 		toggle, next, prev,
 		restoreSession,
