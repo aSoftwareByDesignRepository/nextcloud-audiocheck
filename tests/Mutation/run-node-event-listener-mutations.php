@@ -3,11 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Lightweight mutation gauntlet for NodeEventListener rename handling.
- *
- * Baseline unit tests must pass, then known-bad mutations must fail the suite —
- * proving we catch a regression to getNode() on NodeRenamedEvent and lost
- * swallow-exceptions protection.
+ * Lightweight mutation gauntlet for NodeEventListener rename/copy handling.
  *
  * Usage (from app root, inside Docker when applicable):
  *   php tests/Mutation/run-node-event-listener-mutations.php
@@ -58,17 +54,17 @@ if ($baseline !== 0) {
 }
 
 $mutations = [
-	'restore_getNode_on_rename' => [
-		'from' => "\tprivate function handleRenamed(NodeRenamedEvent \$event): void\n\t{\n\t\t\$source = \$event->getSource();\n\t\t\$target = \$event->getTarget();",
-		'to' => "\tprivate function handleRenamed(NodeRenamedEvent \$event): void\n\t{\n\t\t\$source = \$event->getNode();\n\t\t\$target = \$event->getNode();",
+	'restore_getNode_on_nodes_event' => [
+		'from' => "\tprivate function handleNodesEvent(Node \$source, Node \$target, string \$op): void\n\t{\n\t\t// Prefer the destination: source may be NonExisting* after rename (getOwner/getId throw).\n\t\t\$userId = \$this->ownerUid(\$target) ?? \$this->ownerUid(\$source);\n\t\tif (\$userId === null) {\n\t\t\treturn;\n\t\t}\n\n\t\tif (\$op === 'copy') {\n\t\t\t\$this->scan->handleCopy(\$userId, \$source, \$target);\n\t\t\treturn;\n\t\t}\n\t\t\$this->scan->handleRename(\$userId, \$source, \$target);\n\t}",
+		'to' => "\tprivate function handleNodesEvent(Node \$source, Node \$target, string \$op): void\n\t{\n\t\t\$broken = \$source->getNode();\n\t\t\$this->scan->handleRename('x', \$broken, \$broken);\n\t}",
 	],
 	'drop_exception_swallow' => [
 		'from' => "\tpublic function handle(Event \$event): void\n\t{\n\t\ttry {\n\t\t\t\$this->dispatch(\$event);\n\t\t} catch (\\Throwable \$e) {\n\t\t\t// Never break Files/DAV operations because of indexing side effects.\n\t\t\t\$this->logger->error('AudioCheck node listener failed', ['exception' => \$e]);\n\t\t}\n\t}",
 		'to' => "\tpublic function handle(Event \$event): void\n\t{\n\t\t\$this->dispatch(\$event);\n\t}",
 	],
-	'skip_handleRename' => [
-		'from' => "\t\t\$this->scan->handleRename(\$userId, \$source, \$target);",
-		'to' => "\t\t\$this->scan->handleNodeEvent(\$userId, \$target, 'written');",
+	'skip_handleCopy' => [
+		'from' => "\t\tif (\$op === 'copy') {\n\t\t\t\$this->scan->handleCopy(\$userId, \$source, \$target);\n\t\t\treturn;\n\t\t}",
+		'to' => "\t\tif (\$op === 'copy') {\n\t\t\t\$this->scan->handleRename(\$userId, \$source, \$target);\n\t\t\treturn;\n\t\t}",
 	],
 ];
 

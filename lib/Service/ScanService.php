@@ -276,10 +276,18 @@ class ScanService
 	 * in place (preserves added_at). Cross-storage moves can change file_id: purge the
 	 * source id then index the target. Non-audio targets drop any matching index rows
 	 * so extension/path changes cannot leave stale tracks.
+	 *
+	 * Folder moves rewrite library folder_path + descendant track rel_path prefixes
+	 * (Nextcloud only emits NodeRenamedEvent for the folder, not each child).
 	 */
 	public function handleRename(string $userId, Node $source, Node $target): void
 	{
 		if ($userId === '') {
+			return;
+		}
+
+		if ($target instanceof Folder) {
+			$this->rewritePathsAfterFolderMove($userId, $source, $target);
 			return;
 		}
 
@@ -294,12 +302,175 @@ class ScanService
 			return;
 		}
 
+		// Non-audio file: drop any index rows for the involved file id(s).
 		if ($sourceId !== null) {
 			$this->deleteTrackForFile($userId, $sourceId);
 		}
 		if ($targetId !== null && $targetId !== $sourceId) {
 			$this->deleteTrackForFile($userId, $targetId);
 		}
+	}
+
+	/**
+	 * Index maintenance after a copy. Source stays; only the new target is indexed.
+	 * Folder copies queue a scan (children are not enumerated here — too heavy for the event bus).
+	 */
+	public function handleCopy(string $userId, Node $source, Node $target): void
+	{
+		if ($userId === '') {
+			return;
+		}
+
+		if ($target instanceof File && $this->fileAccess->isAllowedAudioFile($target)) {
+			$this->handleNodeEvent($userId, $target, 'written');
+			return;
+		}
+
+		if ($target instanceof Folder) {
+			// Cheap relevance check: only scan when the destination sits under a library root
+			// or when any library root was copied (path prefix / root id match).
+			if ($this->folderCopyMayAffectLibrary($userId, $target)) {
+				$this->queueScan($userId);
+			}
+		}
+	}
+
+	/** @internal Overridable in unit tests (partial mock). */
+	protected function rewritePathsAfterFolderMove(string $userId, Node $source, Node $target): void
+	{
+		$oldRel = $this->relativeUserPath($userId, $source);
+		$newRel = $this->relativeUserPath($userId, $target);
+		if ($oldRel === null || $newRel === null) {
+			// Without both paths we cannot rewrite prefixes safely — reconcile via scan.
+			$this->queueScan($userId);
+			return;
+		}
+		if ($oldRel === $newRel) {
+			return;
+		}
+
+		$targetId = $this->safeNodeId($target);
+		$librariesTouched = $this->rewriteLibraryPathPrefixes($userId, $oldRel, $newRel, $targetId);
+		$tracksTouched = $this->rewriteTrackPathPrefixes($userId, $oldRel, $newRel);
+
+		// Reconcile library_id assignment for tracks that moved in/out of library roots.
+		if ($librariesTouched > 0 || $tracksTouched > 0) {
+			$this->queueScan($userId);
+		}
+	}
+
+	/**
+	 * @return int Number of library rows updated
+	 */
+	private function rewriteLibraryPathPrefixes(string $userId, string $oldRel, string $newRel, ?int $targetFolderId): int
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id', 'folder_path', 'root_file_id')
+			->from('ac_libraries')
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+		$result = $qb->executeQuery();
+		$updated = 0;
+		while ($row = $result->fetch()) {
+			$folderPath = (string)($row['folder_path'] ?? '');
+			$rootId = isset($row['root_file_id']) ? (int)$row['root_file_id'] : 0;
+			$nextPath = null;
+			if ($targetFolderId !== null && $rootId === $targetFolderId) {
+				$nextPath = $newRel;
+			} elseif ($folderPath === $oldRel) {
+				$nextPath = $newRel;
+			} elseif ($oldRel !== '/' && str_starts_with($folderPath, $oldRel . '/')) {
+				$nextPath = $newRel . substr($folderPath, strlen($oldRel));
+			}
+			if ($nextPath === null || $nextPath === $folderPath) {
+				continue;
+			}
+			$uq = $this->db->getQueryBuilder();
+			$uq->update('ac_libraries')
+				->set('folder_path', $uq->createNamedParameter($nextPath))
+				->where($uq->expr()->eq('id', $uq->createNamedParameter((int)$row['id'], \PDO::PARAM_INT)));
+			$uq->executeStatement();
+			$updated++;
+		}
+		$result->closeCursor();
+		return $updated;
+	}
+
+	/**
+	 * @return int Number of track rows updated
+	 */
+	private function rewriteTrackPathPrefixes(string $userId, string $oldRel, string $newRel): int
+	{
+		$qb = $this->db->getQueryBuilder();
+		$like = $this->db->escapeLikeParameter($oldRel) . '/%';
+		$qb->select('id', 'rel_path')
+			->from('ac_tracks')
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->andWhere($qb->expr()->orX(
+				$qb->expr()->eq('rel_path', $qb->createNamedParameter($oldRel)),
+				$qb->expr()->like('rel_path', $qb->createNamedParameter($like)),
+			));
+		$result = $qb->executeQuery();
+		$updated = 0;
+		while ($row = $result->fetch()) {
+			$rel = (string)$row['rel_path'];
+			$next = $rel === $oldRel
+				? $newRel
+				: $newRel . substr($rel, strlen($oldRel));
+			if ($next === $rel) {
+				continue;
+			}
+			$uq = $this->db->getQueryBuilder();
+			$uq->update('ac_tracks')
+				->set('rel_path', $uq->createNamedParameter($next))
+				->where($uq->expr()->eq('id', $uq->createNamedParameter((int)$row['id'], \PDO::PARAM_INT)));
+			$uq->executeStatement();
+			$updated++;
+		}
+		$result->closeCursor();
+		return $updated;
+	}
+
+	private function folderCopyMayAffectLibrary(string $userId, Folder $target): bool
+	{
+		$rel = $this->relativeUserPath($userId, $target);
+		if ($rel === null) {
+			return true;
+		}
+		foreach ($this->listLibraryRoots($userId) as $root) {
+			$folderPath = rtrim((string)($root['folder_path'] ?? '/'), '/');
+			if ($folderPath === '' || $folderPath === '/') {
+				return true;
+			}
+			if ($rel === $folderPath
+				|| str_starts_with($rel, $folderPath . '/')
+				|| str_starts_with($folderPath, $rel . '/')) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private function relativeUserPath(string $userId, Node $node): ?string
+	{
+		try {
+			$path = $node->getPath();
+		} catch (\Throwable) {
+			return null;
+		}
+		if ($path === '') {
+			return null;
+		}
+		$userHome = $this->fileAccess->getUserHomePath($userId);
+		if ($userHome !== '' && str_starts_with($path, $userHome)) {
+			$path = substr($path, strlen($userHome));
+		}
+		if ($path === '' || $path === '/') {
+			return '/';
+		}
+		if ($path[0] !== '/') {
+			$path = '/' . $path;
+		}
+		return rtrim($path, '/') ?: '/';
 	}
 
 	/** @internal Overridable in unit tests (partial mock). */
@@ -322,8 +493,11 @@ class ScanService
 		}
 	}
 
-	/** @return list<array<string, mixed>> */
-	private function listLibraryRoots(string $userId): array
+	/**
+	 * @return list<array<string, mixed>>
+	 * @internal Overridable in unit tests (partial mock).
+	 */
+	protected function listLibraryRoots(string $userId): array
 	{
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')->from('ac_libraries')

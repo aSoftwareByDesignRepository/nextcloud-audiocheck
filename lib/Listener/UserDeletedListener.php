@@ -10,6 +10,7 @@ use OCA\AudioCheck\Service\ScanService;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
 use OCP\User\Events\UserDeletedEvent;
+use Psr\Log\LoggerInterface;
 
 /** @template-implements IEventListener<Event> */
 class UserDeletedListener implements IEventListener
@@ -18,6 +19,7 @@ class UserDeletedListener implements IEventListener
 		private AccessControlService $access,
 		private ScanService $scan,
 		private PlayQueueService $queue,
+		private LoggerInterface $logger,
 	) {
 	}
 
@@ -26,9 +28,13 @@ class UserDeletedListener implements IEventListener
 		if (!$event instanceof UserDeletedEvent) {
 			return;
 		}
-		$uid = $event->getUser()->getUID();
-		$this->access->purgeUser($uid);
-		$this->scan->purgeUserData($uid);
-		$this->queue->purgeUser($uid);
+		try {
+			$uid = $event->getUser()->getUID();
+			$this->access->purgeUser($uid);
+			$this->scan->purgeUserData($uid);
+			$this->queue->purgeUser($uid);
+		} catch (\Throwable $e) {
+			$this->logger->error('AudioCheck user-deleted cleanup failed', ['exception' => $e]);
+		}
 	}
 }

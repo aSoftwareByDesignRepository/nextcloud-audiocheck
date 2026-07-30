@@ -11,6 +11,7 @@ use OCA\AudioCheck\Service\ScanService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJobList;
 use OCP\Files\File;
+use OCP\Files\Folder;
 use OCP\Files\Node;
 use OCP\IDBConnection;
 use OCP\IConfig;
@@ -19,9 +20,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 
 /**
- * AC-TST-NODE-02: ScanService::handleRename semantics (same-id update vs cross-id purge).
- *
- * Uses a partial mock so DB-heavy upsert/delete can be asserted without a live container.
+ * AC-TST-NODE-02: ScanService rename/copy semantics.
  */
 final class ScanServiceRenameTest extends TestCase
 {
@@ -30,8 +29,9 @@ final class ScanServiceRenameTest extends TestCase
 		$target = $this->audioFile(10);
 		$source = $this->nodeWithId(10);
 
-		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile']);
+		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile', 'rewritePathsAfterFolderMove']);
 		$scan->expects($this->never())->method('deleteTrackForFile');
+		$scan->expects($this->never())->method('rewritePathsAfterFolderMove');
 		$scan->expects($this->once())->method('handleNodeEvent')->with('alice', $target, 'written');
 
 		$scan->handleRename('alice', $source, $target);
@@ -42,7 +42,7 @@ final class ScanServiceRenameTest extends TestCase
 		$target = $this->audioFile(20);
 		$source = $this->nodeWithId(10);
 
-		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile']);
+		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile', 'rewritePathsAfterFolderMove']);
 		$scan->expects($this->once())->method('deleteTrackForFile')->with('alice', 10);
 		$scan->expects($this->once())->method('handleNodeEvent')->with('alice', $target, 'written');
 
@@ -54,7 +54,7 @@ final class ScanServiceRenameTest extends TestCase
 		$target = $this->nonAudioFile(20);
 		$source = $this->nodeWithId(10);
 
-		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile']);
+		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile', 'rewritePathsAfterFolderMove']);
 		$scan->expects($this->never())->method('handleNodeEvent');
 		$scan->expects($this->exactly(2))
 			->method('deleteTrackForFile')
@@ -68,8 +68,21 @@ final class ScanServiceRenameTest extends TestCase
 		$target = $this->nonAudioFile(10);
 		$source = $this->nodeWithId(10);
 
-		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile']);
+		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile', 'rewritePathsAfterFolderMove']);
 		$scan->expects($this->once())->method('deleteTrackForFile')->with('alice', 10);
+		$scan->expects($this->never())->method('handleNodeEvent');
+
+		$scan->handleRename('alice', $source, $target);
+	}
+
+	public function testHandleRenameFolderRewritesPathsAndNeverDeletesByFolderId(): void
+	{
+		$target = $this->createMock(Folder::class);
+		$source = $this->nodeWithId(99);
+
+		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile', 'rewritePathsAfterFolderMove']);
+		$scan->expects($this->once())->method('rewritePathsAfterFolderMove')->with('alice', $source, $target);
+		$scan->expects($this->never())->method('deleteTrackForFile');
 		$scan->expects($this->never())->method('handleNodeEvent');
 
 		$scan->handleRename('alice', $source, $target);
@@ -80,9 +93,10 @@ final class ScanServiceRenameTest extends TestCase
 		$target = $this->audioFile(1);
 		$source = $this->nodeWithId(1);
 
-		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile']);
+		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile', 'rewritePathsAfterFolderMove']);
 		$scan->expects($this->never())->method('handleNodeEvent');
 		$scan->expects($this->never())->method('deleteTrackForFile');
+		$scan->expects($this->never())->method('rewritePathsAfterFolderMove');
 
 		$scan->handleRename('', $source, $target);
 	}
@@ -93,11 +107,100 @@ final class ScanServiceRenameTest extends TestCase
 		$source = $this->createMock(Node::class);
 		$source->method('getId')->willThrowException(new \RuntimeException('nonexisting'));
 
-		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile']);
+		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile', 'rewritePathsAfterFolderMove']);
 		$scan->expects($this->never())->method('deleteTrackForFile');
 		$scan->expects($this->once())->method('handleNodeEvent')->with('alice', $target, 'written');
 
 		$scan->handleRename('alice', $source, $target);
+	}
+
+	public function testHandleCopyUpsertsAudioTargetWithoutDeletingSource(): void
+	{
+		$target = $this->audioFile(40);
+		$source = $this->nodeWithId(10);
+
+		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile', 'queueScan']);
+		$scan->expects($this->once())->method('handleNodeEvent')->with('alice', $target, 'written');
+		$scan->expects($this->never())->method('deleteTrackForFile');
+		$scan->expects($this->never())->method('queueScan');
+
+		$scan->handleCopy('alice', $source, $target);
+	}
+
+	public function testHandleCopyNonAudioIsNoop(): void
+	{
+		$target = $this->nonAudioFile(40);
+		$source = $this->nodeWithId(10);
+
+		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile', 'queueScan']);
+		$scan->expects($this->never())->method('handleNodeEvent');
+		$scan->expects($this->never())->method('deleteTrackForFile');
+		$scan->expects($this->never())->method('queueScan');
+
+		$scan->handleCopy('alice', $source, $target);
+	}
+
+	public function testHandleCopyFolderQueuesScanWhenUnderLibrary(): void
+	{
+		$target = $this->createMock(Folder::class);
+		$target->method('getPath')->willReturn('/alice/files/Music/Album');
+		$source = $this->nodeWithId(1);
+
+		$fileAccess = $this->createMock(FileAccessService::class);
+		$fileAccess->method('getUserHomePath')->with('alice')->willReturn('/alice/files');
+		$fileAccess->method('isAllowedAudioFile')->willReturn(false);
+
+		$scan = $this->getMockBuilder(ScanService::class)
+			->setConstructorArgs([
+				$this->createMock(IDBConnection::class),
+				$fileAccess,
+				$this->createMock(MetadataService::class),
+				$this->createMock(CoverService::class),
+				$this->createMock(ITimeFactory::class),
+				$this->createMock(IJobList::class),
+				$this->createMock(IConfig::class),
+				$this->createMock(LoggerInterface::class),
+			])
+			->onlyMethods(['queueScan', 'listLibraryRoots', 'handleNodeEvent', 'deleteTrackForFile'])
+			->getMock();
+
+		$scan->method('listLibraryRoots')->willReturn([
+			['id' => 1, 'folder_path' => '/Music', 'content_kind' => 'auto'],
+		]);
+		$scan->expects($this->once())->method('queueScan')->with('alice');
+
+		$scan->handleCopy('alice', $source, $target);
+	}
+
+	public function testHandleCopyFolderSkipsScanOutsideLibraries(): void
+	{
+		$target = $this->createMock(Folder::class);
+		$target->method('getPath')->willReturn('/alice/files/Documents/Stuff');
+		$source = $this->nodeWithId(1);
+
+		$fileAccess = $this->createMock(FileAccessService::class);
+		$fileAccess->method('getUserHomePath')->with('alice')->willReturn('/alice/files');
+
+		$scan = $this->getMockBuilder(ScanService::class)
+			->setConstructorArgs([
+				$this->createMock(IDBConnection::class),
+				$fileAccess,
+				$this->createMock(MetadataService::class),
+				$this->createMock(CoverService::class),
+				$this->createMock(ITimeFactory::class),
+				$this->createMock(IJobList::class),
+				$this->createMock(IConfig::class),
+				$this->createMock(LoggerInterface::class),
+			])
+			->onlyMethods(['queueScan', 'listLibraryRoots', 'handleNodeEvent', 'deleteTrackForFile'])
+			->getMock();
+
+		$scan->method('listLibraryRoots')->willReturn([
+			['id' => 1, 'folder_path' => '/Music', 'content_kind' => 'auto'],
+		]);
+		$scan->expects($this->never())->method('queueScan');
+
+		$scan->handleCopy('alice', $source, $target);
 	}
 
 	public function testDeletedEventUsesSafeNodeId(): void

@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Fatal on every file move/rename** (issue #7) — `NodeEventListener` called the non-existent `NodeRenamedEvent::getNode()`. Rename events expose `getSource()` / `getTarget()` only; the listener now routes through `ScanService::handleRename()`, updates audio index paths in place, purges cross-storage source ids, and never lets indexing exceptions abort DAV MOVE (copy-without-delete).
+- **Folder move index drift** — renaming/moving a folder now rewrites descendant `ac_tracks.rel_path` and matching `ac_libraries.folder_path` prefixes (Nextcloud only emits one event for the folder), then queues a scan to reconcile library membership.
+- **Copied audio never indexed** — `NodeCopiedEvent` is registered and indexes the new target (folder copies under a library queue a scan).
+- **User/group delete listeners** — cleanup failures are logged and no longer bubble into the core delete event bus.
 
 ## 1.2.10 - 2026-07-21
 
