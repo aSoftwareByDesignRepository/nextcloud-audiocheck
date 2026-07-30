@@ -20,7 +20,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 
 /**
- * AC-TST-NODE-02: ScanService rename/copy semantics.
+ * AC-TST-NODE-02: ScanService rename/copy semantics + immediate library_id reconcile.
  */
 final class ScanServiceRenameTest extends TestCase
 {
@@ -119,10 +119,10 @@ final class ScanServiceRenameTest extends TestCase
 		$target = $this->audioFile(40);
 		$source = $this->nodeWithId(10);
 
-		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile', 'queueScan']);
+		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile', 'indexFolderIntoLibraries']);
 		$scan->expects($this->once())->method('handleNodeEvent')->with('alice', $target, 'written');
 		$scan->expects($this->never())->method('deleteTrackForFile');
-		$scan->expects($this->never())->method('queueScan');
+		$scan->expects($this->never())->method('indexFolderIntoLibraries');
 
 		$scan->handleCopy('alice', $source, $target);
 	}
@@ -132,75 +132,57 @@ final class ScanServiceRenameTest extends TestCase
 		$target = $this->nonAudioFile(40);
 		$source = $this->nodeWithId(10);
 
-		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile', 'queueScan']);
+		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile', 'indexFolderIntoLibraries']);
 		$scan->expects($this->never())->method('handleNodeEvent');
 		$scan->expects($this->never())->method('deleteTrackForFile');
-		$scan->expects($this->never())->method('queueScan');
+		$scan->expects($this->never())->method('indexFolderIntoLibraries');
 
 		$scan->handleCopy('alice', $source, $target);
 	}
 
-	public function testHandleCopyFolderQueuesScanWhenUnderLibrary(): void
+	public function testHandleCopyFolderDelegatesToIndexFolderIntoLibraries(): void
 	{
 		$target = $this->createMock(Folder::class);
-		$target->method('getPath')->willReturn('/alice/files/Music/Album');
 		$source = $this->nodeWithId(1);
 
-		$fileAccess = $this->createMock(FileAccessService::class);
-		$fileAccess->method('getUserHomePath')->with('alice')->willReturn('/alice/files');
-		$fileAccess->method('isAllowedAudioFile')->willReturn(false);
+		$scan = $this->partialScanMock(['handleNodeEvent', 'deleteTrackForFile', 'indexFolderIntoLibraries']);
+		$scan->expects($this->once())->method('indexFolderIntoLibraries')->with('alice', $target);
+		$scan->expects($this->never())->method('handleNodeEvent');
 
-		$scan = $this->getMockBuilder(ScanService::class)
-			->setConstructorArgs([
-				$this->createMock(IDBConnection::class),
-				$fileAccess,
-				$this->createMock(MetadataService::class),
-				$this->createMock(CoverService::class),
-				$this->createMock(ITimeFactory::class),
-				$this->createMock(IJobList::class),
-				$this->createMock(IConfig::class),
-				$this->createMock(LoggerInterface::class),
-			])
-			->onlyMethods(['queueScan', 'listLibraryRoots', 'handleNodeEvent', 'deleteTrackForFile'])
-			->getMock();
+		$scan->handleCopy('alice', $source, $target);
+	}
 
-		$scan->method('listLibraryRoots')->willReturn([
-			['id' => 1, 'folder_path' => '/Music', 'content_kind' => 'auto'],
-		]);
+	public function testIndexFolderIntoLibrariesQueuesScanOnlyWhenWalkTruncated(): void
+	{
+		$folder = $this->createMock(Folder::class);
+		$scan = $this->partialScanMock(['folderIntersectsLibrary', 'indexAudioUnderFolder', 'queueScan']);
+		$scan->method('folderIntersectsLibrary')->willReturn(true);
+		$scan->expects($this->once())->method('indexAudioUnderFolder')->willReturn(false);
 		$scan->expects($this->once())->method('queueScan')->with('alice');
 
-		$scan->handleCopy('alice', $source, $target);
+		$scan->indexFolderIntoLibraries('alice', $folder);
 	}
 
-	public function testHandleCopyFolderSkipsScanOutsideLibraries(): void
+	public function testIndexFolderIntoLibrariesDoesNotQueueScanWhenComplete(): void
 	{
-		$target = $this->createMock(Folder::class);
-		$target->method('getPath')->willReturn('/alice/files/Documents/Stuff');
-		$source = $this->nodeWithId(1);
-
-		$fileAccess = $this->createMock(FileAccessService::class);
-		$fileAccess->method('getUserHomePath')->with('alice')->willReturn('/alice/files');
-
-		$scan = $this->getMockBuilder(ScanService::class)
-			->setConstructorArgs([
-				$this->createMock(IDBConnection::class),
-				$fileAccess,
-				$this->createMock(MetadataService::class),
-				$this->createMock(CoverService::class),
-				$this->createMock(ITimeFactory::class),
-				$this->createMock(IJobList::class),
-				$this->createMock(IConfig::class),
-				$this->createMock(LoggerInterface::class),
-			])
-			->onlyMethods(['queueScan', 'listLibraryRoots', 'handleNodeEvent', 'deleteTrackForFile'])
-			->getMock();
-
-		$scan->method('listLibraryRoots')->willReturn([
-			['id' => 1, 'folder_path' => '/Music', 'content_kind' => 'auto'],
-		]);
+		$folder = $this->createMock(Folder::class);
+		$scan = $this->partialScanMock(['folderIntersectsLibrary', 'indexAudioUnderFolder', 'queueScan']);
+		$scan->method('folderIntersectsLibrary')->willReturn(true);
+		$scan->expects($this->once())->method('indexAudioUnderFolder')->willReturn(true);
 		$scan->expects($this->never())->method('queueScan');
 
-		$scan->handleCopy('alice', $source, $target);
+		$scan->indexFolderIntoLibraries('alice', $folder);
+	}
+
+	public function testIndexFolderIntoLibrariesSkipsOutsideLibraries(): void
+	{
+		$folder = $this->createMock(Folder::class);
+		$scan = $this->partialScanMock(['folderIntersectsLibrary', 'indexAudioUnderFolder', 'queueScan']);
+		$scan->method('folderIntersectsLibrary')->willReturn(false);
+		$scan->expects($this->never())->method('indexAudioUnderFolder');
+		$scan->expects($this->never())->method('queueScan');
+
+		$scan->indexFolderIntoLibraries('alice', $folder);
 	}
 
 	public function testDeletedEventUsesSafeNodeId(): void
@@ -212,6 +194,83 @@ final class ScanServiceRenameTest extends TestCase
 		$scan->expects($this->never())->method('deleteTrackForFile');
 
 		$scan->handleNodeEvent('alice', $node, 'deleted');
+	}
+
+	public function testResolveLibraryForRelPathHonoursIncludeSubfolders(): void
+	{
+		$fileAccess = $this->createMock(FileAccessService::class);
+		$scan = $this->getMockBuilder(ScanService::class)
+			->setConstructorArgs([
+				$this->createMock(IDBConnection::class),
+				$fileAccess,
+				$this->createMock(MetadataService::class),
+				$this->createMock(CoverService::class),
+				$this->createMock(ITimeFactory::class),
+				$this->createMock(IJobList::class),
+				$this->createMock(IConfig::class),
+				$this->createMock(LoggerInterface::class),
+			])
+			->onlyMethods(['listLibraryRoots'])
+			->getMock();
+
+		$scan->method('listLibraryRoots')->willReturn([
+			[
+				'id' => 7,
+				'folder_path' => '/Music',
+				'include_subfolders' => 0,
+				'content_kind' => 'auto',
+			],
+		]);
+
+		$direct = $scan->resolveLibraryForRelPath('alice', '/Music/track.mp3');
+		$this->assertNotNull($direct);
+		$this->assertSame(7, (int)$direct['id']);
+
+		$nested = $scan->resolveLibraryForRelPath('alice', '/Music/Album/track.mp3');
+		$this->assertNull($nested);
+	}
+
+	public function testResolveLibraryForRelPathLongestPrefixWins(): void
+	{
+		$scan = $this->getMockBuilder(ScanService::class)
+			->setConstructorArgs([
+				$this->createMock(IDBConnection::class),
+				$this->createMock(FileAccessService::class),
+				$this->createMock(MetadataService::class),
+				$this->createMock(CoverService::class),
+				$this->createMock(ITimeFactory::class),
+				$this->createMock(IJobList::class),
+				$this->createMock(IConfig::class),
+				$this->createMock(LoggerInterface::class),
+			])
+			->onlyMethods(['listLibraryRoots'])
+			->getMock();
+
+		$scan->method('listLibraryRoots')->willReturn([
+			['id' => 1, 'folder_path' => '/Music', 'include_subfolders' => 1, 'content_kind' => 'auto'],
+			['id' => 2, 'folder_path' => '/Music/Jazz', 'include_subfolders' => 1, 'content_kind' => 'auto'],
+		]);
+
+		$hit = $scan->resolveLibraryForRelPath('alice', '/Music/Jazz/x.mp3');
+		$this->assertNotNull($hit);
+		$this->assertSame(2, (int)$hit['id']);
+	}
+
+	public function testRewritePathsDoesNotQueueScanForLibraryId(): void
+	{
+		$source = file_get_contents(dirname(__DIR__, 3) . '/lib/Service/ScanService.php');
+		$this->assertIsString($source);
+		$this->assertStringContainsString('rewriteTrackPathsAndLibraryIds', $source);
+		$this->assertStringContainsString('indexFolderIntoLibraries', $source);
+		$this->assertDoesNotMatchRegularExpression(
+			'/rewriteTrackPathsAndLibraryIds\([^;]+;\s*[^}]*queueScan/s',
+			$source,
+		);
+		// Immediate library_id assignment must happen in the rewrite loop.
+		$this->assertMatchesRegularExpression(
+			'/function\s+rewriteTrackPathsAndLibraryIds.*?set\(\'library_id\'/s',
+			$source,
+		);
 	}
 
 	/**

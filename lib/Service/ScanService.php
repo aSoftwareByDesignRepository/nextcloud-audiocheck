@@ -313,7 +313,8 @@ class ScanService
 
 	/**
 	 * Index maintenance after a copy. Source stays; only the new target is indexed.
-	 * Folder copies queue a scan (children are not enumerated here — too heavy for the event bus).
+	 * Folder copies index audio under the destination synchronously (bounded); only
+	 * overflow queues a background scan — library_id is never left for "later".
 	 */
 	public function handleCopy(string $userId, Node $source, Node $target): void
 	{
@@ -327,21 +328,22 @@ class ScanService
 		}
 
 		if ($target instanceof Folder) {
-			// Cheap relevance check: only scan when the destination sits under a library root
-			// or when any library root was copied (path prefix / root id match).
-			if ($this->folderCopyMayAffectLibrary($userId, $target)) {
-				$this->queueScan($userId);
-			}
+			$this->indexFolderIntoLibraries($userId, $target);
 		}
 	}
 
-	/** @internal Overridable in unit tests (partial mock). */
+	/**
+	 * @internal Overridable in unit tests (partial mock).
+	 *
+	 * Rewrites descendant paths, assigns library_id immediately from the new paths,
+	 * then discovers previously unindexed audio under the moved folder (bounded).
+	 */
 	protected function rewritePathsAfterFolderMove(string $userId, Node $source, Node $target): void
 	{
 		$oldRel = $this->relativeUserPath($userId, $source);
 		$newRel = $this->relativeUserPath($userId, $target);
 		if ($oldRel === null || $newRel === null) {
-			// Without both paths we cannot rewrite prefixes safely — reconcile via scan.
+			// Without both paths we cannot rewrite prefixes safely — full reconcile via scan.
 			$this->queueScan($userId);
 			return;
 		}
@@ -350,13 +352,74 @@ class ScanService
 		}
 
 		$targetId = $this->safeNodeId($target);
-		$librariesTouched = $this->rewriteLibraryPathPrefixes($userId, $oldRel, $newRel, $targetId);
-		$tracksTouched = $this->rewriteTrackPathPrefixes($userId, $oldRel, $newRel);
+		// Libraries first so track library_id resolution sees updated folder_path values.
+		$this->rewriteLibraryPathPrefixes($userId, $oldRel, $newRel, $targetId);
+		$this->rewriteTrackPathsAndLibraryIds($userId, $oldRel, $newRel);
 
-		// Reconcile library_id assignment for tracks that moved in/out of library roots.
-		if ($librariesTouched > 0 || $tracksTouched > 0) {
+		// Discover audio that entered a library via the move (no prior ac_tracks row).
+		if ($target instanceof Folder) {
+			$this->indexFolderIntoLibraries($userId, $target);
+		}
+	}
+
+	/**
+	 * Index audio under $folder when it intersects an enabled library.
+	 * Completes synchronously up to SCAN_BATCH_SIZE files; queues a scan only if truncated.
+	 */
+	public function indexFolderIntoLibraries(string $userId, Folder $folder): void
+	{
+		if (!$this->folderIntersectsLibrary($userId, $folder)) {
+			return;
+		}
+		if (!$this->indexAudioUnderFolder($userId, $folder, self::SCAN_BATCH_SIZE)) {
 			$this->queueScan($userId);
 		}
+	}
+
+	/**
+	 * Walk $folder for allowed audio and upsert into the index.
+	 *
+	 * @return bool True when the walk finished; false when truncated at $limit (caller may queueScan).
+	 * @internal Overridable in unit tests (partial mock).
+	 */
+	protected function indexAudioUnderFolder(string $userId, Folder $folder, int $limit): bool
+	{
+		if ($limit < 1) {
+			return false;
+		}
+		$now = $this->timeFactory->getTime();
+		$stack = [];
+		$processed = 0;
+		do {
+			$remaining = $limit - $processed;
+			if ($remaining < 1) {
+				return false;
+			}
+			$batch = $this->fileAccess->walkAudioFilesBatch($folder, true, $stack, $remaining);
+			$stack = $batch['stack'];
+			foreach ($batch['files'] as $node) {
+				$library = $this->resolveLibraryForFile($userId, $node);
+				$libraryId = $library !== null ? (int)($library['id'] ?? 0) : null;
+				$contentKind = $library !== null
+					? (string)($library['content_kind'] ?? LibraryService::CONTENT_KIND_AUTO)
+					: LibraryService::CONTENT_KIND_AUTO;
+				$this->upsertTrack(
+					$userId,
+					$node,
+					$libraryId !== null && $libraryId > 0 ? $libraryId : null,
+					$now,
+					$now,
+					true,
+					$contentKind,
+				);
+				$processed++;
+			}
+			if ($processed >= $limit && !$batch['done']) {
+				return false;
+			}
+		} while (!$batch['done']);
+
+		return true;
 	}
 
 	/**
@@ -396,19 +459,24 @@ class ScanService
 	}
 
 	/**
+	 * Rewrite descendant track paths and assign library_id from the new path immediately.
+	 *
 	 * @return int Number of track rows updated
+	 * @internal Overridable in unit tests (partial mock).
 	 */
-	private function rewriteTrackPathPrefixes(string $userId, string $oldRel, string $newRel): int
+	protected function rewriteTrackPathsAndLibraryIds(string $userId, string $oldRel, string $newRel): int
 	{
+		$roots = $this->listLibraryRoots($userId);
 		$qb = $this->db->getQueryBuilder();
 		$like = $this->db->escapeLikeParameter($oldRel) . '/%';
-		$qb->select('id', 'rel_path')
+		$qb->select('id', 'rel_path', 'library_id')
 			->from('ac_tracks')
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
 			->andWhere($qb->expr()->orX(
 				$qb->expr()->eq('rel_path', $qb->createNamedParameter($oldRel)),
 				$qb->expr()->like('rel_path', $qb->createNamedParameter($like)),
-			));
+			))
+			->orderBy('id', 'ASC');
 		$result = $qb->executeQuery();
 		$updated = 0;
 		while ($row = $result->fetch()) {
@@ -416,12 +484,24 @@ class ScanService
 			$next = $rel === $oldRel
 				? $newRel
 				: $newRel . substr($rel, strlen($oldRel));
-			if ($next === $rel) {
+			$library = $this->resolveLibraryForRelPath($userId, $next, $roots);
+			$libraryId = $library !== null ? (int)($library['id'] ?? 0) : null;
+			if ($libraryId !== null && $libraryId < 1) {
+				$libraryId = null;
+			}
+			$prevLibraryId = $row['library_id'] !== null && $row['library_id'] !== ''
+				? (int)$row['library_id']
+				: null;
+			if ($next === $rel && $prevLibraryId === $libraryId) {
 				continue;
 			}
 			$uq = $this->db->getQueryBuilder();
 			$uq->update('ac_tracks')
 				->set('rel_path', $uq->createNamedParameter($next))
+				->set('library_id', $uq->createNamedParameter(
+					$libraryId,
+					$libraryId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT,
+				))
 				->where($uq->expr()->eq('id', $uq->createNamedParameter((int)$row['id'], \PDO::PARAM_INT)));
 			$uq->executeStatement();
 			$updated++;
@@ -430,7 +510,8 @@ class ScanService
 		return $updated;
 	}
 
-	private function folderCopyMayAffectLibrary(string $userId, Folder $target): bool
+	/** @internal Overridable in unit tests (partial mock). */
+	protected function folderIntersectsLibrary(string $userId, Folder $target): bool
 	{
 		$rel = $this->relativeUserPath($userId, $target);
 		if ($rel === null) {
@@ -438,12 +519,19 @@ class ScanService
 		}
 		foreach ($this->listLibraryRoots($userId) as $root) {
 			$folderPath = rtrim((string)($root['folder_path'] ?? '/'), '/');
+			$includeSub = (int)($root['include_subfolders'] ?? 1) === 1;
 			if ($folderPath === '' || $folderPath === '/') {
 				return true;
 			}
-			if ($rel === $folderPath
-				|| str_starts_with($rel, $folderPath . '/')
-				|| str_starts_with($folderPath, $rel . '/')) {
+			// Folder is the library root, inside it, or contains it (library nested under moved tree).
+			if ($rel === $folderPath || str_starts_with($folderPath, $rel . '/')) {
+				return true;
+			}
+			if ($includeSub && str_starts_with($rel, $folderPath . '/')) {
+				return true;
+			}
+			if (!$includeSub && $this->parentRelPath($rel) === $folderPath) {
+				// Non-recursive library: only the library folder's direct child folders matter.
 				return true;
 			}
 		}
@@ -471,6 +559,22 @@ class ScanService
 			$path = '/' . $path;
 		}
 		return rtrim($path, '/') ?: '/';
+	}
+
+	private function parentRelPath(string $relPath): string
+	{
+		$relPath = rtrim($relPath, '/');
+		if ($relPath === '' || $relPath === '/') {
+			return '/';
+		}
+		$pos = strrpos($relPath, '/');
+		if ($pos === false) {
+			return '/';
+		}
+		if ($pos === 0) {
+			return '/';
+		}
+		return substr($relPath, 0, $pos) ?: '/';
 	}
 
 	/** @internal Overridable in unit tests (partial mock). */
@@ -515,23 +619,43 @@ class ScanService
 	/** @return array<string, mixed>|null */
 	private function resolveLibraryForFile(string $userId, File $file): ?array
 	{
-		$roots = $this->listLibraryRoots($userId);
-		if ($roots === []) {
-			return null;
-		}
 		$relPath = $file->getPath();
 		$userHome = $this->fileAccess->getUserHomePath($userId);
-		if (str_starts_with($relPath, $userHome)) {
+		if ($userHome !== '' && str_starts_with($relPath, $userHome)) {
 			$relPath = substr($relPath, strlen($userHome));
 		}
 		if ($relPath === '' || $relPath[0] !== '/') {
 			$relPath = '/' . ltrim($relPath, '/');
 		}
+		$relPath = rtrim($relPath, '/') ?: '/';
+		return $this->resolveLibraryForRelPath($userId, $relPath);
+	}
+
+	/**
+	 * Pick the best enabled library root for a user-relative file path.
+	 * Longest matching folder_path wins. Honours include_subfolders:
+	 * when false, only files whose parent directory equals the library folder match.
+	 *
+	 * @param list<array<string, mixed>>|null $roots
+	 * @return array<string, mixed>|null
+	 */
+	public function resolveLibraryForRelPath(string $userId, string $relPath, ?array $roots = null): ?array
+	{
+		$roots ??= $this->listLibraryRoots($userId);
+		if ($roots === []) {
+			return null;
+		}
+		if ($relPath === '' || $relPath[0] !== '/') {
+			$relPath = '/' . ltrim($relPath, '/');
+		}
+		$relPath = rtrim($relPath, '/') ?: '/';
+		$parent = $this->parentRelPath($relPath);
 
 		$best = null;
 		$bestLen = -1;
 		foreach ($roots as $root) {
 			$folderPath = rtrim((string)($root['folder_path'] ?? '/'), '/');
+			$includeSub = (int)($root['include_subfolders'] ?? 1) === 1;
 			if ($folderPath === '' || $folderPath === '/') {
 				if ($best === null) {
 					$best = $root;
@@ -539,13 +663,20 @@ class ScanService
 				}
 				continue;
 			}
-			$prefix = $folderPath . '/';
-			if ($relPath === $folderPath || str_starts_with($relPath, $prefix)) {
-				$len = strlen($folderPath);
-				if ($len > $bestLen) {
-					$bestLen = $len;
-					$best = $root;
-				}
+			$matches = false;
+			if ($includeSub) {
+				$matches = $relPath === $folderPath || str_starts_with($relPath, $folderPath . '/');
+			} else {
+				// Non-recursive: file must live directly inside the library folder.
+				$matches = $parent === $folderPath;
+			}
+			if (!$matches) {
+				continue;
+			}
+			$len = strlen($folderPath);
+			if ($len > $bestLen) {
+				$bestLen = $len;
+				$best = $root;
 			}
 		}
 		return $best;

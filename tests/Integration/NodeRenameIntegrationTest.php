@@ -176,6 +176,102 @@ final class NodeRenameIntegrationTest extends TestCase
 		$this->assertStringNotContainsString('BookOld', (string)$after);
 	}
 
+	public function testFolderMoveIntoLibraryAssignsLibraryIdImmediately(): void
+	{
+		/** @var IUserManager $userManager */
+		$userManager = \OC::$server->get(IUserManager::class);
+		$userManager->createUser(self::USER, self::PASSWORD);
+
+		/** @var FileAccessService $access */
+		$access = \OC::$server->get(FileAccessService::class);
+		$home = $access->getUserFolder(self::USER);
+		/** @var Folder $libraryRoot */
+		$libraryRoot = $home->newFolder('LibRoot');
+		/** @var Folder $inbox */
+		$inbox = $home->newFolder('InboxAlbum');
+		/** @var File $file */
+		$file = $inbox->newFile('song.mp3');
+		$file->putContent($this->minimalMp3Bytes());
+		$fileId = (int)$file->getId();
+
+		/** @var \OCA\AudioCheck\Service\LibraryService $libraries */
+		$libraries = \OC::$server->get(\OCA\AudioCheck\Service\LibraryService::class);
+		$added = $libraries->addLibrary(self::USER, null, true, \OCA\AudioCheck\Service\LibraryService::CONTENT_KIND_AUTO, '/LibRoot');
+		$libraryId = (int)$added['library']['id'];
+		$this->assertGreaterThan(0, $libraryId);
+
+		/** @var ScanService $scan */
+		$scan = \OC::$server->get(ScanService::class);
+		// Index while outside the library (library_id should be null).
+		$scan->handleNodeEvent(self::USER, $file, 'written');
+		$this->assertNull($this->trackLibraryId(self::USER, $fileId));
+
+		$oldPath = $inbox->getPath();
+		$inbox->move($libraryRoot->getPath() . '/InboxAlbum');
+		/** @var Folder $moved */
+		$moved = $libraryRoot->get('InboxAlbum');
+		$this->assertInstanceOf(Folder::class, $moved);
+
+		$sourceWithPath = $this->createMock(Node::class);
+		$sourceWithPath->method('getId')->willThrowException(new NotFoundException());
+		$sourceWithPath->method('getPath')->willReturn($oldPath);
+		$sourceWithPath->method('getOwner')->willThrowException(new NotFoundException());
+
+		$scan->handleRename(self::USER, $sourceWithPath, $moved);
+
+		$this->assertStringContainsString('LibRoot', (string)$this->trackRelPath(self::USER, $fileId));
+		$this->assertSame($libraryId, $this->trackLibraryId(self::USER, $fileId));
+		// Must not leave reconcile for a background scan.
+		$status = $scan->getStatus(self::USER);
+		$this->assertNotSame(ScanService::STATUS_QUEUED, $status['status']);
+		$this->assertNotSame(ScanService::STATUS_RUNNING, $status['status']);
+	}
+
+	public function testFolderMoveOutOfLibraryClearsLibraryIdImmediately(): void
+	{
+		/** @var IUserManager $userManager */
+		$userManager = \OC::$server->get(IUserManager::class);
+		$userManager->createUser(self::USER, self::PASSWORD);
+
+		/** @var FileAccessService $access */
+		$access = \OC::$server->get(FileAccessService::class);
+		$home = $access->getUserFolder(self::USER);
+		/** @var Folder $libraryRoot */
+		$libraryRoot = $home->newFolder('OutLib');
+		/** @var Folder $album */
+		$album = $libraryRoot->newFolder('Album');
+		/** @var File $file */
+		$file = $album->newFile('leave.mp3');
+		$file->putContent($this->minimalMp3Bytes());
+		$fileId = (int)$file->getId();
+
+		/** @var \OCA\AudioCheck\Service\LibraryService $libraries */
+		$libraries = \OC::$server->get(\OCA\AudioCheck\Service\LibraryService::class);
+		$added = $libraries->addLibrary(self::USER, null, true, \OCA\AudioCheck\Service\LibraryService::CONTENT_KIND_AUTO, '/OutLib');
+		$libraryId = (int)$added['library']['id'];
+
+		/** @var ScanService $scan */
+		$scan = \OC::$server->get(ScanService::class);
+		$scan->handleNodeEvent(self::USER, $file, 'written');
+		$this->assertSame($libraryId, $this->trackLibraryId(self::USER, $fileId));
+
+		$oldPath = $album->getPath();
+		$album->move($home->getPath() . '/OutsideAlbum');
+		/** @var Folder $moved */
+		$moved = $home->get('OutsideAlbum');
+
+		$sourceWithPath = $this->createMock(Node::class);
+		$sourceWithPath->method('getId')->willThrowException(new NotFoundException());
+		$sourceWithPath->method('getPath')->willReturn($oldPath);
+		$sourceWithPath->method('getOwner')->willThrowException(new NotFoundException());
+
+		$scan->handleRename(self::USER, $sourceWithPath, $moved);
+
+		$this->assertNull($this->trackLibraryId(self::USER, $fileId));
+		$status = $scan->getStatus(self::USER);
+		$this->assertNotSame(ScanService::STATUS_QUEUED, $status['status']);
+	}
+
 	/**
 	 * Post-rename source path is gone; getId()/getOwner() throw — mirrors NonExistingFile.
 	 */
@@ -194,16 +290,29 @@ final class NodeRenameIntegrationTest extends TestCase
 
 	private function trackRelPath(string $userId, int $fileId): ?string
 	{
+		$row = $this->trackRow($userId, $fileId);
+		return $row === null ? null : (string)$row['rel_path'];
+	}
+
+	private function trackLibraryId(string $userId, int $fileId): ?int
+	{
+		$row = $this->trackRow($userId, $fileId);
+		if ($row === null || $row['library_id'] === null || $row['library_id'] === '') {
+			return null;
+		}
+		return (int)$row['library_id'];
+	}
+
+	/** @return array<string, mixed>|null */
+	private function trackRow(string $userId, int $fileId): ?array
+	{
 		$db = \OC::$server->get(\OCP\IDBConnection::class);
 		$qb = $db->getQueryBuilder();
-		$qb->select('rel_path')->from('ac_tracks')
+		$qb->select('rel_path', 'library_id')->from('ac_tracks')
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
 			->andWhere($qb->expr()->eq('file_id', $qb->createNamedParameter($fileId, \PDO::PARAM_INT)));
 		$row = $qb->executeQuery()->fetch();
-		if ($row === false) {
-			return null;
-		}
-		return (string)$row['rel_path'];
+		return $row === false ? null : $row;
 	}
 
 	private function minimalMp3Bytes(): string
