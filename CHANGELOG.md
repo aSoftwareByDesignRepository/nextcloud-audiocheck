@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 1.2.12 - 2026-07-31
+
 ### Added
 
 - **Jump back / forward 30 seconds** on Now Playing — podcast-style −30 / +30 beside play (issue #6). Mini player stays simple; open Now Playing for jumps. Keyboard ←/→ and MediaSession seek use 30 seconds.
