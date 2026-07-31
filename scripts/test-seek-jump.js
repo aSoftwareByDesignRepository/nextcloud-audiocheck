@@ -26,6 +26,9 @@ function loadClamp(source) {
 	if (typeof api.resolveMediaSessionDeltaSec !== 'function') {
 		throw new Error('AudioCheckSeekJump.resolveMediaSessionDeltaSec missing');
 	}
+	if (typeof api.shouldHideMiniPlayer !== 'function') {
+		throw new Error('AudioCheckSeekJump.shouldHideMiniPlayer missing');
+	}
 	return api;
 }
 
@@ -76,6 +79,14 @@ function runCases(api) {
 		30,
 		'MediaSession rejects invalid lockedSec',
 	);
+	assertEqual(api.shouldHideMiniPlayer('now-playing'), true, 'hide mini on now-playing');
+	assertEqual(api.shouldHideMiniPlayer('home'), false, 'show mini on home');
+	assertEqual(api.shouldHideMiniPlayer('music'), false, 'show mini on music');
+	assertEqual(api.shouldHideMiniPlayer(''), false, 'empty view keeps mini');
+	assertEqual(api.shouldHideMiniPlayer(null), false, 'null view keeps mini');
+	assertEqual(api.shouldHideMiniPlayer(undefined), false, 'undefined view keeps mini');
+	assertEqual(api.shouldHideMiniPlayer('NOW-PLAYING'), false, 'hide is case-sensitive to router ids');
+	assertEqual(api.shouldHideMiniPlayer('now-playing-extra'), false, 'prefix must not hide');
 }
 
 const api = loadClamp(src);
@@ -163,4 +174,55 @@ if (!killed) {
 	process.exit(1);
 }
 console.log('seek-jump mutation OK (media session hard-lock)');
+
+// Mutation: always show mini on now-playing — must fail.
+const mutantAlwaysShowMini = src.replace(
+	"function shouldHideMiniPlayer(viewId) {\n\t\treturn String(viewId || '') === 'now-playing';\n\t}",
+	"function shouldHideMiniPlayer(viewId) {\n\t\treturn false;\n\t}",
+);
+killed = false;
+try {
+	runCases(loadClamp(mutantAlwaysShowMini));
+} catch (err) {
+	killed = true;
+}
+if (!killed) {
+	console.error('mutation NOT killed: shouldHideMiniPlayer always false but tests still passed');
+	process.exit(1);
+}
+console.log('seek-jump mutation OK (hide mini on now-playing)');
+
+// Mutation: hide mini on every view — must fail home/music assertions.
+const mutantAlwaysHideMini = src.replace(
+	"function shouldHideMiniPlayer(viewId) {\n\t\treturn String(viewId || '') === 'now-playing';\n\t}",
+	"function shouldHideMiniPlayer(viewId) {\n\t\treturn true;\n\t}",
+);
+killed = false;
+try {
+	runCases(loadClamp(mutantAlwaysHideMini));
+} catch (err) {
+	killed = true;
+}
+if (!killed) {
+	console.error('mutation NOT killed: shouldHideMiniPlayer always true but tests still passed');
+	process.exit(1);
+}
+console.log('seek-jump mutation OK (do not hide mini on other views)');
+
+// Mutation: loose substring match — must fail prefix case.
+const mutantSubstringHide = src.replace(
+	"function shouldHideMiniPlayer(viewId) {\n\t\treturn String(viewId || '') === 'now-playing';\n\t}",
+	"function shouldHideMiniPlayer(viewId) {\n\t\treturn String(viewId || '').indexOf('now-playing') !== -1;\n\t}",
+);
+killed = false;
+try {
+	runCases(loadClamp(mutantSubstringHide));
+} catch (err) {
+	killed = true;
+}
+if (!killed) {
+	console.error('mutation NOT killed: substring hide accepted now-playing-extra');
+	process.exit(1);
+}
+console.log('seek-jump mutation OK (exact view id only)');
 console.log('All seek-jump gates green');

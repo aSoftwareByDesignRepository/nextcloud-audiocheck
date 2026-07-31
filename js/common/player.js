@@ -601,15 +601,75 @@
 		const prevBtn = document.getElementById('ac-mini-prev');
 		const nextBtn = document.getElementById('ac-mini-next');
 		const playBtn = document.getElementById('ac-mini-play');
+		const jumpBack = document.getElementById('ac-mini-jump-back');
+		const jumpFwd = document.getElementById('ac-mini-jump-forward');
 		const track = activeTrack();
 		const a = audio();
 		const hasTrack = !!track && index >= 0;
+		const jumpBlocked = !hasTrack || !!track.unavailable || track.browserPlayable === false;
 		if (playBtn) {
 			const hasSource = !!(a && a.src);
 			playBtn.disabled = !hasTrack && !hasSource;
 		}
 		if (prevBtn) prevBtn.disabled = !canGoPrev();
 		if (nextBtn) nextBtn.disabled = !canGoNext();
+		if (jumpBack) jumpBack.disabled = jumpBlocked;
+		if (jumpFwd) jumpFwd.disabled = jumpBlocked;
+	}
+
+	/**
+	 * SSR PHP uses vsprintf (%s), not JS {named} placeholders — hydrate aria-labels
+	 * + badge from SEEK_JUMP_SEC so mini and Now Playing stay in lockstep.
+	 */
+	function syncMiniJumpLabels() {
+		const sec = String(SEEK_JUMP_SEC);
+		const back = document.getElementById('ac-mini-jump-back');
+		const fwd = document.getElementById('ac-mini-jump-forward');
+		if (back) {
+			back.setAttribute('aria-label', t('audiocheck', 'Jump back {seconds} seconds', { seconds: sec }));
+			const badge = back.querySelector('.ac-transport-jump__secs');
+			if (badge) badge.textContent = sec;
+		}
+		if (fwd) {
+			fwd.setAttribute('aria-label', t('audiocheck', 'Jump forward {seconds} seconds', { seconds: sec }));
+			const badge = fwd.querySelector('.ac-transport-jump__secs');
+			if (badge) badge.textContent = sec;
+		}
+	}
+
+	function syncMiniPlayerDock(viewId) {
+		const player = document.getElementById('ac-mini-player');
+		if (!player) return;
+		const view = viewId
+			|| (window.AudioCheckRouter && typeof AudioCheckRouter.getCurrentView === 'function'
+				? AudioCheckRouter.getCurrentView()
+				: document.getElementById('app-content')?.dataset?.acView);
+		const hide = window.AudioCheckSeekJump && typeof window.AudioCheckSeekJump.shouldHideMiniPlayer === 'function'
+			? window.AudioCheckSeekJump.shouldHideMiniPlayer(view)
+			: String(view || '') === 'now-playing';
+		if (hide) {
+			// WCAG: never leave keyboard focus inside a subtree that becomes hidden/inert.
+			const active = document.activeElement;
+			if (active && player.contains(active) && typeof active.blur === 'function') {
+				active.blur();
+			}
+		}
+		player.hidden = !!hide;
+		player.setAttribute('aria-hidden', hide ? 'true' : 'false');
+		if ('inert' in HTMLElement.prototype) {
+			player.inert = !!hide;
+		}
+		syncPlayerClearance();
+	}
+
+	function syncPlayerClearance() {
+		const player = document.getElementById('ac-mini-player');
+		if (!player) return;
+		const hidden = !!player.hidden
+			|| player.getAttribute('aria-hidden') === 'true'
+			|| window.getComputedStyle(player).display === 'none';
+		const px = hidden ? 0 : player.offsetHeight;
+		document.documentElement.style.setProperty('--ac-player-clearance', px + 'px');
 	}
 
 	function updateMini(track, opts) {
@@ -871,13 +931,20 @@
 		}
 		const seq = ++seekJumpSeq;
 		a.currentTime = nextSec;
+		// Browsers often skip `seeked` when the assigned time equals the current
+		// position (e.g. −30 already at 0). Clear pending immediately then; otherwise
+		// wait for seeked / timeout so rapid taps still accumulate via pending.
 		const clearIfLatest = () => {
 			if (seq === seekJumpSeq) {
 				seekJumpPendingSec = null;
 			}
 		};
-		a.addEventListener('seeked', clearIfLatest, { once: true });
-		window.setTimeout(clearIfLatest, 750);
+		if (Math.abs(nextSec - cur) < 0.0005) {
+			clearIfLatest();
+		} else {
+			a.addEventListener('seeked', clearIfLatest, { once: true });
+			window.setTimeout(clearIfLatest, 750);
+		}
 		updateMiniSeek();
 		saveProgress(false, false);
 		notify();
@@ -958,22 +1025,20 @@
 		AudioCheckRouter.navigate('now-playing', {}, true);
 	}
 
-	function syncPlayerClearance() {
-		const player = document.getElementById('ac-mini-player');
-		if (!player) return;
-		document.documentElement.style.setProperty('--ac-player-clearance', player.offsetHeight + 'px');
-	}
-
 	function bindPlayerClearance() {
 		const player = document.getElementById('ac-mini-player');
 		if (!player || player.dataset.acClearanceBound) return;
 		player.dataset.acClearanceBound = '1';
-		syncPlayerClearance();
+		syncMiniPlayerDock();
 		if (typeof ResizeObserver !== 'undefined') {
 			new ResizeObserver(() => syncPlayerClearance()).observe(player);
 		} else {
 			window.addEventListener('resize', syncPlayerClearance);
 		}
+		document.addEventListener('audiocheck-view-change', (event) => {
+			const viewId = event && event.detail && event.detail.viewId;
+			syncMiniPlayerDock(viewId);
+		});
 	}
 
 	function bindMiniNowOpen() {
@@ -1054,6 +1119,8 @@
 		document.getElementById('ac-mini-play')?.addEventListener('click', toggle);
 		document.getElementById('ac-mini-prev')?.addEventListener('click', prev);
 		document.getElementById('ac-mini-next')?.addEventListener('click', next);
+		document.getElementById('ac-mini-jump-back')?.addEventListener('click', () => seekBySec(-SEEK_JUMP_SEC));
+		document.getElementById('ac-mini-jump-forward')?.addEventListener('click', () => seekBySec(SEEK_JUMP_SEC));
 		document.getElementById('ac-mini-seek')?.addEventListener('input', (e) => {
 			const ms = parseInt(e.target.value, 10);
 			clearSeekJumpPending();
@@ -1466,6 +1533,7 @@
 			bindPlayerClearance();
 			initMiniVolume();
 			applyDefaultVolume();
+			syncMiniJumpLabels();
 			if (bootstrapRestoring && !activeTrack()) {
 				updateMini(null);
 			} else {

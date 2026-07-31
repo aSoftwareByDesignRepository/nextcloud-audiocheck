@@ -44,10 +44,19 @@
 		return Number.isFinite(locked) && locked > 0 ? locked : SEEK_JUMP_SEC;
 	}
 
+	/**
+	 * Mini player is redundant on full Now Playing (same as mobile Home).
+	 * Coerce so null/undefined/non-strings never throw or false-positive.
+	 */
+	function shouldHideMiniPlayer(viewId) {
+		return String(viewId || '') === 'now-playing';
+	}
+
 	window.AudioCheckSeekJump = {
 		SEEK_JUMP_SEC,
 		clampSeekBySeconds,
 		resolveSeekByTarget,
 		resolveMediaSessionDeltaSec,
+		shouldHideMiniPlayer,
 	};
 })();

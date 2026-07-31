@@ -23,7 +23,8 @@ use OCA\AudioCheck\Service\IconCatalog;
 	</main>
 	</div>
 
-	<footer id="ac-mini-player" class="ac-mini-player" role="region" aria-label="<?php p($l->t('Mini player')); ?>">
+	<footer id="ac-mini-player" class="ac-mini-player" role="region" aria-label="<?php p($l->t('Mini player')); ?>"
+		<?php if (($_['viewId'] ?? 'home') === 'now-playing'): ?>hidden aria-hidden="true"<?php endif; ?>>
 		<audio id="ac-audio" preload="metadata" playsinline></audio>
 		<div class="ac-mini-player__inner">
 			<button type="button" class="ac-mini-player__track ac-mini-player__track--idle" id="ac-mini-now"
@@ -39,8 +40,22 @@ use OCA\AudioCheck\Service\IconCatalog;
 				<button type="button" class="ac-btn ac-transport-btn" id="ac-mini-prev" aria-label="<?php p($l->t('Previous')); ?>">
 					<?php print_unescaped(IconCatalog::render('previous')); ?>
 				</button>
+				<button type="button" class="ac-btn ac-transport-btn ac-transport-btn--jump" id="ac-mini-jump-back"
+					aria-label="<?php p($l->t('Jump back 30 seconds')); ?>">
+					<span class="ac-transport-jump" aria-hidden="true">
+						<?php print_unescaped(IconCatalog::render('rotate-ccw')); ?>
+						<span class="ac-transport-jump__secs">30</span>
+					</span>
+				</button>
 				<button type="button" class="ac-btn ac-transport-btn ac-transport-btn--primary" id="ac-mini-play" aria-label="<?php p($l->t('Play')); ?>" aria-pressed="false">
 					<?php print_unescaped(IconCatalog::render('play')); ?>
+				</button>
+				<button type="button" class="ac-btn ac-transport-btn ac-transport-btn--jump" id="ac-mini-jump-forward"
+					aria-label="<?php p($l->t('Jump forward 30 seconds')); ?>">
+					<span class="ac-transport-jump" aria-hidden="true">
+						<?php print_unescaped(IconCatalog::render('rotate-cw')); ?>
+						<span class="ac-transport-jump__secs">30</span>
+					</span>
 				</button>
 				<button type="button" class="ac-btn ac-transport-btn" id="ac-mini-next" aria-label="<?php p($l->t('Next')); ?>">
 					<?php print_unescaped(IconCatalog::render('next')); ?>

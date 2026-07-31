@@ -1734,8 +1734,23 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	align-items: center;
 	justify-content: center;
 	gap: var(--ac-space-2);
+	flex-wrap: nowrap;
 	grid-column: 1 / -1;
 	grid-row: 2;
+}
+/* Full Now Playing already has transport — hide redundant mini strip (mobile Home parity). */
+#app-content.ac-app[data-ac-view="now-playing"] #ac-mini-player,
+#app-content.ac-app.ac-app--now-playing #ac-mini-player {
+	display: none !important;
+}
+@media (max-width: 379px) {
+	.ac-mini-player__transport {
+		gap: var(--ac-space-1);
+	}
+	.ac-mini-player .ac-transport-jump .ac-icon {
+		width: 1.15rem;
+		height: 1.15rem;
+	}
 }
 .ac-mini-player__seek {
 	display: flex;
@@ -3001,14 +3016,16 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 		gap: var(--ac-space-1);
 	}
 	#app-content.ac-app button.ac-btn.ac-transport-btn--jump,
-	.ac-now-transport .ac-transport-btn--jump {
+	.ac-now-transport .ac-transport-btn--jump,
+	.ac-mini-player .ac-transport-btn--jump {
 		min-width: 44px;
 		min-height: 44px;
 		padding-inline: 0.15rem;
 	}
 }
 #app-content.ac-app button.ac-btn.ac-transport-btn--jump,
-.ac-now-transport .ac-transport-btn--jump {
+.ac-now-transport .ac-transport-btn--jump,
+.ac-mini-player .ac-transport-btn--jump {
 	min-width: var(--ac-touch);
 	min-height: var(--ac-touch);
 	flex-direction: column;
@@ -3016,7 +3033,8 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	border-radius: 999px;
 }
 #app-content.ac-app button.ac-btn.ac-transport-btn--jump:disabled,
-.ac-now-transport .ac-transport-btn--jump:disabled {
+.ac-now-transport .ac-transport-btn--jump:disabled,
+.ac-mini-player .ac-transport-btn--jump:disabled {
 	opacity: 0.45;
 }
 .ac-transport-jump {
@@ -3046,7 +3064,9 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 #app-content.ac-app button.ac-btn.ac-transport-btn--jump:not(:disabled):hover,
 #app-content.ac-app button.ac-btn.ac-transport-btn--jump:not(:disabled):focus-visible,
 .ac-now-transport .ac-transport-btn--jump:not(:disabled):hover,
-.ac-now-transport .ac-transport-btn--jump:not(:disabled):focus-visible {
+.ac-now-transport .ac-transport-btn--jump:not(:disabled):focus-visible,
+.ac-mini-player .ac-transport-btn--jump:not(:disabled):hover,
+.ac-mini-player .ac-transport-btn--jump:not(:disabled):focus-visible {
 	transform: none;
 }
 .ac-now-seek {

@@ -64,7 +64,13 @@
 		currentView = viewId;
 		root.dataset.acView = viewId;
 		const appContent = document.getElementById('app-content');
-		if (appContent) appContent.dataset.acView = viewId;
+		if (appContent) {
+			appContent.dataset.acView = viewId;
+			Array.from(appContent.classList).forEach((cls) => {
+				if (cls.indexOf('ac-app--') === 0) appContent.classList.remove(cls);
+			});
+			appContent.classList.add('ac-app--' + viewId);
+		}
 		updateMainLayout(viewId);
 		if (window.AudioCheckPageChrome) {
 			AudioCheckPageChrome.clearActions();

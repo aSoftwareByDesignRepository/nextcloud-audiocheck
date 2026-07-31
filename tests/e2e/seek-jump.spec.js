@@ -294,11 +294,126 @@ test.describe('AudioCheck seek jump (±30s)', () => {
 		expect(delta).toBe(30);
 	});
 
-	test('mini player has no ±30 jump buttons', async ({ page }) => {
+	test('mini player is hidden on Now Playing and shows ±30 on other views', async ({ page }) => {
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto(`${BASE}/apps/audiocheck/now-playing`, { waitUntil: 'domcontentloaded' });
+		// SSR must hide before JS hydrates — no flash of mini under full player.
+		await expect(page.locator('#ac-mini-player')).toBeHidden();
+		await waitForShell(page);
+
+		await expect(page.locator('#ac-mini-player')).toBeHidden();
+		const dockState = await page.evaluate(() => {
+			const mini = document.getElementById('ac-mini-player');
+			return {
+				hideHelper: window.AudioCheckSeekJump.shouldHideMiniPlayer('now-playing'),
+				hiddenAttr: !!mini?.hidden,
+				ariaHidden: mini?.getAttribute('aria-hidden'),
+				inert: !!(mini && mini.inert),
+				focusInsideMini: !!(mini && document.activeElement && mini.contains(document.activeElement)),
+			};
+		});
+		expect(dockState.hideHelper).toBe(true);
+		expect(dockState.hiddenAttr).toBe(true);
+		expect(dockState.ariaHidden).toBe('true');
+		expect(dockState.focusInsideMini).toBe(false);
+
 		await page.goto(`${BASE}/apps/audiocheck/`, { waitUntil: 'domcontentloaded' });
 		await waitForShell(page);
-		await expect(page.locator('#ac-mini-player #ac-now-jump-back')).toHaveCount(0);
-		await expect(page.locator('#ac-mini-player #ac-mini-jump-back')).toHaveCount(0);
-		await expect(page.locator('#ac-mini-player .ac-transport-btn--jump')).toHaveCount(0);
+		await expect(page.locator('#ac-mini-player')).toBeVisible();
+		const back = page.locator('#ac-mini-jump-back');
+		const fwd = page.locator('#ac-mini-jump-forward');
+		await expect(back).toBeVisible();
+		await expect(fwd).toBeVisible();
+		await expect(back).toHaveAttribute('aria-label', /Jump back 30 seconds/i);
+		await expect(fwd).toHaveAttribute('aria-label', /Jump forward 30 seconds/i);
+
+		const sizes = await page.evaluate(() => {
+			const b = document.getElementById('ac-mini-jump-back');
+			const f = document.getElementById('ac-mini-jump-forward');
+			const br = b.getBoundingClientRect();
+			const fr = f.getBoundingClientRect();
+			return {
+				backH: br.height,
+				backW: br.width,
+				fwdH: fr.height,
+				fwdW: fr.width,
+				secs: b.querySelector('.ac-transport-jump__secs')?.textContent,
+			};
+		});
+		expect(sizes.backH).toBeGreaterThanOrEqual(44);
+		expect(sizes.backW).toBeGreaterThanOrEqual(44);
+		expect(sizes.fwdH).toBeGreaterThanOrEqual(44);
+		expect(sizes.fwdW).toBeGreaterThanOrEqual(44);
+		expect(sizes.secs).toBe('30');
+
+		// Focus a mini control, then navigate to Now Playing — focus must leave the dock.
+		await back.focus();
+		await page.evaluate(() => {
+			if (window.AudioCheckRouter) AudioCheckRouter.navigate('now-playing', {}, true);
+		});
+		await expect(page.locator('#ac-mini-player')).toBeHidden();
+		const afterNav = await page.evaluate(() => {
+			const mini = document.getElementById('ac-mini-player');
+			return {
+				focusInsideMini: !!(mini && document.activeElement && mini.contains(document.activeElement)),
+				hidden: !!mini?.hidden,
+			};
+		});
+		expect(afterNav.hidden).toBe(true);
+		expect(afterNav.focusInsideMini).toBe(false);
+	});
+
+	test('mini player ±30 jumps on an active track outside Now Playing', async ({ page }) => {
+		await page.goto(`${BASE}/apps/audiocheck/`, { waitUntil: 'domcontentloaded' });
+		await waitForShell(page);
+		const loaded = await loadPlayableTrack(page);
+		test.skip(!loaded, 'No playable tracks in library — seed audio before seeking e2e');
+
+		await page.waitForFunction(() => {
+			const a = document.getElementById('ac-audio');
+			const back = document.getElementById('ac-mini-jump-back');
+			return !!(a && back && !back.disabled && Number.isFinite(a.currentTime));
+		}, null, { timeout: 25_000 });
+
+		await page.evaluate(() => {
+			const a = document.getElementById('ac-audio');
+			if (!a) return;
+			const dur = Number.isFinite(a.duration) && a.duration > 0 ? a.duration : 0;
+			a.currentTime = dur >= 40 ? 35 : Math.max(1, dur * 0.7 || 2);
+		});
+		await page.waitForFunction(() => {
+			const a = document.getElementById('ac-audio');
+			return !!(a && a.currentTime >= 1);
+		}, null, { timeout: 10_000 });
+
+		const before = await page.evaluate(() => document.getElementById('ac-audio').currentTime);
+		await page.locator('#ac-mini-jump-back').click();
+		await page.waitForFunction((prev) => {
+			const a = document.getElementById('ac-audio');
+			return !!(a && (a.currentTime <= Math.max(0, prev - 20) + 0.25 || a.currentTime <= 0.5));
+		}, before, { timeout: 10_000 });
+	});
+
+	test('mini player stays usable at 320px width with five transport controls', async ({ page }) => {
+		await page.setViewportSize({ width: 320, height: 640 });
+		await page.goto(`${BASE}/apps/audiocheck/`, { waitUntil: 'domcontentloaded' });
+		await waitForShell(page);
+		const overflow = await page.evaluate(() => {
+			const row = document.querySelector('#ac-mini-player .ac-mini-player__transport');
+			if (!row) return { ok: false };
+			const ids = ['ac-mini-prev', 'ac-mini-jump-back', 'ac-mini-play', 'ac-mini-jump-forward', 'ac-mini-next'];
+			const boxes = ids.map((id) => {
+				const el = document.getElementById(id);
+				const r = el.getBoundingClientRect();
+				return { id, left: r.left, right: r.right, width: r.width, height: r.height };
+			});
+			const rowBox = row.getBoundingClientRect();
+			const clipped = boxes.some((b) => b.left < rowBox.left - 1 || b.right > rowBox.right + 1);
+			const tooSmall = boxes.some((b) => b.height < 44 || b.width < 40);
+			return { ok: true, clipped, tooSmall, boxes, rowWidth: rowBox.width };
+		});
+		expect(overflow.ok).toBe(true);
+		expect(overflow.clipped).toBe(false);
+		expect(overflow.tooSmall).toBe(false);
 	});
 });
