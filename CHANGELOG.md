@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.2.13 - 2026-07-31
+
+### Added
+
+- **Mini player ±30** — jump back/forward 30 seconds on the mini transport (same contract as Now Playing, keyboard, and MediaSession).
+- **Hide mini on Now Playing** — the dock is hidden on Aktuelle Wiedergabe (SSR + SPA) so the full player is the only transport strip.
+
+### Fixed
+
+- **Mini jump aria-labels** — PHP `t()` cannot substitute JS `{seconds}` placeholders; labels use fixed strings plus client hydrate from `SEEK_JUMP_SEC`.
+- **Focus / inert when dock hides** — keyboard focus leaves the mini player before it becomes hidden; `inert` blocks interaction while Now Playing is open.
+- **No-op relative seek pending** — clearing pending immediately when −/+ does not move `currentTime` (e.g. −30 already at 0) so sticky pending cannot skew the next jump.
+
+### Changed
+
+- **Responsive mini transport** — five-button row stays usable at 320px with ≥44px touch targets for jump controls.
+
 ## Unreleased
 
 ## 1.2.12 - 2026-07-31
