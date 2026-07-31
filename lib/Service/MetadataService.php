@@ -72,6 +72,7 @@ class MetadataService
 	public function extractTags(File $file, string $libraryContentKind = LibraryService::CONTENT_KIND_AUTO): array
 	{
 		$fallbackTitle = pathinfo($file->getName(), PATHINFO_FILENAME);
+		$inferredDiscNo = $this->discFolderNumber($this->parentFolderName($file));
 		$defaults = [
 			'kind' => $this->resolveKindWithLibraryPolicy($this->guessKind($file), $libraryContentKind),
 			'duration_ms' => 0,
@@ -83,7 +84,7 @@ class MetadataService
 			'genre' => null,
 			'series' => null,
 			'track_no' => null,
-			'disc_no' => null,
+			'disc_no' => $inferredDiscNo,
 			'release_year' => null,
 			'has_chapters' => 0,
 			'chapters_json' => null,
@@ -133,7 +134,8 @@ class MetadataService
 			$genre = $this->firstTag($tags, ['genre']);
 			$series = $this->firstTag($tags, ['series', 'seriestitle', 'series_name', 'series-name', 'grouping', 'movementname']);
 			$trackNo = $this->firstTagInt($tags, ['track_number', 'tracknumber', 'track']);
-			$discNo = $this->firstTagInt($tags, ['disc_number', 'discnumber', 'part_of_set', 'disc']);
+			// getID3 maps ID3v2 TPOS to 'part_of_a_set'; 'part_of_set' kept for other taggers.
+			$discNo = $this->firstTagInt($tags, ['disc_number', 'discnumber', 'part_of_a_set', 'part_of_set', 'disc']) ?? $inferredDiscNo;
 			$year = $this->firstTagInt($tags, ['year', 'date', 'recordingtime']);
 
 			$kind = $this->resolveKindWithLibraryPolicy(
@@ -239,6 +241,12 @@ class MetadataService
 		return $tempPath;
 	}
 
+	/**
+	 * Untagged files group by their folder name. When the direct parent is a
+	 * disc/chapter split folder (e.g. Book/CD 1/01.mp3 or Book/Kapitel 2/…),
+	 * the book folder one level up is the meaningful group — otherwise each
+	 * disc of a multi-disc audiobook shows up as its own "book".
+	 */
 	private function albumFallback(File $file, string $title): string
 	{
 		try {
@@ -246,6 +254,12 @@ class MetadataService
 			if ($parent !== null) {
 				$name = trim($parent->getName());
 				if ($name !== '' && $name !== '.') {
+					if ($this->discFolderNumber($name) !== null) {
+						$bookName = $this->containingBookFolderName($parent);
+						if ($bookName !== null) {
+							return $this->bound($bookName, 512);
+						}
+					}
 					return $this->bound($name, 512);
 				}
 			}
@@ -253,6 +267,59 @@ class MetadataService
 			// Non-fatal: fall back to title.
 		}
 		return $title;
+	}
+
+	private function parentFolderName(File $file): ?string
+	{
+		try {
+			$parent = $file->getParent();
+		} catch (\Throwable) {
+			return null;
+		}
+		if ($parent === null) {
+			return null;
+		}
+		$name = trim($parent->getName());
+
+		return $name !== '' && $name !== '.' ? $name : null;
+	}
+
+	/**
+	 * Parse a disc/chapter split folder name ("CD 1", "Disc2", "Part_03",
+	 * "Chapter 4", "Kapitel 5", "Teil 6") into its number. Real book titles
+	 * ("Harry Potter Part 1") never match: the whole name must be the keyword
+	 * plus a number.
+	 */
+	private function discFolderNumber(?string $folderName): ?int
+	{
+		if ($folderName === null) {
+			return null;
+		}
+		if (!preg_match('/^(?:cd|disc|disk|part|chapter|kapitel|teil)[\s._-]*0*(\d{1,4})$/i', trim($folderName), $m)) {
+			return null;
+		}
+		$number = (int)$m[1];
+
+		return $number > 0 ? $number : null;
+	}
+
+	private function containingBookFolderName(\OCP\Files\Folder $discFolder): ?string
+	{
+		try {
+			$book = $discFolder->getParent();
+		} catch (\Throwable) {
+			return null;
+		}
+		if ($book === null) {
+			return null;
+		}
+		$name = trim($book->getName());
+		// 'files' is the user-home container node, not a real library folder.
+		if ($name === '' || $name === '.' || $name === 'files') {
+			return null;
+		}
+
+		return $name;
 	}
 
 	private function guessKind(File $file, int $durationMs = 0, array $tags = []): string

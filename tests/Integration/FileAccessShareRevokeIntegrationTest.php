@@ -6,9 +6,10 @@ namespace OCA\AudioCheck\Tests\Integration;
 
 use OCA\AudioCheck\Exception\NotFoundException;
 use OCA\AudioCheck\Service\FileAccessService;
+use OCA\AudioCheck\Service\ScanService;
+use OCA\AudioCheck\Tests\Shim\IntegrationTestUsers;
 use OCP\Constants;
 use OCP\Files\File;
-use OCP\IUserManager;
 use OCP\Share\IManager as ShareManager;
 use OCP\Share\IShare;
 use Test\TestCase;
@@ -24,52 +25,47 @@ final class FileAccessShareRevokeIntegrationTest extends TestCase
 	private const RECIPIENT_PRUNE = 'ac_share_rcpt2';
 	private const PASSWORD = 'ac-test-pass-9xK!';
 
+	/** @var list<string> */
+	private array $users = [];
+
 	protected function setUp(): void
 	{
 		if (!class_exists(\OC::class) || !isset(\OC::$server)) {
 			$this->markTestSkipped('Nextcloud is not bootstrapped (run inside Docker with NEXTCLOUD_ROOT).');
 		}
-		/** @var IUserManager $userManager */
-		$userManager = \OC::$server->get(IUserManager::class);
-		foreach ([self::OWNER, self::RECIPIENT, self::OWNER_PRUNE, self::RECIPIENT_PRUNE] as $uid) {
-			if ($userManager->userExists($uid)) {
-				$userManager->get($uid)?->delete();
-			}
-		}
+		$this->users = [];
+		IntegrationTestUsers::remove(
+			self::OWNER,
+			self::RECIPIENT,
+			self::OWNER_PRUNE,
+			self::RECIPIENT_PRUNE,
+		);
 	}
 
 	protected function tearDown(): void
 	{
-		if (!isset(\OC::$server)) {
-			return;
+		if (isset(\OC::$server)) {
+			IntegrationTestUsers::clearSession();
+			$this->flushMounts();
+			$uids = array_values(array_unique(array_merge($this->users, [
+				self::OWNER,
+				self::RECIPIENT,
+				self::OWNER_PRUNE,
+				self::RECIPIENT_PRUNE,
+			])));
+			IntegrationTestUsers::remove(...$uids);
 		}
-		/** @var IUserManager $userManager */
-		$userManager = \OC::$server->get(IUserManager::class);
-		foreach ([self::OWNER, self::RECIPIENT, self::OWNER_PRUNE, self::RECIPIENT_PRUNE] as $uid) {
-			if ($userManager->userExists($uid)) {
-				$userManager->get($uid)?->delete();
-			}
-		}
+		parent::tearDown();
 	}
 
 	public function testSharedFileAccessibleUntilShareRevoked(): void
 	{
-		/** @var IUserManager $userManager */
-		$userManager = \OC::$server->get(IUserManager::class);
-		if (!$userManager->userExists(self::OWNER)) {
-			$userManager->createUser(self::OWNER, self::PASSWORD);
-		}
-		if (!$userManager->userExists(self::RECIPIENT)) {
-			$userManager->createUser(self::RECIPIENT, self::PASSWORD);
-		}
+		$this->freshUsers(self::OWNER, self::RECIPIENT);
 
 		/** @var FileAccessService $access */
 		$access = \OC::$server->get(FileAccessService::class);
 		$ownerFolder = $access->getUserFolder(self::OWNER);
-		$path = 'audiocheck-share-test.mp3';
-		if ($ownerFolder->nodeExists($path)) {
-			$ownerFolder->get($path)->delete();
-		}
+		$path = 'audiocheck-share-test-' . uniqid('', true) . '.mp3';
 		/** @var File $file */
 		$file = $ownerFolder->newFile($path);
 		$file->putContent($this->minimalMp3Bytes());
@@ -84,11 +80,13 @@ final class FileAccessShareRevokeIntegrationTest extends TestCase
 		$share->setPermissions(Constants::PERMISSION_READ);
 		$share->setNode($file);
 		$created = $shareManager->createShare($share);
+		$this->flushMounts();
 
 		$this->assertTrue($access->isFileAccessible(self::RECIPIENT, $fileId));
 		$access->resolveReadableFile(self::RECIPIENT, $fileId);
 
 		$shareManager->deleteShare($created);
+		$this->flushMounts();
 
 		try {
 			$access->resolveReadableFile(self::RECIPIENT, $fileId);
@@ -101,22 +99,13 @@ final class FileAccessShareRevokeIntegrationTest extends TestCase
 
 	public function testSharedTrackRowPrunedAfterScan(): void
 	{
-		/** @var IUserManager $userManager */
-		$userManager = \OC::$server->get(IUserManager::class);
-		if (!$userManager->userExists(self::OWNER_PRUNE)) {
-			$userManager->createUser(self::OWNER_PRUNE, self::PASSWORD);
-		}
-		if (!$userManager->userExists(self::RECIPIENT_PRUNE)) {
-			$userManager->createUser(self::RECIPIENT_PRUNE, self::PASSWORD);
-		}
+		$this->freshUsers(self::OWNER_PRUNE, self::RECIPIENT_PRUNE);
+		$this->purgeAudioCheckRows(self::RECIPIENT_PRUNE);
 
 		/** @var FileAccessService $access */
 		$access = \OC::$server->get(FileAccessService::class);
 		$ownerFolder = $access->getUserFolder(self::OWNER_PRUNE);
-		$path = 'audiocheck-share-prune.mp3';
-		if ($ownerFolder->nodeExists($path)) {
-			$ownerFolder->get($path)->delete();
-		}
+		$path = 'audiocheck-share-prune-' . uniqid('', true) . '.mp3';
 		/** @var File $file */
 		$file = $ownerFolder->newFile($path);
 		$file->putContent($this->minimalMp3Bytes());
@@ -131,16 +120,54 @@ final class FileAccessShareRevokeIntegrationTest extends TestCase
 		$share->setPermissions(Constants::PERMISSION_READ);
 		$share->setNode($file);
 		$created = $shareManager->createShare($share);
+		$this->flushMounts();
 
 		$sharedFile = $access->resolveReadableFile(self::RECIPIENT_PRUNE, $fileId);
-		/** @var \OCA\AudioCheck\Service\ScanService $scan */
-		$scan = \OC::$server->get(\OCA\AudioCheck\Service\ScanService::class);
+		/** @var ScanService $scan */
+		$scan = \OC::$server->get(ScanService::class);
 		$scan->handleNodeEvent(self::RECIPIENT_PRUNE, $sharedFile, 'written');
 		$this->assertTrue($this->trackExistsForUser(self::RECIPIENT_PRUNE, $fileId));
 
 		$shareManager->deleteShare($created);
-		$scan->scanUser(self::RECIPIENT_PRUNE);
+		$this->flushMounts();
+		$this->assertFalse(
+			$access->isFileAccessible(self::RECIPIENT_PRUNE, $fileId),
+			'revoked share must not stay readable before prune scan',
+		);
+
+		$tries = 0;
+		do {
+			$scan->scanUser(self::RECIPIENT_PRUNE);
+			$status = $scan->getStatus(self::RECIPIENT_PRUNE);
+			$this->assertLessThan(40, ++$tries, 'scan did not reach idle');
+		} while ($status['status'] !== ScanService::STATUS_IDLE);
+		$this->assertNull($status['lastError'], 'scan error: ' . (string)$status['lastError']);
 		$this->assertFalse($this->trackExistsForUser(self::RECIPIENT_PRUNE, $fileId));
+	}
+
+	private function freshUsers(string ...$uids): void
+	{
+		foreach ($uids as $uid) {
+			IntegrationTestUsers::create($uid, self::PASSWORD);
+			$this->users[] = $uid;
+		}
+	}
+
+	private function flushMounts(): void
+	{
+		if (class_exists(\OC_Util::class)) {
+			\OC_Util::tearDownFS();
+		}
+	}
+
+	private function purgeAudioCheckRows(string $userId): void
+	{
+		$db = \OC::$server->get(\OCP\IDBConnection::class);
+		foreach (['ac_tracks', 'ac_scan_state', 'ac_libraries', 'ac_play_state'] as $table) {
+			$qb = $db->getQueryBuilder();
+			$qb->delete($table)->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+			$qb->executeStatement();
+		}
 	}
 
 	private function trackExistsForUser(string $userId, int $fileId): bool

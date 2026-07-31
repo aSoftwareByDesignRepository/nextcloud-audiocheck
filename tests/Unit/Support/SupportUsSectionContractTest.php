@@ -90,7 +90,11 @@ final class SupportUsSectionContractTest extends TestCase {
 		self::assertStringContainsString('ac-support-us', $css);
 		self::assertStringContainsString(':focus-visible', $css);
 		self::assertStringContainsString('prefers-reduced-motion', $css);
-		self::assertStringContainsString('min-height: 2.75rem', $css);
+		self::assertMatchesRegularExpression(
+			'/min-height:\s*(?:2\.75rem|var\(--ac-touch(?:,\s*2\.75rem)?\))/',
+			$css,
+			'Support & Us CTAs need a ≥44px / 2.75rem touch target',
+		);
 		self::assertStringContainsString('support-us__option', $css);
 		self::assertStringContainsString('support-us__benefit', $css);
 		self::assertStringContainsString('support-us__coverage', $css);

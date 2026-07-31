@@ -2830,6 +2830,14 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	margin: var(--ac-space-4) 0 0;
 	max-width: 42rem;
 }
+.ac-library-layout-hint {
+	margin: var(--ac-space-4) 0 0;
+	max-width: 42rem;
+}
+.ac-library-card__field .ac-field__hint {
+	margin: var(--ac-space-1) 0 0;
+	max-width: 18rem;
+}
 .ac-content-kind-picker {
 	display: flex;
 	flex-direction: column;
@@ -5478,7 +5486,7 @@ body.ac-modal-open { overflow: hidden; }
 }
 
 .ac-support-us__cta {
-	min-height: var(--ac-touch);
+	min-height: var(--ac-touch, 2.75rem);
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;

@@ -152,8 +152,21 @@ class ScanService
 		$scanRow = $this->getScanRow($userId);
 		$now = $this->timeFactory->getTime();
 		$cursor = $this->parseCursor($scanRow);
-		$isResume = $cursor['scanGen'] > 0;
+		// Resume an in-progress walk, or the next library root after a batch
+		// boundary. A bare leftover scanGen (failed clearCursor) must not be
+		// reused — it collides with same-second node-event last_seen_at and
+		// can skip prune of revoked shares.
+		$isResume = $cursor['scanGen'] > 0
+			&& ($cursor['walkStack'] !== [] || $cursor['rootIdx'] > 0);
+		if ($cursor['scanGen'] > 0 && !$isResume) {
+			$this->clearCursor($userId);
+		}
 		$scanGen = $isResume ? $cursor['scanGen'] : $now;
+		if (!$isResume) {
+			// Strictly newer than any existing last_seen_at so same-second
+			// handleNodeEvent upserts are still pruned if the file vanishes.
+			$scanGen = max($scanGen, $this->maxTrackLastSeen($userId) + 1);
+		}
 		$rootIdx = $isResume ? $cursor['rootIdx'] : 0;
 		$walkStack = $isResume ? $cursor['walkStack'] : [];
 
@@ -196,6 +209,13 @@ class ScanService
 				if ($ri !== $rootIdx) {
 					$walkStack = [];
 				}
+				// Budget already spent finishing the previous root at a batch
+				// boundary — pause BEFORE walking this root so an empty walk
+				// cursor cannot restart the previous root forever.
+				if ($processed >= self::SCAN_BATCH_SIZE) {
+					$this->pauseScanBatch($userId, $scanGen, $ri, $walkStack);
+					return;
+				}
 				do {
 					$remaining = self::SCAN_BATCH_SIZE - $processed;
 					$batch = $this->fileAccess->walkAudioFilesBatch($folder, $includeSub, $walkStack, $remaining);
@@ -214,19 +234,14 @@ class ScanService
 						if (($processed % 25) === 0) {
 							$this->touchScanLease($userId);
 						}
-						if ($processed >= self::SCAN_BATCH_SIZE) {
-							$this->saveCursor($userId, [
-								'scanGen' => $scanGen,
-								'rootIdx' => $ri,
-								'walkStack' => $walkStack,
-							]);
-							$total = $this->countTracks($userId);
-							$this->setStatus($userId, self::STATUS_QUEUED, null, null, $total);
-							if (!$this->jobList->has(\OCA\AudioCheck\BackgroundJob\ScanJob::class, ['userId' => $userId])) {
-								$this->jobList->add(\OCA\AudioCheck\BackgroundJob\ScanJob::class, ['userId' => $userId]);
-							}
-							return;
-						}
+					}
+					// Pause only while this root still has unscanned files.
+					// When the walk completes on the exact batch boundary,
+					// fall through so we advance roots / prune instead of
+					// persisting an empty walkStack that would infinite-loop.
+					if ($processed >= self::SCAN_BATCH_SIZE && !$batch['done']) {
+						$this->pauseScanBatch($userId, $scanGen, $ri, $walkStack);
+						return;
 					}
 				} while (!$batch['done']);
 				$walkStack = [];
@@ -802,40 +817,15 @@ class ScanService
 	/** @param array<string, mixed>|null $row @return array{scanGen:int,rootIdx:int,walkStack:list<array{path:string,offset:int}>} */
 	private function parseCursor(?array $row): array
 	{
-		if ($row === null || $row['cursor'] === null || (string)$row['cursor'] === '') {
-			return ['scanGen' => 0, 'rootIdx' => 0, 'walkStack' => []];
-		}
-		try {
-			$data = json_decode((string)$row['cursor'], true, 8, JSON_THROW_ON_ERROR);
-			if (!is_array($data)) {
-				return ['scanGen' => 0, 'rootIdx' => 0, 'walkStack' => []];
-			}
-			$walkStack = [];
-			if (isset($data['walkStack']) && is_array($data['walkStack'])) {
-				foreach ($data['walkStack'] as $frame) {
-					if (!is_array($frame)) {
-						continue;
-					}
-					$walkStack[] = [
-						'path' => (string)($frame['path'] ?? ''),
-						'offset' => max(0, (int)($frame['offset'] ?? 0)),
-					];
-				}
-			}
-			return [
-				'scanGen' => (int)($data['scanGen'] ?? 0),
-				'rootIdx' => (int)($data['rootIdx'] ?? 0),
-				'walkStack' => $walkStack,
-			];
-		} catch (\JsonException) {
-			return ['scanGen' => 0, 'rootIdx' => 0, 'walkStack' => []];
-		}
+		$raw = $row !== null && $row['cursor'] !== null ? (string)$row['cursor'] : null;
+
+		return ScanCursor::decode($raw);
 	}
 
 	/** @param array{scanGen:int,rootIdx:int,walkStack:list<array{path:string,offset:int}>} $cursor */
 	private function saveCursor(string $userId, array $cursor): void
 	{
-		$json = json_encode($cursor, JSON_THROW_ON_ERROR);
+		$json = ScanCursor::encode($cursor);
 		$row = $this->getScanRow($userId);
 		if ($row === null) {
 			$now = $this->timeFactory->getTime();
@@ -897,6 +887,33 @@ class ScanService
 		$row = $result->fetch();
 		$result->closeCursor();
 		return $row === false ? null : $row;
+	}
+
+	/** @param list<array{path:string,offset:int}> $walkStack */
+	private function pauseScanBatch(string $userId, int $scanGen, int $rootIdx, array $walkStack): void
+	{
+		$this->saveCursor($userId, [
+			'scanGen' => $scanGen,
+			'rootIdx' => $rootIdx,
+			'walkStack' => $walkStack,
+		]);
+		$total = $this->countTracks($userId);
+		$this->setStatus($userId, self::STATUS_QUEUED, null, null, $total);
+		if (!$this->jobList->has(\OCA\AudioCheck\BackgroundJob\ScanJob::class, ['userId' => $userId])) {
+			$this->jobList->add(\OCA\AudioCheck\BackgroundJob\ScanJob::class, ['userId' => $userId]);
+		}
+	}
+
+	private function maxTrackLastSeen(string $userId): int
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->selectAlias($qb->func()->max('last_seen_at'), 'm')
+			->from('ac_tracks')
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		return (int)($row['m'] ?? 0);
 	}
 
 	private function countTracks(string $userId): int

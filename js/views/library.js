@@ -539,7 +539,7 @@
 					attrs: { 'aria-label': t('audiocheck', 'Subfolders for {folder}', { folder: pathLabel }) },
 				});
 				[
-					{ value: '1', label: t('audiocheck', 'Includes subfolders'), selected: lib.includeSubfolders !== false },
+					{ value: '1', label: t('audiocheck', 'All nested folders'), selected: lib.includeSubfolders !== false },
 					{ value: '0', label: t('audiocheck', 'This folder only'), selected: lib.includeSubfolders === false },
 				].forEach((opt) => {
 					scopeSelect.appendChild(C.el('option', {
@@ -566,6 +566,12 @@
 					});
 				});
 				scopeField.appendChild(scopeSelect);
+				scopeField.appendChild(C.el('p', {
+					className: 'ac-field__hint',
+					id: scopeSelectId + '-hint',
+					text: t('audiocheck', 'Needed for Author / Book / chapter layouts. Turn this off only if every audio file sits directly in this folder.'),
+				}));
+				scopeSelect.setAttribute('aria-describedby', scopeSelectId + '-hint');
 				actions.appendChild(scopeField);
 
 				actions.appendChild(C.el('button', {
@@ -641,6 +647,11 @@
 				const libs = C.el('div', { className: 'ac-library-list', attrs: { role: 'list' } });
 				list.forEach((lib) => libs.appendChild(renderLibraryRow(lib)));
 				listHost.appendChild(libs);
+				listHost.appendChild(C.el('p', {
+					className: 'ac-field__hint ac-library-layout-hint',
+					attrs: { role: 'note' },
+					text: t('audiocheck', 'Audiobook layout tip: Author / Book / files.mp3, or Author / Book / CD 1 / files.mp3. Keep “All nested folders” on so every level is scanned.'),
+				}));
 				if (list.length > 1) {
 					listHost.appendChild(C.el('p', {
 						className: 'ac-field__hint ac-library-overlap-hint',

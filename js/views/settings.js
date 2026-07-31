@@ -90,7 +90,7 @@
 			const subfolders = C.el('input', { id: 'ac-scan-subfolders', type: 'checkbox' });
 			subRow.appendChild(subfolders);
 			subRow.appendChild(C.el('label', { attrs: { for: 'ac-scan-subfolders' }, text: t('audiocheck', 'Scan subfolders') }));
-			subRow.appendChild(C.el('p', { className: 'ac-field__hint', text: t('audiocheck', 'Include files in subfolders when scanning. Used for new library folders and the default folder.') }));
+			subRow.appendChild(C.el('p', { className: 'ac-field__hint', text: t('audiocheck', 'Include audio in every nested folder — for example Author/Book/Chapter. Applies to new library folders and the default folder.') }));
 			scanFs.appendChild(subRow);
 
 			const actions = C.el('div', { className: 'ac-form-actions' });

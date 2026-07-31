@@ -87,6 +87,13 @@ class FileAccessService
 	/** @var list<string> */
 	private const COVER_FILENAMES = ['cover.jpg', 'folder.jpg', 'front.png', 'cover.png', 'folder.png'];
 
+	/**
+	 * Hard cap on recursive walk depth (library root = 0). Protects against
+	 * pathological nesting / cycles while remaining far above real audiobook
+	 * layouts (Author / Book / CD / file ≈ depth 3).
+	 */
+	public const MAX_WALK_DEPTH = 32;
+
 	public function __construct(
 		private IRootFolder $rootFolder,
 		private IEncryptionManager $encryptionManager,
@@ -394,6 +401,10 @@ class FileAccessService
 	/**
 	 * Walk audio files depth-first without materializing the full tree in memory.
 	 *
+	 * When $recursive is true, every nested folder under the library root is
+	 * visited up to {@see MAX_WALK_DEPTH} — including Author/Book and
+	 * Author/Book/Chapter layouts used by multi-file audiobooks.
+	 *
 	 * @param list<array{path:string,offset:int}> $stack Empty stack starts at $root.
 	 * @return array{files:list<File>,stack:list<array{path:string,offset:int}>,done:bool}
 	 */
@@ -407,8 +418,9 @@ class FileAccessService
 
 		while ($stack !== [] && count($files) < $limit) {
 			$frameIdx = count($stack) - 1;
-			$frame = &$stack[$frameIdx];
-			$folder = $this->folderAtRelativePath($root, (string)$frame['path']);
+			// Depth = nested folders below the library root (frame 0).
+			$depth = $frameIdx;
+			$folder = $this->folderAtRelativePath($root, (string)$stack[$frameIdx]['path']);
 			if ($folder === null) {
 				array_pop($stack);
 				continue;
@@ -416,21 +428,31 @@ class FileAccessService
 
 			$listing = $this->sortedDirectoryListing($folder);
 			$count = count($listing);
-			while ($frame['offset'] < $count && count($files) < $limit) {
-				$node = $listing[$frame['offset']];
-				$frame['offset']++;
+			$descended = false;
+			while ($stack[$frameIdx]['offset'] < $count && count($files) < $limit) {
+				$node = $listing[$stack[$frameIdx]['offset']];
+				$stack[$frameIdx]['offset']++;
 				if ($node instanceof File && $node->isReadable() && $this->isAllowedAudioFile($node)) {
 					$files[] = $node;
 					continue;
 				}
-				if ($recursive && $node instanceof Folder && $node->isReadable()) {
-					$childPath = $this->childRelativePath((string)$frame['path'], $node->getName());
+				if (
+					$recursive
+					&& $depth < self::MAX_WALK_DEPTH
+					&& $node instanceof Folder
+					&& $node->isReadable()
+				) {
+					$childPath = $this->childRelativePath((string)$stack[$frameIdx]['path'], $node->getName());
 					$stack[] = ['path' => $childPath, 'offset' => 0];
+					$descended = true;
 					break;
 				}
 			}
 
-			if ($frame['offset'] >= $count) {
+			// Pop only the frame we just exhausted. When a child frame was pushed
+			// above, the top of the stack is that child — popping here would skip
+			// the entire subtree (e.g. the last book folder inside an author folder).
+			if (!$descended && $stack[$frameIdx]['offset'] >= $count) {
 				array_pop($stack);
 			}
 		}
@@ -476,7 +498,7 @@ class FileAccessService
 	}
 
 	/** @return list<File> */
-	private function collectAudioFilesRecursive(Folder $folder): array
+	private function collectAudioFilesRecursive(Folder $folder, int $depth = 0): array
 	{
 		$files = [];
 		foreach ($folder->getDirectoryListing() as $node) {
@@ -484,8 +506,8 @@ class FileAccessService
 				$files[] = $node;
 				continue;
 			}
-			if ($node instanceof Folder && $node->isReadable()) {
-				foreach ($this->collectAudioFilesRecursive($node) as $child) {
+			if ($node instanceof Folder && $node->isReadable() && $depth < self::MAX_WALK_DEPTH) {
+				foreach ($this->collectAudioFilesRecursive($node, $depth + 1) as $child) {
 					$files[] = $child;
 				}
 			}

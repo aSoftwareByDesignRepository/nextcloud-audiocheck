@@ -24,6 +24,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- **Nested audiobook folders skipped during scan** — recursive walks no longer drop a book folder that sorts last (or alone) under its author. Layouts like `/Audiobooks/Author/Book/*.mp3` and `/Audiobooks/Author/Book/CD 1/*.mp3` are indexed completely.
+- **Scan cursor size on deep trees** — walk position is stored in a compact path+offsets form so deep Author/Book/Chapter stacks stay within the `varchar(4000)` cursor column across resumes.
+- **Multi-disc grouping** — untagged files in `CD n` / `Disc n` / `Chapter n` / `Kapitel n` folders group under the parent book and keep disc order.
+- **Same-second scan prune** — a new full scan picks a generation strictly newer than any existing `last_seen_at`, so tracks indexed by a file event in the same second are still pruned when the file becomes inaccessible (e.g. share revoke).
+- **Batch-boundary infinite rescan** — finishing a library root on an exact `SCAN_BATCH_SIZE` boundary no longer persists an empty walk cursor that restarted the same root forever and skipped prune; pause only while the current root still has work (or before starting the next root).
+
+### Changed
+
+- **Library UX** — clearer “All nested folders” scope, an Author/Book layout tip, and Settings copy that names the nested audiobook pattern.
+- **Walk depth cap** — recursive scans stop descending after 32 folder levels (files at that depth still index) to bound pathological nesting.
+
 ## 1.2.12 - 2026-07-31
 
 ### Added
