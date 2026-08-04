@@ -7,40 +7,45 @@
 	<id>audiocheck</id>
 	<name>AudioCheck</name>
 	<name lang="de">AudioCheck</name>
-	<summary>Play audiobooks and music from your Nextcloud files — resume, queues, chapters, and playlists</summary>
-	<summary lang="de">Hörbücher und Musik aus deinen Nextcloud-Dateien — mit Fortsetzen, Warteschlange, Kapiteln und Playlists</summary>
+	<summary>Play audiobooks and music from your Nextcloud Files — resume, queues, chapters, playlists</summary>
+	<summary lang="de">Hörbücher und Musik aus Ihren Nextcloud-Dateien — Fortsetzen, Warteschlange, Kapitel, Playlists</summary>
 	<description><![CDATA[
 # AudioCheck — your audio library inside Nextcloud
 
-Your MP3, MP4, M4A, M4B, and other audio files already live in Files. AudioCheck indexes the folders you choose, streams with live permission checks, and keeps a **persistent player** while you browse the rest of Nextcloud.
+Your audio files already live in Files. AudioCheck indexes the folders you choose, streams with live permission checks, and keeps a **persistent mini-player** while you browse the rest of Nextcloud.
 
-## Why people install it
+The app is **free** under AGPL-3.0-or-later. There is no seat license for this web app in the shipped package.
 
-- **Multi-file audiobooks** — play every chapter file in a book as one queue; resume is stored on your server per account
-- **Music library** — tracks, albums, folders, search, and sort
-- **Continue listening** — home shelf, dashboard widget, and saved progress per file
-- **Playlists & Favorites** — build lists from collections; star tracks in Now playing or Browse
-- **Chapters & speed** — chapter jumps on M4B; 0.5×–4.0× speed for audiobooks
-- **Security by design** — single file-access gate; uniform 404 for inaccessible files; playback streams only from your Nextcloud files
-- **Accessible & responsive** — keyboard shortcuts, clear sections, focus-friendly controls, and a layout that works on phones and desktops
+## What you get
 
-## Supported formats
+- Separate music and audiobook library roots; collections, albums and folder browsing
+- Multi-file audiobooks as one queue; resume stored on your server per account
+- Durable playback queue; optional resume on open; Continue listening on Home and the dashboard widget
+- Playlists; Favorites synced with Files stars
+- Chapter jumps on M4B (and tagged chapter metadata); playback speed 0.5×–4.0×
+- Files actions: Play in AudioCheck / Play folder as album
+- Browse by artists, authors, genres, series, folders, tags and favorites
+- Optional access restriction (Nextcloud admins always retain access)
+- UI languages: English and German
+- Accessibility foundations aimed at WCAG 2.1 AA (not a third-party certification)
 
-**Indexed and streamed:** MP3, MP4/M4A/M4B (including podcasts tagged as video/mp4), OGG, Opus, FLAC, WAV, AAC, and other common `audio/*` types.
+## Formats
 
-**Browser playback** depends on your browser: MP3, M4A, M4B, AAC, OGG, Opus, and WAV usually work; FLAC and some others may need a different browser.
+**Indexed and streamed on the server:** MP3, MP4/M4A/M4B (including podcasts tagged as video/mp4), OGG, Opus, FLAC, WAV, AAC and other common `audio/*` types.
 
-## Get started in three steps
+**Browser playback** depends on the browser: MP3, M4A, M4B, AAC, OGG, Opus and WAV usually work; FLAC and some others may need a different browser.
 
-1. Open **Library**, add your music and audiobook folders, then **Scan now**.
-2. In **Settings**, enable **Resume where you left off** (recommended).
-3. Open **Music** or **Audiobooks** and press **Play** — the mini-player stays visible while you navigate.
+## Get started
 
-## Integrations
+1. Open **Library**, add music and audiobook folders, then **Scan now** (or `occ audiocheck:scan`).
+2. In **Settings**, enable **Resume where you left off** if you want that behaviour.
+3. Open **Music** or **Audiobooks** and press Play — the mini-player stays visible while you navigate.
 
-- **Files app** — Play in AudioCheck / Play folder as album
-- **Dashboard** — Continue listening widget
-- **CLI** — `occ audiocheck:scan`
+## Honest limits
+
+- Playback bytes go through a single file-access gate with live permission checks; revoked shares stop playback. The app makes no outbound HTTP calls for playback.
+- Scan depth is capped (32 folder levels). Playlist play/shuffle has a documented track cap (2000).
+- Declared databases: MySQL and PostgreSQL only.
 
 ## Requirements
 
@@ -49,37 +54,42 @@ Your MP3, MP4, M4A, M4B, and other audio files already live in Files. AudioCheck
 - MySQL or PostgreSQL
 	]]></description>
 	<description lang="de"><![CDATA[
-# AudioCheck — deine Audiothek in Nextcloud
+# AudioCheck — Ihre Audiothek in Nextcloud
 
-Deine MP3-, MP4-, M4A-, M4B- und weiteren Audiodateien liegen bereits in Dateien. AudioCheck indexiert die von dir gewählten Ordner, streamt mit Live-Berechtigungsprüfung und hält einen **dauerhaften Player**, während du den Rest von Nextcloud nutzt.
+Ihre Audiodateien liegen bereits in Dateien. AudioCheck indexiert die von Ihnen gewählten Ordner, streamt mit Live-Berechtigungsprüfung und hält einen **dauerhaften Mini-Player**, während Sie den Rest von Nextcloud nutzen.
 
-## Darum lohnt sich die Installation
+Die App ist unter AGPL-3.0-or-later **kostenfrei**. Für diese Web-App ist im ausgelieferten Paket keine Sitzlizenz vorgesehen.
 
-- **Mehrteilige Hörbücher** — alle Kapiteldateien eines Buches als eine Warteschlange; Fortschritt wird pro Konto auf dem Server gespeichert
-- **Musikbibliothek** — Titel, Alben, Ordner, Suche und Sortierung
-- **Weiterhören** — Startseite, Dashboard-Widget und gespeicherter Fortschritt pro Datei
-- **Playlists & Favoriten** — Listen aus Sammlungen; Sterne in Aktuelle Wiedergabe oder Durchsuchen
-- **Kapitel & Geschwindigkeit** — Kapitelsprünge bei M4B; 0,5×–4,0× für Hörbücher
-- **Sicherheit** — zentraler Dateizugriff; einheitliche 404 bei fehlenden Rechten; Wiedergabe nur aus deinen Nextcloud-Dateien
-- **Barrierefrei & responsiv** — Tastaturkürzel, klare Bereiche, fokusfreundliche Steuerung und Layout für Handy und Desktop
+## Was enthalten ist
 
-## Unterstützte Formate
+- Getrennte Musik- und Hörbuch-Bibliotheken; Sammlungen, Alben und Ordner
+- Mehrteilige Hörbücher als eine Warteschlange; Fortschritt pro Konto auf dem Server
+- Dauerhafte Warteschlange; optionales Fortsetzen beim Öffnen; Weiterhören auf der Startseite und im Dashboard-Widget
+- Playlists; Favoriten synchron mit Dateien-Sternen
+- Kapitelsprünge bei M4B; Geschwindigkeit 0,5×–4,0×
+- Dateien-Aktionen: In AudioCheck abspielen / Ordner als Album abspielen
+- Facetten: Interpreten, Autoren, Genres, Serien, Ordner, Tags, Favoriten
+- Optionale Zugriffsbeschränkung (Nextcloud-Administratoren behalten den Zugriff)
+- Oberflächensprachen: Deutsch und Englisch
+- Barrierefreiheits-Grundlagen mit Ziel WCAG 2.1 AA (keine Fremdzertifizierung)
 
-**Indexiert und gestreamt:** MP3, MP4/M4A/M4B (auch Podcasts mit video/mp4), OGG, Opus, FLAC, WAV, AAC und weitere gängige `audio/*`-Typen.
+## Formate
 
-**Browser-Wiedergabe** hängt vom Browser ab: MP3, M4A, M4B, AAC, OGG, Opus und WAV funktionieren meist; FLAC und manche andere Formate benötigen ggf. einen anderen Browser.
+**Auf dem Server indexiert und gestreamt:** MP3, MP4/M4A/M4B (auch Podcasts mit video/mp4), OGG, Opus, FLAC, WAV, AAC und weitere gängige `audio/*`-Typen.
 
-## In drei Schritten starten
+**Browser-Wiedergabe** hängt vom Browser ab: MP3, M4A, M4B, AAC, OGG, Opus und WAV funktionieren meist; FLAC und manche andere Formate brauchen ggf. einen anderen Browser.
 
-1. **Bibliothek** öffnen, Musik- und Hörbuchordner hinzufügen, dann **Jetzt scannen**.
-2. Unter **Einstellungen** **Dort fortsetzen, wo du aufgehört hast** aktivieren (empfohlen).
-3. **Musik** oder **Hörbücher** öffnen und **Wiedergabe** starten — der Mini-Player bleibt sichtbar.
+## Start
 
-## Integrationen
+1. **Bibliothek** öffnen, Ordner hinzufügen, **Jetzt scannen** (oder `occ audiocheck:scan`).
+2. Unter **Einstellungen** bei Bedarf **Dort fortsetzen, wo Sie aufgehört haben** aktivieren.
+3. **Musik** oder **Hörbücher** öffnen und Wiedergabe starten — der Mini-Player bleibt sichtbar.
 
-- **Dateien-App** — In AudioCheck abspielen / Ordner als Album abspielen
-- **Dashboard** — Widget „Weiterhören“
-- **CLI** — `occ audiocheck:scan`
+## Klare Grenzen
+
+- Dateizugriff über ein zentrales Gate mit Live-Rechten; widerrufene Freigaben beenden die Wiedergabe. Keine ausgehenden HTTP-Aufrufe für Playback.
+- Scan-Tiefe begrenzt (32 Ordnerebenen). Playlists haben eine dokumentierte Titel-Obergrenze (2000).
+- Deklarierte Datenbanken: nur MySQL und PostgreSQL.
 
 ## Voraussetzungen
 
@@ -87,7 +97,7 @@ Deine MP3-, MP4-, M4A-, M4B- und weiteren Audiodateien liegen bereits in Dateien
 - PHP 8.2–8.5
 - MySQL oder PostgreSQL
 	]]></description>
-	<version>1.2.15</version>
+	<version>1.2.16</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Alexander Mäule</author>
 	<namespace>AudioCheck</namespace>

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.2.16 - 2026-08-04
+
+### Changed
+
+- **Library folders UX** — folder rows are a single clear line (name, path, track count, Remove). Content type and nested-folder settings live under collapsed **Folder options**.
+- **Add folder flow** — no content-type modal; Music / Audiobook / Auto-detect shortcuts, path-based type guessing, and automatic scan after add.
+- **Store listing copy** — README and `info.xml` descriptions clarified (free AGPL web app, formats, get-started steps).
+- **Nextcloud** — `max-version` remains **34** (current stable **34.0.2**).
+
+### Tests
+
+- Journey + axe WCAG 2.1 AA coverage for the simplified Library surface (`library-folders-ux` / nested-scan e2e and PHPUnit contracts).
+
 ## 1.2.15 - 2026-08-02
 
 ### Changed

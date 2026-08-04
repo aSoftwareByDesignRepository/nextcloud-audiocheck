@@ -1,65 +1,83 @@
 # AudioCheck
 
-Nextcloud-native audio library and player for **audiobooks**, **music**, and lectures stored in your Files.
+[![Nextcloud](https://img.shields.io/badge/Nextcloud-32–34-0082c9?logo=nextcloud&logoColor=white)](https://nextcloud.com/)
+[![PHP](https://img.shields.io/badge/PHP-8.2–8.5-777BB4?logo=php&logoColor=white)](https://www.php.net/)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 
-Turn folders you already have into a polished library: scan, browse, play, resume where you left off, and keep listening while you navigate the app.
+**[English](#english)** · **[Deutsch](#deutsch)**
 
-## Features
+Audiobooks and music from your Nextcloud Files — with resume, queues, chapters and playlists.
 
-- **Your files stay in Files** — AudioCheck indexes folders you choose; nothing is uploaded elsewhere
-- **Music and audiobooks** — separate library roots, collections, albums, and folder browsing
-- **Resume everywhere** — cross-device progress, durable playback queue, and optional “resume on open”
-- **Persistent mini-player** — audio keeps playing while you browse Home, Library, Playlists, and more
-- **Playlists & Favorites** — built-in Favorites (synced with Files stars) plus manual playlists
-- **Browse facets** — artists, authors, genres, series, folders, tags, and favorites
-- **Adjustable speed** — 0.5×–4.0× for audiobooks and podcasts
-- **Chapter navigation** — for `.m4b` and tagged chapter metadata
-- **Files integration** — “Play in AudioCheck” and “Play folder as album” actions
-- **Dashboard widget** — Continue listening on the Nextcloud dashboard
-- **Access control** — restrict who may open the app; server admins always retain access
-- **EN + DE** — localized interface
-- **Accessible UI** — WCAG 2.1 AA foundations (skip link, 44px targets, reduced motion, screen-reader live regions)
+---
 
-## Requirements
+## English
 
-- Nextcloud 32–34
-- PHP 8.2–8.5
-- MySQL or PostgreSQL
+**Your audio library inside Nextcloud.**
 
-## Install from Git
+AudioCheck indexes folders you choose in Files, streams with live permission checks, and keeps a persistent mini-player while you navigate. Music and audiobooks use separate library roots.
+
+The app is **free** under AGPL-3.0-or-later. No seat license is required for this web app.
+
+### What is included
+
+- Scan chosen folders (UI or `occ audiocheck:scan`); multi-file audiobooks as one queue
+- Resume on the server per account; durable queue; optional resume on open; dashboard Continue listening
+- Playlists; Favorites synced with Files stars; chapter jumps on M4B; speed 0.5×–4.0×
+- Files actions: Play in AudioCheck / Play folder as album
+- Optional access restriction (admins retain access)
+- EN + DE UI; accessibility foundations aimed at WCAG 2.1 AA (not a certification)
+
+### Formats
+
+Server indexes common `audio/*` types including MP3, M4A/M4B, OGG, Opus, FLAC, WAV, AAC. Browser decode depends on the browser — FLAC and some others may need a different browser.
+
+### Requirements
+
+- Nextcloud 32–34 · PHP 8.2–8.5 · MySQL or PostgreSQL
+
+### Install from Git
 
 ```bash
 cd /path/to/nextcloud/apps/
 git clone https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck.git audiocheck
-cd audiocheck
-composer install --no-dev
+cd audiocheck && composer install --no-dev
+php occ app:enable audiocheck
 ```
 
-Enable the app in Nextcloud (Apps → AudioCheck) or run `php occ app:enable audiocheck`.
+### Security
 
-Add library folders in the app, then run `php occ audiocheck:scan --user=<uid>` or use **Scan now** in the UI.
+All file byte, metadata and cover access goes through a single file-access gate with live permissions. No outbound HTTP for playback. Report sensitive findings privately to the maintainer (`appinfo/info.xml`).
 
-## Development
+### License
 
-```bash
-composer install
-npm test
-./vendor/bin/phpunit
-bash scripts/check-file-access-gate.sh
-```
+[AGPL-3.0-or-later](LICENSE).
 
-## Releasing
+---
 
-Bump `appinfo/info.xml` `<version>`, update `CHANGELOG.md`, run `make release-signed` with Nextcloud `occ` and app signing certificates (`~/.nextcloud/certificates/audiocheck.key` / `.crt`, or set `APP_CERT_KEY_PATH` / `APP_CERT_CRT_PATH`), then upload the tarball to [apps.nextcloud.com](https://apps.nextcloud.com).
+## Deutsch
 
-Store listing images live under `screenshots/` as `audiocheck-screenshot-NN.png`; push them to `main` on GitHub before submitting a release (the store loads raw GitHub URLs from `info.xml`).
+**Ihre Audiothek in Nextcloud.**
 
-## Security
+AudioCheck indexiert gewählte Ordner in Dateien, streamt mit Live-Berechtigungsprüfung und hält einen dauerhaften Mini-Player. Musik und Hörbücher haben getrennte Bibliothekswurzeln.
 
-All file byte, metadata, and cover access goes through `FileAccessService::resolveReadableFile()` only. Every stream and cover is checked against live file permissions; revoked shares stop playback immediately. The app makes no outbound HTTP calls for playback.
+Die App ist unter AGPL-3.0-or-later **kostenfrei**. Für diese Web-App ist keine Sitzlizenz nötig.
 
-Do not open issues or pull requests that contain production secrets, personal data, or internal hostnames. Report sensitive findings privately to the maintainer (see `appinfo/info.xml` author).
+### Was enthalten ist
 
-## License
+- Ordner scannen (UI oder `occ audiocheck:scan`); mehrteilige Hörbücher als eine Warteschlange
+- Fortschritt auf dem Server; dauerhafte Warteschlange; Dashboard „Weiterhören“
+- Playlists; Favoriten mit Dateien-Sternen; Kapitel bei M4B; Geschwindigkeit 0,5×–4,0×
+- Dateien-Aktionen; optionale Zugriffsbeschränkung
+- DE + EN; Barrierefreiheits-Grundlagen mit Ziel WCAG 2.1 AA (keine Zertifizierung)
 
-AGPL-3.0-or-later — see [LICENSE](LICENSE).
+### Formate
+
+Server indexiert gängige `audio/*`-Typen. Browser-Wiedergabe hängt vom Browser ab — FLAC und manche Formate brauchen ggf. einen anderen Browser.
+
+### Voraussetzungen
+
+- Nextcloud 32–34 · PHP 8.2–8.5 · MySQL oder PostgreSQL
+
+### Lizenz
+
+[AGPL-3.0-or-later](LICENSE).
