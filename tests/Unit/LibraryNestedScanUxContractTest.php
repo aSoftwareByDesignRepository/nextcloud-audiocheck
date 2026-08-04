@@ -7,7 +7,8 @@ namespace OCA\AudioCheck\Tests\Unit;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Keeps Library / Settings copy honest about multi-level audiobook layouts.
+ * Keeps Library UX radical-simplicity contracts honest:
+ * one-row folders, progressive options, auto-scan add, nested-layout tip.
  */
 final class LibraryNestedScanUxContractTest extends TestCase
 {
@@ -18,14 +19,30 @@ final class LibraryNestedScanUxContractTest extends TestCase
 		$this->root = dirname(__DIR__, 2);
 	}
 
-	public function testLibraryExplainsNestedAudiobookLayouts(): void
+	public function testLibraryUsesProgressiveFolderOptions(): void
 	{
 		$js = (string)file_get_contents($this->root . '/js/views/library.js');
-		$this->assertStringContainsString('All nested folders', $js);
-		$this->assertStringContainsString('Author / Book / files.mp3', $js);
-		$this->assertStringContainsString('ac-library-layout-hint', $js);
+		$this->assertStringContainsString('Folder options', $js);
+		$this->assertStringContainsString('Include nested folders', $js);
+		$this->assertStringContainsString('ac-library-card__options', $js);
+		$this->assertStringContainsString('ac-seg', $js);
+		$this->assertStringContainsString('guessContentKindFromPath', $js);
 		$this->assertStringContainsString('aria-describedby', $js);
+		// Always-on clutter removed from the default surface
+		$this->assertStringNotContainsString('ac-library-card__select', $js);
+		$this->assertStringNotContainsString('pickContentKindModal', $js);
+		$this->assertStringNotContainsString('ac-library-overlap-hint', $js);
 		$this->assertStringNotContainsString("'Includes subfolders'", $js);
+	}
+
+	public function testLibraryExplainsNestedAudiobookLayoutsInHowItWorks(): void
+	{
+		$js = (string)file_get_contents($this->root . '/js/views/library.js');
+		$this->assertStringContainsString('ac-library-layout-hint', $js);
+		$this->assertStringContainsString('Author / Book / chapter', $js);
+		$this->assertStringContainsString('Scanning starts automatically', $js);
+		$this->assertStringContainsString('Add music folder', $js);
+		$this->assertStringContainsString('Add audiobook folder', $js);
 	}
 
 	public function testSettingsHintNamesAuthorBookChapterPattern(): void
@@ -34,18 +51,21 @@ final class LibraryNestedScanUxContractTest extends TestCase
 		$this->assertStringContainsString('Author/Book/Chapter', $js);
 	}
 
-	public function testLocalesContainNestedScanStrings(): void
+	public function testLocalesContainSimplifiedLibraryStrings(): void
 	{
 		foreach (['en', 'de'] as $lang) {
 			$json = json_decode((string)file_get_contents($this->root . '/l10n/' . $lang . '.json'), true);
 			$this->assertIsArray($json);
 			$t = $json['translations'] ?? [];
-			$this->assertArrayHasKey('All nested folders', $t);
+			$this->assertArrayHasKey('Folder options', $t);
+			$this->assertArrayHasKey('Include nested folders', $t);
 			$this->assertArrayHasKey(
-				'Audiobook layout tip: Author / Book / files.mp3, or Author / Book / CD 1 / files.mp3. Keep “All nested folders” on so every level is scanned.',
+				'Tip: Author / Book / chapter folders work best. Nested scanning stays on by default.',
 				$t,
 			);
-			$this->assertNotSame('', trim((string)$t['All nested folders']));
+			$this->assertArrayHasKey('Pick a folder from Files — scanning starts automatically.', $t);
+			$this->assertNotSame('', trim((string)$t['Folder options']));
+			$this->assertNotSame('', trim((string)$t['Include nested folders']));
 		}
 	}
 
@@ -53,5 +73,7 @@ final class LibraryNestedScanUxContractTest extends TestCase
 	{
 		$css = (string)file_get_contents($this->root . '/css/app.css');
 		$this->assertMatchesRegularExpression('/\.ac-library-layout-hint\s*\{[^}]*max-width:\s*42rem/s', $css);
+		$this->assertMatchesRegularExpression('/\.ac-library-card__main\s*\{/s', $css);
+		$this->assertMatchesRegularExpression('/\.ac-seg__option\s*\{[^}]*min-height:\s*var\(--ac-touch\)/s', $css);
 	}
 }

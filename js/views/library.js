@@ -28,22 +28,6 @@
 		return 'auto';
 	}
 
-	function scanStatusKey(status) {
-		if (status === 'running') return t('audiocheck', 'Running');
-		if (status === 'queued') return t('audiocheck', 'Queued');
-		if (status === 'idle') return t('audiocheck', 'Idle');
-		if (status === 'failed' || status === 'error') return t('audiocheck', 'Failed');
-		if (!status) return t('audiocheck', 'Unknown');
-		return t('audiocheck', 'Unknown');
-	}
-
-	function scanBadgeClass(status) {
-		if (status === 'running' || status === 'queued') return 'ac-badge ac-badge--active';
-		if (status === 'idle') return 'ac-badge ac-badge--ok';
-		if (status === 'failed' || status === 'error') return 'ac-badge ac-badge--warn';
-		return 'ac-badge';
-	}
-
 	function isScanning(scan) {
 		return !!scan && (scan.status === 'running' || scan.status === 'queued');
 	}
@@ -92,11 +76,21 @@
 		return t('audiocheck', 'Auto-detect');
 	}
 
-	function contentKindHint(kind) {
-		const k = kind || 'auto';
-		if (k === 'music') return t('audiocheck', 'All audio in this folder is treated as music.');
-		if (k === 'audiobook') return t('audiocheck', 'All audio in this folder is treated as audiobooks (including MP3 chapters).');
-		return t('audiocheck', 'AudioCheck decides from file type, length, and genre.');
+	/**
+	 * Infer Music / Audiobooks from common folder names so "Add a folder" needs no extra step.
+	 * @param {string} path
+	 * @returns {'auto'|'music'|'audiobook'}
+	 */
+	function guessContentKindFromPath(path) {
+		const hay = (friendlyFolderPath(path) + ' ' + folderDisplayName(path)).toLowerCase()
+			.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss');
+		if (/\b(audiobooks?|hoerbuecher|horbuch(?:er)?|livre\s*audio)\b/.test(hay)) {
+			return 'audiobook';
+		}
+		if (/\b(music|musik|musica|musique|songs?)\b/.test(hay)) {
+			return 'music';
+		}
+		return 'auto';
 	}
 
 	function contentKindBadgeClass(kind) {
@@ -106,71 +100,11 @@
 		return 'ac-badge ac-badge--auto';
 	}
 
-	/**
-	 * One-decision-at-a-time content-type chooser shown after a folder is picked.
-	 * Large, labelled radio cards keep the choice obvious and keyboard-friendly.
-	 * @returns {Promise<string|null>} chosen kind, or null if cancelled
-	 */
-	function pickContentKindModal() {
-		return new Promise((resolve) => {
-			let selected = 'auto';
-			const groupName = 'ac-content-kind-' + Math.random().toString(36).slice(2);
-			const group = C.el('div', {
-				className: 'ac-choice-group',
-				attrs: { role: 'radiogroup', 'aria-label': t('audiocheck', 'Content type') },
-			});
-			CONTENT_KINDS.forEach((kind) => {
-				const mod = libraryCardModifier(kind);
-				const isDefault = kind === selected;
-				const option = C.el('label', { className: 'ac-choice ac-choice--' + mod });
-				const input = C.el('input', {
-					type: 'radio',
-					className: 'ac-choice__input',
-					attrs: { name: groupName, value: kind, checked: isDefault ? true : undefined, autofocus: isDefault ? true : undefined },
-				});
-				input.addEventListener('change', () => { if (input.checked) selected = kind; });
-				option.appendChild(input);
-				const iconKind = mod === 'auto' ? 'folder' : mod;
-				option.appendChild(C.kindIcon(iconKind, 'ac-choice__icon'));
-				const textWrap = C.el('span', { className: 'ac-choice__body' });
-				const titleRow = C.el('span', { className: 'ac-choice__title-row' });
-				titleRow.appendChild(C.el('span', { className: 'ac-choice__title', text: contentKindLabel(kind) }));
-				if (kind === 'auto') {
-					titleRow.appendChild(C.el('span', {
-						className: 'ac-badge ac-badge--ok ac-choice__badge',
-						text: t('audiocheck', 'Recommended'),
-					}));
-				}
-				textWrap.appendChild(titleRow);
-				textWrap.appendChild(C.el('span', { className: 'ac-choice__desc', text: contentKindHint(kind) }));
-				option.appendChild(textWrap);
-				group.appendChild(option);
-			});
-			const intro = C.el('p', {
-				className: 'ac-field__hint ac-content-kind-picker__intro',
-				text: t('audiocheck', 'Tell AudioCheck what lives in this folder. You can change this later.'),
-			});
-			C.openModal({
-				title: t('audiocheck', 'What is in this folder?'),
-				primaryLabel: t('audiocheck', 'Add folder'),
-				dialogClass: 'ac-modal__dialog--narrow',
-				render() {
-					return C.el('div', { className: 'ac-content-kind-picker' }, [intro, group]);
-				},
-				onSubmit: async () => {
-					resolve(selected);
-					return true;
-				},
-				onCancel: () => resolve(null),
-			});
-		});
-	}
-
-	function resolveContentKind(presetKind) {
+	function resolveContentKind(presetKind, pickedPath) {
 		if (presetKind && CONTENT_KINDS.includes(presetKind)) {
-			return Promise.resolve(presetKind);
+			return presetKind;
 		}
-		return pickContentKindModal();
+		return guessContentKindFromPath(pickedPath || '');
 	}
 
 	function updateLibraryField(lib, body, handlers, messages) {
@@ -269,24 +203,18 @@
 				AudioCheckMessaging.toast(t('audiocheck', 'No folder was selected.'), 'warning');
 				return null;
 			}
-			return resolveContentKind(presetKind).then((contentKind) => {
-				if (alive && !alive()) return null;
-				if (!contentKind) {
-					if (typeof setStatus === 'function') setStatus('');
-					return null;
-				}
-				if (typeof setStatus === 'function') {
-					setStatus(t('audiocheck', 'Saving folder…'));
-				}
-				const prefs = window.AudioCheckUserPrefs || {};
-				const body = {
-					includeSubfolders: prefs.scanSubfolders !== false,
-					contentKind,
-				};
-				if (pick.fileId) body.rootFileId = pick.fileId;
-				if (pick.pickedPath) body.folderPath = pick.pickedPath;
-				return AudioCheckApi.post('/apps/audiocheck/api/libraries', body).then((r) => ({ r, contentKind, pick }));
-			});
+			const contentKind = resolveContentKind(presetKind, pick.pickedPath || '');
+			if (typeof setStatus === 'function') {
+				setStatus(t('audiocheck', 'Saving folder…'));
+			}
+			const prefs = window.AudioCheckUserPrefs || {};
+			const body = {
+				includeSubfolders: prefs.scanSubfolders !== false,
+				contentKind,
+			};
+			if (pick.fileId) body.rootFileId = pick.fileId;
+			if (pick.pickedPath) body.folderPath = pick.pickedPath;
+			return AudioCheckApi.post('/apps/audiocheck/api/libraries', body).then((r) => ({ r, contentKind, pick }));
 		}).then((payload) => {
 			if (alive && !alive()) return payload;
 			if (!payload || !payload.r || !payload.r.library) {
@@ -353,7 +281,6 @@
 			let lastLibraries = [];
 			let lastScan = null;
 			let highlightLibraryId = null;
-			let loading = true;
 			let loadError = null;
 
 			const handlers = {
@@ -372,16 +299,16 @@
 				setHighlightLibraryId(id) { highlightLibraryId = id; },
 			};
 
-			function makeAddButton(extraClass) {
+			function makeAddButton(extraClass, label, presetKind) {
 				const btn = C.el('button', {
 					type: 'button',
-					className: 'ac-btn ac-btn--primary js-ac-add-folder' + (extraClass ? ' ' + extraClass : ''),
-					onClick: () => runAddFolder(handlers),
+					className: 'ac-btn js-ac-add-folder' + (extraClass ? ' ' + extraClass : ''),
+					onClick: () => runAddFolder(handlers, presetKind),
 				});
 				if (window.AudioCheckIcons && AudioCheckIcons.createSvg) {
 					btn.appendChild(AudioCheckIcons.createSvg('add'));
 				}
-				btn.appendChild(document.createTextNode(t('audiocheck', 'Add a folder')));
+				btn.appendChild(document.createTextNode(label || t('audiocheck', 'Add a folder')));
 				return btn;
 			}
 
@@ -406,7 +333,6 @@
 				if (scanBtn) {
 					scanBtn.disabled = blocked;
 					scanBtn.setAttribute('aria-disabled', blocked ? 'true' : 'false');
-					// First scan (folders but nothing indexed) is the key action → primary.
 					scanBtn.classList.toggle('ac-btn--primary', !blocked && tracks === 0);
 					scanBtn.textContent = scanning ? t('audiocheck', 'Scanning…') : t('audiocheck', 'Scan now');
 				}
@@ -414,7 +340,6 @@
 
 			function applyState() {
 				if (!alive()) return;
-				loading = false;
 				if (foldersCard) {
 					foldersCard.setAttribute('aria-busy', isScanning(lastScan) ? 'true' : 'false');
 				}
@@ -437,9 +362,116 @@
 				schedulePoll();
 			}
 
+			function renderKindSegment(lib, handlersRef) {
+				const groupId = 'ac-library-kind-' + lib.id;
+				const field = C.el('div', {
+					className: 'ac-library-card__field ac-library-card__field--kind',
+				});
+				field.appendChild(C.el('span', {
+					className: 'ac-library-card__field-label',
+					id: groupId + '-label',
+					text: t('audiocheck', 'Content type'),
+				}));
+				const group = C.el('div', {
+					className: 'ac-seg',
+					attrs: {
+						role: 'radiogroup',
+						'aria-labelledby': groupId + '-label',
+						'aria-label': t('audiocheck', 'Content type for {folder}', { folder: friendlyFolderPath(lib.folderPath) }),
+					},
+				});
+				let kindBusy = false;
+				CONTENT_KINDS.forEach((kind) => {
+					const inputId = groupId + '-' + kind;
+					const option = C.el('label', {
+						className: 'ac-seg__option ac-seg__option--' + libraryCardModifier(kind),
+						attrs: { for: inputId },
+					});
+					const input = C.el('input', {
+						type: 'radio',
+						id: inputId,
+						className: 'ac-seg__input',
+						attrs: {
+							name: groupId,
+							value: kind,
+							checked: (lib.contentKind || 'auto') === kind ? true : undefined,
+						},
+					});
+					input.addEventListener('change', () => {
+						if (!input.checked || kindBusy) return;
+						const next = kind;
+						const prev = lib.contentKind || 'auto';
+						if (next === prev) return;
+						kindBusy = true;
+						group.querySelectorAll('input').forEach((el) => { el.disabled = true; });
+						updateLibraryContentKind(lib, next, handlersRef).catch((e) => {
+							const revert = group.querySelector('input[value="' + prev + '"]');
+							if (revert) revert.checked = true;
+							AudioCheckMessaging.toast(e.message, 'error');
+						}).finally(() => {
+							kindBusy = false;
+							group.querySelectorAll('input').forEach((el) => { el.disabled = false; });
+						});
+					});
+					option.appendChild(input);
+					option.appendChild(C.el('span', { className: 'ac-seg__text', text: contentKindLabel(kind) }));
+					group.appendChild(option);
+				});
+				field.appendChild(group);
+				return field;
+			}
+
+			function renderScopeToggle(lib, handlersRef) {
+				const scopeId = 'ac-library-scope-' + lib.id;
+				const hintId = scopeId + '-hint';
+				const field = C.el('div', { className: 'ac-library-card__field ac-library-card__field--scope' });
+				const row = C.el('div', { className: 'ac-library-card__check-row' });
+				const input = C.el('input', {
+					type: 'checkbox',
+					id: scopeId,
+					className: 'ac-library-card__check',
+					attrs: {
+						checked: lib.includeSubfolders !== false ? true : undefined,
+						'aria-describedby': hintId,
+					},
+				});
+				let scopeBusy = false;
+				input.addEventListener('change', () => {
+					if (scopeBusy) {
+						input.checked = lib.includeSubfolders !== false;
+						return;
+					}
+					const next = !!input.checked;
+					const prev = lib.includeSubfolders !== false;
+					if (next === prev) return;
+					scopeBusy = true;
+					input.disabled = true;
+					updateLibraryScope(lib, next, handlersRef).catch((e) => {
+						input.checked = prev;
+						AudioCheckMessaging.toast(e.message, 'error');
+					}).finally(() => {
+						scopeBusy = false;
+						input.disabled = false;
+					});
+				});
+				row.appendChild(input);
+				row.appendChild(C.el('label', {
+					attrs: { for: scopeId },
+					text: t('audiocheck', 'Include nested folders'),
+				}));
+				field.appendChild(row);
+				field.appendChild(C.el('p', {
+					className: 'ac-field__hint',
+					id: hintId,
+					text: t('audiocheck', 'Needed for Author / Book / chapter layouts. Turn this off only if every audio file sits directly in this folder.'),
+				}));
+				return field;
+			}
+
 			function renderLibraryRow(lib) {
 				const kindMod = libraryCardModifier(lib.contentKind);
 				const pathLabel = friendlyFolderPath(lib.folderPath);
+				const displayName = folderDisplayName(lib.folderPath);
 				const trackCount = typeof lib.trackCount === 'number' ? lib.trackCount : 0;
 				const row = C.el('article', {
 					className: 'ac-library-card ac-library-card--' + kindMod
@@ -448,133 +480,51 @@
 					attrs: { role: 'listitem', 'data-library-id': String(lib.id) },
 				});
 
-				const cardBody = C.el('div', { className: 'ac-library-card__row' });
+				const main = C.el('div', { className: 'ac-library-card__main' });
+				main.appendChild(C.kindIcon(kindMod, 'ac-library-card__icon'));
 
 				const identity = C.el('div', { className: 'ac-library-card__identity' });
-				identity.appendChild(C.kindIcon(kindMod, 'ac-library-card__icon'));
-				const titles = C.el('div', { className: 'ac-library-card__titles' });
 				const titleRow = C.el('div', { className: 'ac-library-card__title-row' });
 				titleRow.appendChild(C.el('h3', {
 					className: 'ac-library-card__name',
-					text: folderDisplayName(lib.folderPath),
+					text: displayName,
 				}));
-				titleRow.appendChild(C.el('span', {
-					className: 'ac-library-card__kind ' + contentKindBadgeClass(lib.contentKind),
-					text: contentKindLabel(lib.contentKind),
-				}));
-				titles.appendChild(titleRow);
-				titles.appendChild(C.el('p', {
+				// Only show the type chip when it adds information (Auto, or name ≠ type).
+				const kindLabel = contentKindLabel(lib.contentKind);
+				const nameLooksLikeKind = displayName.toLowerCase() === kindLabel.toLowerCase()
+					|| displayName.toLowerCase() === 'music'
+					|| displayName.toLowerCase() === 'audiobooks'
+					|| displayName.toLowerCase() === 'audiobook';
+				if ((lib.contentKind || 'auto') === 'auto' || !nameLooksLikeKind) {
+					titleRow.appendChild(C.el('span', {
+						className: 'ac-library-card__kind ' + contentKindBadgeClass(lib.contentKind),
+						text: kindLabel,
+					}));
+				}
+				identity.appendChild(titleRow);
+				identity.appendChild(C.el('p', {
 					className: 'ac-library-card__path',
 					text: pathLabel,
 				}));
-				identity.appendChild(titles);
-				const head = C.el('div', { className: 'ac-library-card__head' });
-				head.appendChild(identity);
+				main.appendChild(identity);
 
-				const stats = C.el('dl', { className: 'ac-library-card__stats' });
-				const item = C.el('div', {
-					className: 'ac-library-card__stat' + (trackCount > 0 ? ' ac-library-card__stat--ok' : ' ac-library-card__stat--empty'),
+				const count = C.el('p', {
+					className: 'ac-library-card__count' + (trackCount > 0 ? ' ac-library-card__count--ok' : ' ac-library-card__count--empty'),
+					attrs: {
+						'aria-label': trackCount > 0
+							? AudioCheckTime.tracksLabel(trackCount)
+							: t('audiocheck', 'No tracks yet'),
+					},
 				});
-				item.appendChild(C.el('dt', { className: 'ac-library-card__stat-label', text: t('audiocheck', 'Tracks') }));
-				item.appendChild(C.el('dd', {
-					className: 'ac-library-card__stat-value',
-					text: trackCount > 0 ? String(trackCount) : t('audiocheck', 'No tracks yet'),
-				}));
-				stats.appendChild(item);
-				head.appendChild(stats);
-				cardBody.appendChild(head);
+				if (trackCount > 0) {
+					count.appendChild(C.el('span', { className: 'ac-library-card__count-value', text: String(trackCount) }));
+					count.appendChild(C.el('span', { className: 'ac-library-card__count-label', text: t('audiocheck', 'Tracks') }));
+				} else {
+					count.appendChild(C.el('span', { className: 'ac-library-card__count-label', text: t('audiocheck', 'No tracks yet') }));
+				}
+				main.appendChild(count);
 
-				const actions = C.el('div', {
-					className: 'ac-library-card__actions',
-					attrs: { role: 'group', 'aria-label': t('audiocheck', 'Folder settings for {folder}', { folder: pathLabel }) },
-				});
-
-				const kindField = C.el('div', { className: 'ac-library-card__field' });
-				const kindSelectId = 'ac-library-kind-' + lib.id;
-				kindField.appendChild(C.el('label', {
-					attrs: { for: kindSelectId },
-					text: t('audiocheck', 'Content type'),
-				}));
-				const kindSelect = C.el('select', {
-					id: kindSelectId,
-					className: 'ac-input ac-library-card__select',
-					attrs: { 'aria-label': t('audiocheck', 'Content type for {folder}', { folder: pathLabel }) },
-				});
-				CONTENT_KINDS.forEach((kind) => {
-					kindSelect.appendChild(C.el('option', {
-						attrs: { value: kind, selected: (lib.contentKind || 'auto') === kind ? true : undefined },
-						text: contentKindLabel(kind),
-					}));
-				});
-				let kindBusy = false;
-				kindSelect.addEventListener('change', () => {
-					const next = kindSelect.value;
-					const prev = lib.contentKind || 'auto';
-					if (next === prev || kindBusy) {
-						kindSelect.value = prev;
-						return;
-					}
-					kindBusy = true;
-					kindSelect.disabled = true;
-					updateLibraryContentKind(lib, next, handlers).catch((e) => {
-						kindSelect.value = prev;
-						AudioCheckMessaging.toast(e.message, 'error');
-					}).finally(() => {
-						kindBusy = false;
-						kindSelect.disabled = false;
-					});
-				});
-				kindField.appendChild(kindSelect);
-				actions.appendChild(kindField);
-
-				const scopeField = C.el('div', { className: 'ac-library-card__field' });
-				const scopeSelectId = 'ac-library-scope-' + lib.id;
-				scopeField.appendChild(C.el('label', {
-					attrs: { for: scopeSelectId },
-					text: t('audiocheck', 'Subfolders'),
-				}));
-				const scopeSelect = C.el('select', {
-					id: scopeSelectId,
-					className: 'ac-input ac-library-card__select',
-					attrs: { 'aria-label': t('audiocheck', 'Subfolders for {folder}', { folder: pathLabel }) },
-				});
-				[
-					{ value: '1', label: t('audiocheck', 'All nested folders'), selected: lib.includeSubfolders !== false },
-					{ value: '0', label: t('audiocheck', 'This folder only'), selected: lib.includeSubfolders === false },
-				].forEach((opt) => {
-					scopeSelect.appendChild(C.el('option', {
-						attrs: { value: opt.value, selected: opt.selected ? true : undefined },
-						text: opt.label,
-					}));
-				});
-				let scopeBusy = false;
-				scopeSelect.addEventListener('change', () => {
-					const next = scopeSelect.value === '1';
-					const prev = lib.includeSubfolders !== false;
-					if (next === prev || scopeBusy) {
-						scopeSelect.value = prev ? '1' : '0';
-						return;
-					}
-					scopeBusy = true;
-					scopeSelect.disabled = true;
-					updateLibraryScope(lib, next, handlers).catch((e) => {
-						scopeSelect.value = prev ? '1' : '0';
-						AudioCheckMessaging.toast(e.message, 'error');
-					}).finally(() => {
-						scopeBusy = false;
-						scopeSelect.disabled = false;
-					});
-				});
-				scopeField.appendChild(scopeSelect);
-				scopeField.appendChild(C.el('p', {
-					className: 'ac-field__hint',
-					id: scopeSelectId + '-hint',
-					text: t('audiocheck', 'Needed for Author / Book / chapter layouts. Turn this off only if every audio file sits directly in this folder.'),
-				}));
-				scopeSelect.setAttribute('aria-describedby', scopeSelectId + '-hint');
-				actions.appendChild(scopeField);
-
-				actions.appendChild(C.el('button', {
+				main.appendChild(C.el('button', {
 					type: 'button',
 					className: 'ac-btn ac-btn--danger ac-library-card__remove',
 					text: t('audiocheck', 'Remove'),
@@ -593,8 +543,21 @@
 						});
 					},
 				}));
-				cardBody.appendChild(actions);
-				row.appendChild(cardBody);
+				row.appendChild(main);
+
+				const options = C.el('details', { className: 'ac-library-card__options' });
+				options.appendChild(C.el('summary', {
+					className: 'ac-library-card__options-summary',
+					text: t('audiocheck', 'Folder options'),
+				}));
+				const optionsBody = C.el('div', {
+					className: 'ac-library-card__options-body',
+					attrs: { role: 'group', 'aria-label': t('audiocheck', 'Folder settings for {folder}', { folder: pathLabel }) },
+				});
+				optionsBody.appendChild(renderKindSegment(lib, handlers));
+				optionsBody.appendChild(renderScopeToggle(lib, handlers));
+				options.appendChild(optionsBody);
+				row.appendChild(options);
 
 				if (!lib.enabled) {
 					row.appendChild(C.el('p', {
@@ -602,30 +565,31 @@
 						attrs: { role: 'alert' },
 						text: t('audiocheck', 'This folder is unavailable. Remove it or restore access in Files.'),
 					}));
-				} else if (trackCount === 0 && !isScanning(lastScan)) {
-					row.appendChild(C.el('p', {
-						className: 'ac-library-card__message ac-library-card__hint',
-						attrs: { role: 'status' },
-						text: t('audiocheck', 'Press Scan now if audio does not appear after a moment.'),
-					}));
 				}
 
 				return row;
 			}
 
 			function renderEmptyFolders() {
-				const empty = C.emptyState(
-					t('audiocheck', 'No folders yet'),
-					t('audiocheck', 'Add a folder from your Files. AudioCheck will scan it for music and audiobooks.'),
-					{
-						variant: 'section',
-						icon: 'folder',
-						ctaLabel: t('audiocheck', 'Add a folder'),
-						onCta: () => runAddFolder(handlers),
-					},
-				);
-				const cta = empty.querySelector('.ac-btn');
-				if (cta) cta.classList.add('js-ac-add-folder');
+				const empty = C.el('div', {
+					className: 'ac-empty ac-empty--section ac-library-empty',
+					attrs: { role: 'status' },
+				});
+				empty.appendChild(C.el('h3', { text: t('audiocheck', 'No folders yet') }));
+				empty.appendChild(C.el('p', {
+					text: t('audiocheck', 'Pick a folder from Files — scanning starts automatically.'),
+				}));
+				const actions = C.el('div', {
+					className: 'ac-library-empty__actions',
+					attrs: { role: 'group', 'aria-label': t('audiocheck', 'Add a folder') },
+				});
+				const musicBtn = makeAddButton('ac-btn--primary ac-library-empty__btn', t('audiocheck', 'Add music folder'), 'music');
+				const bookBtn = makeAddButton('ac-btn--primary ac-library-empty__btn', t('audiocheck', 'Add audiobook folder'), 'audiobook');
+				const autoBtn = makeAddButton('ac-library-empty__btn', t('audiocheck', 'Add folder (auto-detect)'), 'auto');
+				actions.appendChild(musicBtn);
+				actions.appendChild(bookBtn);
+				actions.appendChild(autoBtn);
+				empty.appendChild(actions);
 				return empty;
 			}
 
@@ -647,18 +611,11 @@
 				const libs = C.el('div', { className: 'ac-library-list', attrs: { role: 'list' } });
 				list.forEach((lib) => libs.appendChild(renderLibraryRow(lib)));
 				listHost.appendChild(libs);
-				listHost.appendChild(C.el('p', {
-					className: 'ac-field__hint ac-library-layout-hint',
-					attrs: { role: 'note' },
-					text: t('audiocheck', 'Audiobook layout tip: Author / Book / files.mp3, or Author / Book / CD 1 / files.mp3. Keep “All nested folders” on so every level is scanned.'),
-				}));
-				if (list.length > 1) {
-					listHost.appendChild(C.el('p', {
-						className: 'ac-field__hint ac-library-overlap-hint',
-						attrs: { role: 'note' },
-						text: t('audiocheck', 'Tip: use separate roots for music and audiobooks. Avoid nested folders that overlap (for example /Music and /Music/Albums).'),
-					}));
-				}
+
+				const addMore = C.el('div', { className: 'ac-library-add-more' });
+				addMore.appendChild(makeAddButton('ac-btn--primary', t('audiocheck', 'Add a folder')));
+				listHost.appendChild(addMore);
+
 				if (highlightLibraryId) {
 					const target = listHost.querySelector('[data-library-id="' + highlightLibraryId + '"]');
 					if (target) {
@@ -698,7 +655,6 @@
 				}).catch((e) => {
 					if (!alive() || gen !== refreshGen) return;
 					loadError = e.message || t('audiocheck', 'Request failed.');
-					loading = false;
 					renderFolders(lastLibraries);
 					applyState();
 				});
@@ -710,12 +666,10 @@
 				});
 			}
 
-			// —— Header action: add folder ——
 			if (window.AudioCheckPageChrome) {
-				AudioCheckPageChrome.setActions(makeAddButton('ac-library-header__add'));
+				AudioCheckPageChrome.setActions(makeAddButton('ac-btn--primary ac-library-header__add', t('audiocheck', 'Add a folder')));
 			}
 
-			// —— Card: Your folders (status bar + scan + list + links) ——
 			summaryEl = C.el('p', {
 				className: 'ac-library-bar__status ac-library-bar__status--muted',
 				attrs: { role: 'status', 'aria-live': 'polite' },
@@ -727,8 +681,6 @@
 				text: t('audiocheck', 'Scan now'),
 				onClick: onScanClick,
 			});
-			const statusBar = C.el('div', { className: 'ac-library-bar' });
-			statusBar.appendChild(summaryEl);
 
 			addStatusEl = C.el('p', {
 				className: 'ac-library-add__status',
@@ -763,6 +715,9 @@
 				onClick: () => AudioCheckRouter.navigate('browse', {}, true),
 			}));
 
+			const statusBar = C.el('div', { className: 'ac-library-bar' });
+			statusBar.appendChild(summaryEl);
+
 			const folderBody = C.el('div', { className: 'ac-library-folders-body' });
 			folderBody.appendChild(statusBar);
 			folderBody.appendChild(addStatusEl);
@@ -780,17 +735,23 @@
 			foldersCard.classList.add('ac-library-folders-section');
 			body.appendChild(foldersCard);
 
-			// —— Help: how it works + supported formats ——
+			const howBody = C.el('div', { className: 'ac-library-how' });
 			const steps = C.el('ol', { className: 'ac-steps ac-library-steps' });
 			[
 				t('audiocheck', 'Add music folder or Add audiobook folder — pick the matching folder in Files.'),
-				t('audiocheck', 'Scan now — AudioCheck indexes audio inside your folders.'),
+				t('audiocheck', 'Scanning starts automatically. Use Scan now if you add files later.'),
 				t('audiocheck', 'Open Music or Audiobooks — listen to albums, playlists, and chapters.'),
 			].forEach((text) => steps.appendChild(C.el('li', { text })));
+			howBody.appendChild(steps);
+			howBody.appendChild(C.el('p', {
+				className: 'ac-field__hint ac-library-layout-hint',
+				attrs: { role: 'note' },
+				text: t('audiocheck', 'Tip: Author / Book / chapter folders work best. Nested scanning stays on by default.'),
+			}));
 			body.appendChild(C.collapsibleSectionCard(
 				t('audiocheck', 'How it works'),
 				t('audiocheck', 'Add folders, scan, then open Music or Audiobooks.'),
-				steps,
+				howBody,
 				'ac-library-how-heading',
 			));
 
