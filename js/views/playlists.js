@@ -814,9 +814,10 @@
 					renderPlaylistsIndex(body, data.playlists || [], favCount, searchQuery());
 				}).catch((e) => {
 					body.textContent = '';
-					body.appendChild(C.emptyState(
+					body.appendChild(C.loadErrorState(
 						t('audiocheck', 'Could not load playlists'),
 						e.message || t('audiocheck', 'Request failed.'),
+						() => loadIndex(),
 						{ icon: 'playlist' },
 					));
 				});

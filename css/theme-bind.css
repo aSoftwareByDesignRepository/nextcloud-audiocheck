@@ -1,15 +1,17 @@
 /*
  * Loaded after Nextcloud theme stylesheets (see BeforeTemplateRenderedListener).
  * Re-binds --ac-* aliases once body[data-theme-*] --color-* variables are final.
+ * Canonical definitions live in css/common/tokens.css; this sheet is a late-load safety net.
  */
 body,
 #content[class*="app-audiocheck"],
 #app-content.ac-app {
 	--ac-bg-soft: color-mix(in srgb, var(--color-main-background) 96%, var(--color-main-text) 4%);
 	--ac-bg-card: var(--color-main-background);
+	--ac-bg-stripe: color-mix(in srgb, var(--color-main-background) 92%, var(--color-main-text) 8%);
 	--ac-surface: var(--color-main-background);
-	--ac-border: var(--color-border, color-mix(in srgb, var(--color-main-text) 24%, transparent));
-	--ac-border-strong: color-mix(in srgb, var(--color-main-text) 50%, var(--color-border, transparent));
+	--ac-border: color-mix(in srgb, var(--color-main-text) 12%, transparent);
+	--ac-border-strong: color-mix(in srgb, var(--color-main-text) 24%, transparent);
 	--ac-muted: var(--color-text-maxcontrast, color-mix(in srgb, var(--color-main-text) 62%, transparent));
 	--ac-muted-strong: color-mix(in srgb, var(--color-main-text) 82%, var(--color-text-maxcontrast, transparent));
 	--ac-text: var(--color-main-text);
@@ -18,9 +20,23 @@ body,
 	--ac-tint-success: color-mix(in srgb, var(--color-success-text, var(--color-success)) 18%, var(--color-main-background));
 	--ac-tint-warning: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 22%, var(--color-main-background));
 	--ac-tint-danger: color-mix(in srgb, var(--color-error-text, var(--color-error)) 18%, var(--color-main-background));
+	--ac-danger-fill: var(--color-element-error, var(--color-error));
+	--ac-danger-on-fill: var(--color-primary-element-text, var(--color-primary-text));
 	--ac-danger-ink: var(--color-error-text, var(--color-error));
-	--ac-danger-bg: color-mix(in srgb, var(--ac-danger-ink) 16%, var(--color-main-background));
+	--ac-danger-bg: var(--ac-tint-danger);
 	--ac-favorite-ink: var(--ac-danger-ink);
+}
+
+body[data-theme-dark] #app-content.ac-app,
+body[data-theme-dark-highcontrast] #app-content.ac-app,
+body[data-theme-dark],
+body[data-theme-dark-highcontrast] {
+	--ac-danger-fill: color-mix(
+		in srgb,
+		var(--color-element-error, var(--color-error)) 40%,
+		var(--color-main-background)
+	);
+	--ac-danger-on-fill: var(--color-main-text);
 }
 
 #content[class*="app-audiocheck"],

@@ -7,11 +7,13 @@ namespace OCA\AudioCheck\Controller;
 use OCA\AudioCheck\AppInfo\Application;
 use OCA\AudioCheck\Service\AccessControlService;
 use OCA\AudioCheck\Service\PlaybackStateService;
+use OCA\AudioCheck\Service\SettingsSectionCatalog;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Http\TemplateResponse;
+use OCP\IConfig;
 use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IURLGenerator;
@@ -28,6 +30,8 @@ class PageController extends Controller
 		private IURLGenerator $urlGenerator,
 		private AccessControlService $access,
 		private IL10N $l10n,
+		private IConfig $config,
+		private SettingsSectionCatalog $settingsSections,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -104,14 +108,40 @@ class PageController extends Controller
 
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
-	public function appSettings(): RedirectResponse|TemplateResponse
+	public function appSettingsIndex(): RedirectResponse
 	{
 		try {
 			$this->access->requireAppAdmin();
 		} catch (\Throwable) {
 			return new RedirectResponse($this->urlGenerator->linkToRoute('audiocheck.page.index'));
 		}
-		return $this->shell('app-settings', $this->l10n->t('App settings'), $this->l10n->t('Access policy and defaults for AudioCheck.'));
+		return new RedirectResponse($this->urlGenerator->linkToRoute(
+			'audiocheck.page.appSettings',
+			['section' => SettingsSectionCatalog::DEFAULT_SECTION],
+		));
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function appSettings(string $section): RedirectResponse|TemplateResponse
+	{
+		try {
+			$this->access->requireAppAdmin();
+		} catch (\Throwable) {
+			return new RedirectResponse($this->urlGenerator->linkToRoute('audiocheck.page.index'));
+		}
+		if (!$this->settingsSections->isSection($section)) {
+			return new RedirectResponse($this->urlGenerator->linkToRoute(
+				'audiocheck.page.appSettings',
+				['section' => SettingsSectionCatalog::DEFAULT_SECTION],
+			));
+		}
+		return $this->shell(
+			'app-settings',
+			$this->settingsSections->label($this->l10n, $section),
+			$this->settingsSections->help($this->l10n, $section),
+			['settingsSection' => $section],
+		);
 	}
 
 	/** @param array<string, mixed> $extra */
@@ -119,6 +149,17 @@ class PageController extends Controller
 	{
 		$userId = $this->access->currentUserId();
 		$this->registerFrontEndAssets();
+
+		$timezone = 'UTC';
+		if ($userId !== '') {
+			$timezone = $this->config->getUserValue(
+				$userId,
+				'core',
+				'timezone',
+				$this->config->getSystemValueString('default_timezone', 'UTC'),
+			) ?: 'UTC';
+		}
+		$htmlLang = str_replace('_', '-', $this->l10n->getLanguageCode());
 
 		$response = new TemplateResponse(Application::APP_ID, 'index', array_merge([
 			'viewId' => $viewId,
@@ -130,6 +171,9 @@ class PageController extends Controller
 			'appLogoUrl' => $this->urlGenerator->imagePath(Application::APP_ID, 'app.svg'),
 			'urls' => $this->buildUrls(),
 			'speedPresets' => PlaybackStateService::SPEED_PRESETS,
+			'htmlLang' => $htmlLang,
+			'timezone' => $timezone,
+			'locale' => $this->l10n->getLocaleCode(),
 		], $extra));
 		$response->renderAs('user');
 		return $response;
@@ -198,7 +242,25 @@ class PageController extends Controller
 			['id' => 'settings', 'label' => $this->l10n->t('Settings'), 'hint' => $this->l10n->t('Playback and scan preferences'), 'route' => 'audiocheck.page.settings', 'icon' => 'settings'],
 		];
 		if ($this->access->isAppAdmin($userId)) {
-			$account[] = ['id' => 'app-settings', 'label' => $this->l10n->t('App settings'), 'hint' => $this->l10n->t('Access policy and defaults'), 'route' => 'audiocheck.page.appSettings', 'icon' => 'admin-settings'];
+			$settingsChildren = [];
+			foreach (SettingsSectionCatalog::SECTIONS as $sectionId) {
+				$settingsChildren[] = [
+					'id' => 'app-settings-' . $sectionId,
+					'label' => $this->settingsSections->navLabel($this->l10n, $sectionId),
+					'hint' => '',
+					'url' => $this->urlGenerator->linkToRoute('audiocheck.page.appSettings', ['section' => $sectionId]),
+					'section' => $sectionId,
+				];
+			}
+			$account[] = [
+				'id' => 'app-settings',
+				'label' => $this->l10n->t('App settings'),
+				'hint' => $this->l10n->t('Access policy and defaults'),
+				'route' => 'audiocheck.page.appSettings',
+				'routeParams' => ['section' => SettingsSectionCatalog::DEFAULT_SECTION],
+				'icon' => 'admin-settings',
+				'children' => $settingsChildren,
+			];
 		}
 		$groups = [
 			['title' => $this->l10n->t('Listen'), 'items' => $this->mapNavItems($listen, $activeView)],
@@ -209,21 +271,47 @@ class PageController extends Controller
 	}
 
 	/**
-	 * @param list<array<string, string>> $items
+	 * @param list<array<string, mixed>> $items
 	 * @return list<array<string, mixed>>
 	 */
 	private function mapNavItems(array $items, string $activeView): array
 	{
+		$activeSection = $this->request->getParam('section');
 		$out = [];
 		foreach ($items as $item) {
-			$out[] = [
+			$routeParams = is_array($item['routeParams'] ?? null) ? $item['routeParams'] : [];
+			$url = isset($item['url'])
+				? (string)$item['url']
+				: $this->urlGenerator->linkToRoute((string)$item['route'], $routeParams);
+			$isAppSettings = ($item['id'] ?? '') === 'app-settings';
+			$active = ($item['id'] === $activeView)
+				|| ($activeView === 'playlist' && $item['id'] === 'playlists')
+				|| ($isAppSettings && $activeView === 'app-settings');
+			$mapped = [
 				'id' => $item['id'],
 				'label' => $item['label'],
 				'hint' => $item['hint'] ?? '',
-				'url' => $this->urlGenerator->linkToRoute($item['route']),
-				'icon' => $item['icon'],
-				'active' => $item['id'] === $activeView || ($activeView === 'playlist' && $item['id'] === 'playlists'),
+				'url' => $url,
+				'icon' => $item['icon'] ?? 'browse',
+				'active' => $active,
 			];
+			if (!empty($item['children']) && is_array($item['children'])) {
+				$children = [];
+				foreach ($item['children'] as $child) {
+					$section = (string)($child['section'] ?? '');
+					$childActive = $activeView === 'app-settings' && $section !== '' && $section === $activeSection;
+					$children[] = [
+						'id' => $child['id'],
+						'label' => $child['label'],
+						'hint' => $child['hint'] ?? '',
+						'url' => $child['url'],
+						'active' => $childActive,
+					];
+				}
+				$mapped['children'] = $children;
+				$mapped['expanded'] = $activeView === 'app-settings';
+			}
+			$out[] = $mapped;
 		}
 		return $out;
 	}
@@ -231,7 +319,7 @@ class PageController extends Controller
 	/** @return array<string, array{title: string, help: string, icon: string}> */
 	private function buildViewMeta(): array
 	{
-		return [
+		$meta = [
 			'home' => ['title' => $this->l10n->t('Home'), 'help' => $this->l10n->t('Continue listening and discover your audio library.'), 'icon' => 'home'],
 			'audiobooks' => ['title' => $this->l10n->t('Audiobooks'), 'help' => $this->l10n->t('Browse audiobook titles, folders, and books.'), 'icon' => 'audiobook'],
 			'music' => ['title' => $this->l10n->t('Music'), 'help' => $this->l10n->t('Browse tracks, folders, and albums.'), 'icon' => 'music'],
@@ -243,13 +331,33 @@ class PageController extends Controller
 			'settings' => ['title' => $this->l10n->t('Settings'), 'help' => $this->l10n->t('Personal playback and scan preferences.'), 'icon' => 'settings'],
 			'app-settings' => ['title' => $this->l10n->t('App settings'), 'help' => $this->l10n->t('Access policy and defaults for AudioCheck.'), 'icon' => 'admin-settings'],
 		];
+		foreach (SettingsSectionCatalog::SECTIONS as $sectionId) {
+			$meta['app-settings:' . $sectionId] = [
+				'title' => $this->settingsSections->label($this->l10n, $sectionId),
+				'help' => $this->settingsSections->help($this->l10n, $sectionId),
+				'icon' => 'admin-settings',
+			];
+		}
+		return $meta;
 	}
 
-	/** @return array<string, string> */
+	/** @return array<string, mixed> */
 	private function buildUrls(): array
 	{
+		$settingsSections = [];
+		foreach (SettingsSectionCatalog::SECTIONS as $sectionId) {
+			$settingsSections[$sectionId] = $this->urlGenerator->linkToRoute(
+				'audiocheck.page.appSettings',
+				['section' => $sectionId],
+			);
+		}
 		return [
 			'home' => $this->urlGenerator->linkToRoute('audiocheck.page.index'),
+			'appSettings' => $this->urlGenerator->linkToRoute(
+				'audiocheck.page.appSettings',
+				['section' => SettingsSectionCatalog::DEFAULT_SECTION],
+			),
+			'settingsSections' => $settingsSections,
 			'apiTracks' => $this->urlGenerator->linkToRoute('audiocheck.api.listTracks'),
 			'apiCollections' => $this->urlGenerator->linkToRoute('audiocheck.api.listCollections'),
 			'apiProgress' => $this->urlGenerator->linkToRoute('audiocheck.api.getProgress'),

@@ -267,18 +267,58 @@
 			}
 			const isSection = opts.variant === 'section';
 			const box = el('div', {
-				className: 'ac-empty' + (isSection ? ' ac-empty--section' : ' ac-empty--page'),
+				className: 'ac-empty ac-empty-state'
+					+ (isSection ? ' ac-empty--section' : ' ac-empty--page ac-empty-state--page'),
 				attrs: { role: 'status' },
 			});
 			if (!isSection) {
 				box.appendChild(emptyStateIcon(opts.icon || 'app'));
 			}
-			box.appendChild(el(isSection ? 'h3' : 'h2', { text: title }));
-			box.appendChild(el('p', { text: message }));
+			box.appendChild(el(isSection ? 'h3' : 'h2', {
+				className: isSection ? '' : 'ac-empty-state__title',
+				text: title,
+			}));
+			box.appendChild(el('p', {
+				className: 'ac-empty-state__text',
+				text: message,
+			}));
 			if (ctaLabel && onCta) {
-				box.appendChild(el('button', { type: 'button', className: 'ac-btn ac-btn--primary', text: ctaLabel, onClick: onCta }));
+				box.appendChild(el('button', {
+					type: 'button',
+					className: 'ac-btn ac-btn--primary',
+					text: ctaLabel,
+					onClick: onCta,
+				}));
 			}
 			return box;
+		},
+		/**
+		 * Dead-end recovery panel — always offers Try again (Bachus contract).
+		 * @param {string} title
+		 * @param {string} message
+		 * @param {() => void} onRetry
+		 * @param {{icon?: string, variant?: string}} [options]
+		 */
+		loadErrorState(title, message, onRetry, options) {
+			const opts = options || {};
+			return window.AudioCheckComponents.emptyState(
+				title || t('audiocheck', 'Could not load this page'),
+				message || t('audiocheck', 'Request failed.'),
+				{
+					icon: opts.icon || 'app',
+					variant: opts.variant,
+					ctaLabel: t('audiocheck', 'Try again'),
+					onCta: onRetry,
+				},
+			);
+		},
+		setBusy(node, busy) {
+			if (!node) return;
+			if (busy) {
+				node.setAttribute('aria-busy', 'true');
+			} else {
+				node.removeAttribute('aria-busy');
+			}
 		},
 		mediaCard(item, onPlay) {
 			const isListened = !!(item.listened || item.finished);
@@ -654,7 +694,8 @@
 
 	/**
 	 * Accessible modal dialog (focus trap, Escape, labelled title).
-	 * @param {{ title: string, render: () => HTMLElement, primaryLabel?: string, cancelLabel?: string, onSubmit?: (ctx: object) => (boolean|Promise<boolean>), onCancel?: () => void }} options
+	 * Single-flight primary submit + idempotent close (no double-confirm races).
+	 * @param {{ title: string, render: () => HTMLElement, primaryLabel?: string, cancelLabel?: string, onSubmit?: (ctx: object) => (boolean|Promise<boolean>), onCancel?: () => void, hideDefaultActions?: boolean, danger?: boolean, onClose?: () => void }} options
 	 */
 	function openModal(options) {
 		const opts = Object.assign({
@@ -668,14 +709,27 @@
 		if (openModalInstance) openModalInstance.close(false);
 		const previousFocus = document.activeElement;
 		const labelId = 'ac-modal-title-' + Math.random().toString(36).slice(2);
-		let overlay;
+		let dialog;
+		let closed = false;
+		let submitting = false;
+		let primaryBtn = null;
 
 		const instance = {
 			close(ok) {
+				if (closed) return;
+				closed = true;
 				document.body.classList.remove('ac-modal-open');
-				if (overlay) overlay.remove();
+				if (dialog) {
+					try {
+						if (typeof dialog.close === 'function' && dialog.open) dialog.close();
+					} catch (_) { /* ignore */ }
+					dialog.remove();
+				}
 				openModalInstance = null;
 				document.removeEventListener('keydown', onKey);
+				if (typeof opts.onClose === 'function') {
+					try { opts.onClose(); } catch (_) { /* ignore */ }
+				}
 				if (typeof opts.onCancel === 'function' && !ok) opts.onCancel();
 				if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus();
 			},
@@ -697,6 +751,31 @@
 			createElement('div', { class: 'ac-modal__body' }, [body]),
 		];
 		if (!opts.hideDefaultActions) {
+			primaryBtn = createElement('button', {
+				type: 'button',
+				className: 'ac-btn' + (opts.danger ? ' ac-btn--danger' : ' ac-btn--primary'),
+				text: opts.primaryLabel,
+				on: {
+					click: async () => {
+						if (closed || submitting) return;
+						if (typeof opts.onSubmit !== 'function') {
+							instance.close(true);
+							return;
+						}
+						submitting = true;
+						if (primaryBtn) primaryBtn.disabled = true;
+						try {
+							const ok = await opts.onSubmit({ body, close: (r) => instance.close(r) });
+							if (ok !== false) instance.close(true);
+						} catch (err) {
+							AudioCheckMessaging.toast(err.message || t('audiocheck', 'Request failed.'), 'error');
+						} finally {
+							submitting = false;
+							if (!closed && primaryBtn) primaryBtn.disabled = false;
+						}
+					},
+				},
+			});
 			dialogChildren.push(createElement('div', { class: 'ac-modal__actions' }, [
 				createElement('button', {
 					type: 'button',
@@ -704,39 +783,15 @@
 					text: opts.cancelLabel,
 					on: { click: () => instance.close(false) },
 				}),
-				createElement('button', {
-					type: 'button',
-					className: 'ac-btn' + (opts.danger ? ' ac-btn--danger' : ' ac-btn--primary'),
-					text: opts.primaryLabel,
-					on: {
-						click: async () => {
-							if (typeof opts.onSubmit !== 'function') {
-								instance.close(true);
-								return;
-							}
-							try {
-								const ok = await opts.onSubmit({ body, close: (r) => instance.close(r) });
-								if (ok !== false) instance.close(true);
-							} catch (err) {
-								AudioCheckMessaging.toast(err.message || t('audiocheck', 'Request failed.'), 'error');
-							}
-						},
-					},
-				}),
+				primaryBtn,
 			]));
 		}
-		const dialog = createElement('div', {
-			class: 'ac-modal__dialog' + (opts.dialogClass ? ' ' + opts.dialogClass : ''),
-			attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': labelId },
+		dialog = createElement('dialog', {
+			class: 'ac-native-dialog ac-modal__dialog' + (opts.dialogClass ? ' ' + opts.dialogClass : ''),
+			attrs: { 'aria-labelledby': labelId },
 		}, dialogChildren);
 
-		overlay = createElement('div', {
-			class: 'ac-modal',
-			on: { click: (e) => { if (e.target === overlay) instance.close(false); } },
-		}, [dialog]);
-
 		function onKey(e) {
-			if (e.key === 'Escape') { e.preventDefault(); instance.close(false); return; }
 			if (e.key !== 'Tab') return;
 			const list = focusables(dialog);
 			if (!list.length) return;
@@ -746,9 +801,26 @@
 			else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
 		}
 
-		document.body.appendChild(overlay);
+		dialog.addEventListener('cancel', (e) => {
+			e.preventDefault();
+			instance.close(false);
+		});
+		dialog.addEventListener('click', (e) => {
+			if (e.target === dialog) instance.close(false);
+		});
+
+		document.body.appendChild(dialog);
 		document.body.classList.add('ac-modal-open');
 		document.addEventListener('keydown', onKey);
+		try {
+			if (typeof dialog.showModal === 'function') {
+				dialog.showModal();
+			} else {
+				dialog.setAttribute('open', 'open');
+			}
+		} catch (_) {
+			dialog.setAttribute('open', 'open');
+		}
 		const preferred = dialog.querySelector('[autofocus]:not([disabled])');
 		const firstInput = preferred || dialog.querySelector('input, button, select, textarea');
 		if (firstInput) firstInput.focus();

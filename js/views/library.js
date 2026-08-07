@@ -597,11 +597,14 @@
 				if (!listHost) return;
 				listHost.replaceChildren();
 				if (loadError && !list.length) {
-					listHost.appendChild(C.el('p', {
-						className: 'ac-field__hint',
-						attrs: { role: 'alert' },
-						text: loadError,
-					}));
+					listHost.appendChild(C.loadErrorState(
+						t('audiocheck', 'Could not load this page'),
+						loadError,
+						() => {
+							if (typeof refresh === 'function') refresh();
+						},
+						{ icon: 'folder', variant: 'section' },
+					));
 					return;
 				}
 				if (!list.length) {

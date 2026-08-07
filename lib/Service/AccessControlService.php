@@ -6,6 +6,7 @@ namespace OCA\AudioCheck\Service;
 
 use OCA\AudioCheck\AppInfo\Application;
 use OCA\AudioCheck\Exception\AccessDeniedException;
+use OCA\AudioCheck\Exception\ConflictException;
 use OCA\AudioCheck\Exception\NotAuthenticatedException;
 use OCP\IConfig;
 use OCP\IGroupManager;
@@ -25,6 +26,10 @@ class AccessControlService
 	public const KEY_ACCESS_ALLOWED_GROUP_IDS = 'access_allowed_group_ids';
 	public const KEY_DEFAULT_LIBRARY_FOLDER = 'default_library_folder';
 	public const KEY_MAX_META_TEMP_MB = 'max_meta_temp_mb';
+	public const KEY_POLICY_VERSION = 'app_policy_version';
+
+	/** @var list<string> */
+	public const POLICY_SECTIONS = ['access', 'admins', 'defaults'];
 
 	public const DENIAL_RESTRICTION = 'restriction';
 
@@ -120,7 +125,8 @@ class AccessControlService
 	 *   allowedUsersPreview:list<array{id:string,displayName:string}>,
 	 *   allowedGroupsPreview:list<array{id:string,displayName:string}>,
 	 *   defaultLibraryFolder:string,
-	 *   maxMetaTempMb:int
+	 *   maxMetaTempMb:int,
+	 *   policyVersion:int
 	 * }
 	 */
 	public function getAppPolicy(): array
@@ -138,68 +144,129 @@ class AccessControlService
 			'allowedGroupsPreview' => $this->previewGroups($allowedGroupIds),
 			'defaultLibraryFolder' => $this->getDefaultLibraryFolder(),
 			'maxMetaTempMb' => $this->getMaxMetaTempMb(),
+			'policyVersion' => $this->getPolicyVersion(),
 		];
 	}
 
+	/**
+	 * Persist app policy. When payload.section is access|admins|defaults, only that
+	 * slice is updated (sibling keys keep their stored values). When section is
+	 * omitted, the full payload is applied (legacy clients). Optional policyVersion
+	 * enables optimistic concurrency (ConflictException on mismatch).
+	 *
+	 * @param array<string, mixed> $payload
+	 * @return array<string, mixed>
+	 */
 	public function saveAppPolicy(array $payload): array
 	{
-		$adminCandidates = $payload['appAdminUserIds'] ?? [];
-		if (!is_array($adminCandidates)) {
-			throw new \InvalidArgumentException('appAdminUserIds must be an array.');
+		$section = isset($payload['section']) && is_string($payload['section'])
+			? trim($payload['section'])
+			: null;
+		if ($section !== null && $section !== '' && !in_array($section, self::POLICY_SECTIONS, true)) {
+			throw new \InvalidArgumentException('Invalid policy section.');
 		}
-		$normalised = [];
-		foreach ($adminCandidates as $candidate) {
-			if (!is_string($candidate)) {
-				continue;
-			}
-			$candidate = trim($candidate);
-			if ($candidate === '' || strlen($candidate) > 64) {
-				continue;
-			}
-			$normalised[$candidate] = true;
-		}
-		$adminIds = array_keys($normalised);
-		foreach ($adminIds as $adminId) {
-			$user = $this->userManager->get($adminId);
-			if ($user === null || !$user->isEnabled()) {
-				throw new \InvalidArgumentException('One or more app administrator entries are invalid.');
+		$sectionScoped = $section !== null && $section !== '';
+
+		if (array_key_exists('policyVersion', $payload)) {
+			$clientVersion = (int)$payload['policyVersion'];
+			$currentVersion = $this->getPolicyVersion();
+			if ($clientVersion !== $currentVersion) {
+				throw new ConflictException('Policy was changed elsewhere. Reload and try again.');
 			}
 		}
 
-		$currentUserId = $this->userSession->getUser()?->getUID() ?? '';
-		if ($currentUserId !== '' && !$this->isSystemAdmin($currentUserId) && $this->isAppAdmin($currentUserId)) {
-			if (!in_array($currentUserId, $adminIds, true) && $adminIds === []) {
-				throw new \InvalidArgumentException('You cannot remove your own app administrator access without assigning another administrator first.');
+		$adminIds = $this->getAppAdminIds();
+		$restrictionEnabled = $this->isAccessRestrictionEnabled();
+		$allowedUserIds = $this->readJsonIdListConfig(self::KEY_ACCESS_ALLOWED_USER_IDS);
+		$allowedGroupIds = $this->readJsonIdListConfig(self::KEY_ACCESS_ALLOWED_GROUP_IDS);
+		$defaultFolder = $this->getDefaultLibraryFolder();
+		$maxMetaTempMb = $this->getMaxMetaTempMb();
+
+		$touchAdmins = !$sectionScoped || $section === 'admins';
+		$touchAccess = !$sectionScoped || $section === 'access';
+		$touchDefaults = !$sectionScoped || $section === 'defaults';
+
+		if ($touchAdmins) {
+			$adminCandidates = $payload['appAdminUserIds'] ?? [];
+			if (!is_array($adminCandidates)) {
+				throw new \InvalidArgumentException('appAdminUserIds must be an array.');
+			}
+			$normalised = [];
+			foreach ($adminCandidates as $candidate) {
+				if (!is_string($candidate)) {
+					continue;
+				}
+				$candidate = trim($candidate);
+				if ($candidate === '' || strlen($candidate) > 64) {
+					continue;
+				}
+				$normalised[$candidate] = true;
+			}
+			$adminIds = array_keys($normalised);
+			foreach ($adminIds as $adminId) {
+				$user = $this->userManager->get($adminId);
+				if ($user === null || !$user->isEnabled()) {
+					throw new \InvalidArgumentException('One or more app administrator entries are invalid.');
+				}
+			}
+
+			$currentUserId = $this->userSession->getUser()?->getUID() ?? '';
+			if ($currentUserId !== '' && !$this->isSystemAdmin($currentUserId) && $this->isAppAdmin($currentUserId)) {
+				if (!in_array($currentUserId, $adminIds, true) && $adminIds === []) {
+					throw new \InvalidArgumentException('You cannot remove your own app administrator access without assigning another administrator first.');
+				}
 			}
 		}
 
-		$restrictionRaw = $payload['accessRestrictionEnabled'] ?? false;
-		$restrictionEnabled = $restrictionRaw === true || $restrictionRaw === 1 || $restrictionRaw === '1' || $restrictionRaw === 'true';
-
-		$allowedUserIds = $this->normalizeUserIds(is_array($payload['allowedUserIds'] ?? null) ? $payload['allowedUserIds'] : []);
-		$allowedGroupIds = $this->normalizeGroupIds(is_array($payload['allowedGroupIds'] ?? null) ? $payload['allowedGroupIds'] : []);
-		if ($restrictionEnabled && $allowedUserIds === [] && $allowedGroupIds === []) {
-			throw new \InvalidArgumentException('When access restriction is enabled, at least one allowed user or group is required.');
+		if ($touchAccess) {
+			$restrictionRaw = $payload['accessRestrictionEnabled'] ?? false;
+			$restrictionEnabled = $restrictionRaw === true || $restrictionRaw === 1 || $restrictionRaw === '1' || $restrictionRaw === 'true';
+			$allowedUserIds = $this->normalizeUserIds(is_array($payload['allowedUserIds'] ?? null) ? $payload['allowedUserIds'] : []);
+			$allowedGroupIds = $this->normalizeGroupIds(is_array($payload['allowedGroupIds'] ?? null) ? $payload['allowedGroupIds'] : []);
+			if ($restrictionEnabled && $allowedUserIds === [] && $allowedGroupIds === []) {
+				throw new \InvalidArgumentException('When access restriction is enabled, at least one allowed user or group is required.');
+			}
 		}
 
-		$defaultFolder = trim((string)($payload['defaultLibraryFolder'] ?? $this->getDefaultLibraryFolder()));
-		if ($defaultFolder === '' || str_contains($defaultFolder, '..')) {
-			throw new \InvalidArgumentException('Invalid default library folder.');
+		if ($touchDefaults) {
+			$defaultFolder = trim((string)($payload['defaultLibraryFolder'] ?? $defaultFolder));
+			if ($defaultFolder === '' || str_contains($defaultFolder, '..')) {
+				throw new \InvalidArgumentException('Invalid default library folder.');
+			}
+			$maxMetaTempMb = (int)($payload['maxMetaTempMb'] ?? $maxMetaTempMb);
+			if ($maxMetaTempMb < 16 || $maxMetaTempMb > 2048) {
+				throw new \InvalidArgumentException('maxMetaTempMb must be between 16 and 2048.');
+			}
 		}
 
-		$maxMetaTempMb = (int)($payload['maxMetaTempMb'] ?? $this->getMaxMetaTempMb());
-		if ($maxMetaTempMb < 16 || $maxMetaTempMb > 2048) {
-			throw new \InvalidArgumentException('maxMetaTempMb must be between 16 and 2048.');
+		if ($touchAdmins) {
+			$this->config->setAppValue(Application::APP_ID, self::KEY_APP_ADMINS, json_encode($adminIds, JSON_THROW_ON_ERROR));
+		}
+		if ($touchAccess) {
+			$this->config->setAppValue(Application::APP_ID, self::KEY_ACCESS_RESTRICTION, $restrictionEnabled ? '1' : '0');
+			$this->config->setAppValue(Application::APP_ID, self::KEY_ACCESS_ALLOWED_USER_IDS, json_encode($allowedUserIds, JSON_THROW_ON_ERROR));
+			$this->config->setAppValue(Application::APP_ID, self::KEY_ACCESS_ALLOWED_GROUP_IDS, json_encode($allowedGroupIds, JSON_THROW_ON_ERROR));
+		}
+		if ($touchDefaults) {
+			$this->config->setAppValue(Application::APP_ID, self::KEY_DEFAULT_LIBRARY_FOLDER, $defaultFolder);
+			$this->config->setAppValue(Application::APP_ID, self::KEY_MAX_META_TEMP_MB, (string)$maxMetaTempMb);
 		}
 
-		$this->config->setAppValue(Application::APP_ID, self::KEY_APP_ADMINS, json_encode($adminIds, JSON_THROW_ON_ERROR));
-		$this->config->setAppValue(Application::APP_ID, self::KEY_ACCESS_RESTRICTION, $restrictionEnabled ? '1' : '0');
-		$this->config->setAppValue(Application::APP_ID, self::KEY_ACCESS_ALLOWED_USER_IDS, json_encode($allowedUserIds, JSON_THROW_ON_ERROR));
-		$this->config->setAppValue(Application::APP_ID, self::KEY_ACCESS_ALLOWED_GROUP_IDS, json_encode($allowedGroupIds, JSON_THROW_ON_ERROR));
-		$this->config->setAppValue(Application::APP_ID, self::KEY_DEFAULT_LIBRARY_FOLDER, $defaultFolder);
-		$this->config->setAppValue(Application::APP_ID, self::KEY_MAX_META_TEMP_MB, (string)$maxMetaTempMb);
+		$this->bumpPolicyVersion();
 
 		return $this->getAppPolicy();
+	}
+
+	private function getPolicyVersion(): int
+	{
+		$raw = (int)$this->config->getAppValue(Application::APP_ID, self::KEY_POLICY_VERSION, '0');
+		return $raw >= 0 ? $raw : 0;
+	}
+
+	private function bumpPolicyVersion(): void
+	{
+		$next = $this->getPolicyVersion() + 1;
+		$this->config->setAppValue(Application::APP_ID, self::KEY_POLICY_VERSION, (string)$next);
 	}
 
 	/**

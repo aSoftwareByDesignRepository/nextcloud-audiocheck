@@ -1,0 +1,172 @@
+/*
+ * AudioCheck design tokens (--ac-*).
+ * Auto-adapted from arbeitszeitcheck/css/common/tokens.css for design-system parity.
+ * Spacing/typography on :root; theme colours on body + app surfaces
+ * (Nextcloud sets --color-* on body / [data-theme-*]).
+ */
+:root {
+	--ac-space-1: 4px;
+	--ac-space-2: 8px;
+	--ac-space-3: 12px;
+	--ac-space-4: 16px;
+	--ac-space-5: 24px;
+	--ac-space-6: 32px;
+	--ac-space-7: 48px;
+	--ac-space-8: 64px;
+
+	--ac-radius-sm: 6px;
+	--ac-radius-md: 12px;
+	--ac-radius-lg: 16px;
+	--ac-radius-pill: 999px;
+
+	/* Design-system type scale (AZC wins) */
+	--ac-fs-xs: 0.75rem;
+	--ac-fs-sm: 0.875rem;
+	--ac-fs-base: 1rem;
+	--ac-fs-md: 1rem;
+	--ac-fs-lg: 1.125rem;
+	--ac-fs-xl: 1.5rem;
+	--ac-fs-2xl: 1.875rem;
+
+	--ac-line-tight: 1.2;
+	--ac-line-base: 1.45;
+
+	--ac-breakpoint-sm: 480px;
+	--ac-breakpoint-md: 768px;
+	--ac-breakpoint-lg: 1024px;
+	/* Literal aliases used in older AudioCheck media queries */
+	--ac-bp-sm: 480px;
+	--ac-bp-tablet: 768px;
+	--ac-bp-desktop: 1024px;
+
+	--ac-icon-sm: 1rem;
+	--ac-icon-md: 1.125rem;
+	--ac-icon-lg: 1.375rem;
+	--ac-icon-well: 2.25rem;
+	--ac-icon-stroke: 2;
+
+	--ac-tab-num: tabular-nums;
+	--ac-touch: 44px;
+	--ac-touch-lg: 48px;
+
+	--ac-player-clearance: 0px;
+	--ac-player-h: 0px;
+	--ac-nav-w: 280px;
+	--ac-content-max: none;
+
+	/* Bridge for sheets that still use unprefixed --space-* */
+	--space-1: var(--ac-space-1);
+	--space-2: var(--ac-space-2);
+	--space-3: var(--ac-space-3);
+	--space-4: var(--ac-space-4);
+	--space-5: var(--ac-space-5);
+	--space-6: var(--ac-space-6);
+	--space-7: var(--ac-space-7);
+	--space-8: var(--ac-space-8);
+}
+
+/*
+ * Theme-dependent tokens MUST resolve where Nextcloud sets --color-* (body /
+ * [data-theme-*]) and on themed app surfaces. Resolving color-mix only on
+ * :root freezes light computed values under dark themes.
+ */
+body,
+#content[class*="app-audiocheck"],
+#app-content.ac-app,
+.ac-app,
+.ac-modal,
+.ac-toast-fallback,
+.ac-toast-region {
+	--ac-overlay-top: var(--header-height, 50px);
+	--ac-overlay-height: calc(100dvh - var(--header-height, 50px));
+
+	--ac-bg-soft: color-mix(in srgb, var(--color-main-background) 96%, var(--color-main-text) 4%);
+	--ac-bg-card: var(--color-main-background);
+	--ac-bg-stripe: color-mix(in srgb, var(--color-main-background) 92%, var(--color-main-text) 8%);
+	--ac-surface: var(--color-main-background);
+	--ac-text: var(--color-main-text);
+	--ac-muted: var(--color-text-maxcontrast, color-mix(in srgb, var(--color-main-text) 62%, transparent));
+	--ac-muted-strong: color-mix(in srgb, var(--color-main-text) 82%, var(--color-text-maxcontrast, transparent));
+	/* Design-system borders: 12% / 24% ink mix (not 24%/50%) */
+	--ac-border: color-mix(in srgb, var(--color-main-text) 12%, transparent);
+	--ac-border-strong: color-mix(in srgb, var(--color-main-text) 24%, transparent);
+
+	--ac-tint-success: color-mix(in srgb, var(--color-success-text, var(--color-success)) 18%, var(--color-main-background));
+	--ac-tint-warning: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 22%, var(--color-main-background));
+	--ac-tint-danger: color-mix(in srgb, var(--color-error-text, var(--color-error)) 18%, var(--color-main-background));
+	--ac-tint-info: color-mix(in srgb, var(--color-primary-element) 16%, var(--color-main-background));
+
+	--ac-shadow-sm: 0 1px 2px color-mix(in srgb, var(--color-main-text) 8%, transparent);
+	--ac-shadow-md: 0 8px 24px color-mix(in srgb, var(--color-main-text) 12%, transparent);
+	--ac-shadow-lg: 0 1rem 3rem color-mix(in srgb, var(--color-main-text) 28%, transparent);
+
+	--ac-scrim: color-mix(in srgb, var(--color-main-text) 45%, transparent);
+	--ac-scrim-strong: color-mix(in srgb, var(--color-main-text) 55%, transparent);
+	--ac-press: color-mix(in srgb, var(--color-main-text) 15%, transparent);
+
+	--ac-accent: var(--color-primary-element);
+	--ac-accent-music: var(--color-primary-element);
+	--ac-accent-music-text: var(--color-primary-element-text, var(--color-main-text));
+	--ac-accent-music-soft: color-mix(in srgb, var(--ac-accent-music) 14%, var(--color-main-background));
+	--ac-accent-audiobook: var(--color-warning, var(--color-primary-element));
+	--ac-accent-audiobook-text: var(--color-warning-text, var(--color-main-text));
+	--ac-accent-audiobook-soft: color-mix(in srgb, var(--ac-accent-audiobook) 16%, var(--color-main-background));
+	--ac-accent-auto: var(--color-text-maxcontrast, var(--color-main-text));
+	--ac-accent-auto-soft: color-mix(in srgb, var(--ac-accent-auto) 12%, var(--color-main-background));
+
+	/*
+	 * Solid danger CTAs (DS checklist): use --color-element-error, never pale
+	 * --color-error tint + white/ink text (fails AA on NC 30+).
+	 */
+	--ac-danger-fill: var(--color-element-error, var(--color-error));
+	--ac-danger-fill-hover: color-mix(in srgb, var(--color-element-error, var(--color-error)) 82%, var(--color-main-text));
+	--ac-danger-on-fill: var(--color-primary-element-text, var(--color-primary-text));
+	--ac-danger-ink: var(--color-error-text, var(--color-error));
+	--ac-danger-bg: var(--ac-tint-danger);
+	--ac-danger-bg-hover: color-mix(in srgb, var(--ac-danger-ink) 24%, var(--color-main-background));
+	--ac-danger-border: color-mix(in srgb, var(--ac-danger-ink) 44%, var(--ac-border));
+	--ac-favorite-ink: var(--ac-danger-ink);
+
+	--ac-notif-fg-info: var(--color-primary-element);
+	--ac-notif-fg-warning: var(--color-warning-text, var(--color-warning));
+	--ac-notif-fg-success: var(--color-success-text, var(--color-success));
+	--ac-notif-fg-danger: var(--color-error-text, var(--color-error));
+}
+
+/* Bright accent fills on dark themes fail AA with primary-element-text — darken fill. */
+body[data-theme-dark],
+body[data-theme-dark-highcontrast],
+[data-theme-dark] #app-content.ac-app,
+[data-theme-dark-highcontrast] #app-content.ac-app {
+	--ac-danger-fill: color-mix(
+		in srgb,
+		var(--color-element-error, var(--color-error)) 40%,
+		var(--color-main-background)
+	);
+	--ac-danger-fill-hover: color-mix(
+		in srgb,
+		var(--color-element-error, var(--color-error)) 52%,
+		var(--color-main-background)
+	);
+	--ac-danger-on-fill: var(--color-main-text);
+}
+
+@media (prefers-contrast: more) {
+	:root {
+		--ac-icon-stroke: 2.25;
+	}
+
+	body,
+	#content[class*="app-audiocheck"],
+	#app-content.ac-app,
+	.ac-app,
+	.ac-modal,
+	.ac-toast-fallback,
+	.ac-toast-region {
+		--ac-border: color-mix(in srgb, var(--color-main-text) 28%, transparent);
+		--ac-border-strong: color-mix(in srgb, var(--color-main-text) 40%, transparent);
+		--ac-shadow-sm: 0 0 0 1px var(--ac-border-strong);
+		--ac-shadow-md: 0 0 0 1px var(--ac-border-strong);
+		--ac-shadow-lg: 0 0 0 2px var(--ac-border-strong);
+	}
+}

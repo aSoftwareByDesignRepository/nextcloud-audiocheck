@@ -66,7 +66,7 @@
 		});
 
 		const initialView = window.AudioCheckRouter?.getCurrentView?.()
-			|| document.getElementById('ac-main')?.dataset?.acView
+			|| document.getElementById('ac-main-content')?.dataset?.acView
 			|| document.getElementById('app-content')?.dataset?.acView
 			|| 'home';
 		syncVisibility(initialView);

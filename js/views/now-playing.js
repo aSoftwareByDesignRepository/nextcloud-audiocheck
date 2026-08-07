@@ -171,6 +171,13 @@
 				});
 				section.appendChild(sleepBanner);
 
+				const advanced = C.el('details', { className: 'ac-disclosure ac-now-advanced' });
+				advanced.appendChild(C.el('summary', {
+					className: 'ac-disclosure__summary',
+					text: t('audiocheck', 'More playback options'),
+				}));
+				const advancedBody = C.el('div', { className: 'ac-disclosure__body ac-now-advanced__body' });
+
 				const queueModeWrap = C.el('div', { className: 'ac-now-subsection' });
 				queueModeWrap.appendChild(C.el('h3', {
 					className: 'ac-now-subsection__label',
@@ -224,7 +231,7 @@
 				optionGroup.appendChild(repeatRow);
 				optionGroup.appendChild(startModeRow);
 				queueModeWrap.appendChild(optionGroup);
-				section.appendChild(queueModeWrap);
+				advancedBody.appendChild(queueModeWrap);
 
 				const adjustmentsWrap = C.el('div', { className: 'ac-now-subsection' });
 				adjustmentsWrap.appendChild(C.el('h3', {
@@ -302,17 +309,16 @@
 				speedField.appendChild(speedControls);
 				adjustments.appendChild(speedField);
 
-				const volumeField = C.el('div', { className: 'ac-now-field ac-now-field--volume' });
-				volumeField.appendChild(C.el('span', { className: 'ac-now-field__label', text: t('audiocheck', 'Volume') }));
-				volumeField.appendChild(C.volumeControl({ idPrefix: 'ac-now' }));
-				adjustments.appendChild(volumeField);
-
-				const sleepDetails = C.el('details', { className: 'ac-now-sleep-details' });
-				sleepDetails.appendChild(C.el('summary', {
-					className: 'ac-now-field ac-now-field--summary',
+				/* Sleep timer flat in adjustments (one disclosure level via More playback options) */
+				const sleepBlock = C.el('div', {
+					className: 'ac-now-field ac-now-field--sleep',
+					attrs: { role: 'group', 'aria-labelledby': 'ac-sleep-timer-label' },
+				});
+				sleepBlock.appendChild(C.el('span', {
+					id: 'ac-sleep-timer-label',
+					className: 'ac-now-field__label',
 					text: t('audiocheck', 'Sleep timer'),
 				}));
-				const sleepBody = C.el('div', { className: 'ac-now-sleep-details__body' });
 				sleepStatus = C.el('p', {
 					id: 'ac-sleep-timer-status',
 					className: 'ac-field__hint',
@@ -421,16 +427,17 @@
 				sleepActions.appendChild(sleepWhen);
 				sleepActions.appendChild(sleepCustomRow);
 				sleepActions.appendChild(sleepCancel);
-				sleepBody.appendChild(sleepStatus);
-				sleepBody.appendChild(sleepActions);
-				sleepBody.appendChild(C.el('p', {
+				sleepBlock.appendChild(sleepStatus);
+				sleepBlock.appendChild(sleepActions);
+				sleepBlock.appendChild(C.el('p', {
 					className: 'ac-field__hint',
 					text: t('audiocheck', 'Pauses playback when the timer ends. Works while this tab is open.'),
 				}));
-				sleepDetails.appendChild(sleepBody);
-				adjustments.appendChild(sleepDetails);
+				adjustments.appendChild(sleepBlock);
 				adjustmentsWrap.appendChild(adjustments);
-				section.appendChild(adjustmentsWrap);
+				advancedBody.appendChild(adjustmentsWrap);
+				advanced.appendChild(advancedBody);
+				section.appendChild(advanced);
 				return section;
 			}
 
@@ -457,20 +464,15 @@
 					className: 'ac-btn ac-btn--danger ac-now-queue__clear',
 					text: t('audiocheck', 'Clear queue'),
 					onClick: () => {
-						C.openModal({
+						C.confirmDialog({
 							title: t('audiocheck', 'Clear queue?'),
-							primaryLabel: t('audiocheck', 'Clear queue'),
+							message: t('audiocheck', 'Remove all tracks from the queue. Playback will stop.'),
+							confirmLabel: t('audiocheck', 'Clear queue'),
 							cancelLabel: t('audiocheck', 'Cancel'),
-							render() {
-								return C.el('p', {
-									className: 'ac-field__hint',
-									text: t('audiocheck', 'Remove all tracks from the queue. Playback will stop.'),
-								});
-							},
-							onSubmit: () => {
+							danger: true,
+							onConfirm: () => {
 								AudioCheckPlayer.clearQueue();
 								AudioCheckMessaging.toast(t('audiocheck', 'Queue cleared.'));
-								return true;
 							},
 						});
 					},

@@ -2,19 +2,31 @@
 # Guard: theme-dependent --ac-* tokens must be scoped to body / app shell (Nextcloud sets --color-* on body[data-theme-*]).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CSS="$ROOT/css/app.css"
+TOKENS="$ROOT/css/common/tokens.css"
+APP="$ROOT/css/app.css"
+THEME_BIND="$ROOT/css/theme-bind.css"
 
-if ! grep -qE '^body,' "$CSS" && ! grep -qE '^body \{' "$CSS"; then
-	echo "check-theme-tokens: css/app.css must define theme tokens on body { ... }" >&2
+if [[ ! -f "$TOKENS" ]]; then
+	echo "check-theme-tokens: missing css/common/tokens.css" >&2
 	exit 1
 fi
 
-if ! grep -qF '#content[class*="app-audiocheck"]' "$CSS"; then
+if ! grep -qF "@import url('common/tokens.css');" "$APP"; then
+	echo "check-theme-tokens: css/app.css must @import common/tokens.css" >&2
+	exit 1
+fi
+
+if ! grep -qE '^body,' "$TOKENS" && ! grep -qE '^body \{' "$TOKENS"; then
+	echo "check-theme-tokens: tokens.css must define theme tokens on body { ... }" >&2
+	exit 1
+fi
+
+if ! grep -qF '#content[class*="app-audiocheck"]' "$TOKENS"; then
 	echo "check-theme-tokens: theme tokens must also be scoped to #content[class*=\"app-audiocheck\"]" >&2
 	exit 1
 fi
 
-if ! grep -qF '#app-content.ac-app' "$CSS"; then
+if ! grep -qF '#app-content.ac-app' "$TOKENS"; then
 	echo "check-theme-tokens: theme tokens must be re-bound on #app-content.ac-app" >&2
 	exit 1
 fi
@@ -23,9 +35,9 @@ theme_blocks=$(awk '
 	/^body,|^body \{|^#content\[class\*="app-audiocheck"\]|^#app-content\.ac-app \{/ { inblock=1; block="" }
 	inblock { block = block $0 "\n" }
 	/^\}/ && inblock { print block; inblock=0; block="" }
-' "$CSS")
+' "$TOKENS")
 
-for token in --ac-bg-soft --ac-bg-card --ac-surface --ac-muted --ac-text --ac-tint-info --ac-accent; do
+for token in --ac-bg-soft --ac-bg-card --ac-surface --ac-muted --ac-text --ac-tint-info --ac-accent --ac-danger-fill; do
 	if ! echo "$theme_blocks" | grep -F -q -- "$token"; then
 		echo "check-theme-tokens: theme scope missing $token" >&2
 		exit 1
@@ -37,7 +49,17 @@ if ! echo "$theme_blocks" | grep -qE -- '--ac-tint-info:.*main-background'; then
 	exit 1
 fi
 
-root_block=$(awk '/^:root \{/,/^\}/' "$CSS")
+if ! grep -qE -- '--ac-border:\s*color-mix\(in srgb, var\(--color-main-text\) 12%' "$TOKENS"; then
+	echo "check-theme-tokens: --ac-border must use 12% ink mix (design-system)" >&2
+	exit 1
+fi
+
+if ! grep -qE -- '--ac-fs-xs:\s*0\.75rem' "$TOKENS"; then
+	echo "check-theme-tokens: --ac-fs-xs must be 0.75rem (AZC type scale)" >&2
+	exit 1
+fi
+
+root_block=$(awk '/^:root \{/,/^\}/' "$TOKENS")
 if echo "$root_block" | grep -qE '^\s*--ac-(bg|muted|text|surface|border|shadow)'; then
 	echo "check-theme-tokens: :root must not define theme-derived --ac-* tokens" >&2
 	exit 1
@@ -45,6 +67,11 @@ fi
 
 if echo "$theme_blocks" | grep -qE '^\s*--ac-muted-strong:.*97%'; then
 	echo "check-theme-tokens: --ac-muted-strong must not use 97% main-text mix" >&2
+	exit 1
+fi
+
+if [[ -f "$THEME_BIND" ]] && ! grep -Fq -- '--ac-danger-fill' "$THEME_BIND"; then
+	echo "check-theme-tokens: theme-bind.css must rebind --ac-danger-fill" >&2
 	exit 1
 fi
 

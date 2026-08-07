@@ -6,6 +6,7 @@ namespace OCA\AudioCheck\Controller;
 
 use OCA\AudioCheck\Exception\AccessDeniedException;
 use OCA\AudioCheck\Exception\AudioCheckException;
+use OCA\AudioCheck\Exception\ConflictException;
 use OCA\AudioCheck\Exception\InternalErrorException;
 use OCA\AudioCheck\Exception\NotAuthenticatedException;
 use OCA\AudioCheck\Exception\NotFoundException;
@@ -598,6 +599,8 @@ class ApiController extends Controller
 		} catch (ValidationException $e) {
 			$fields = $e->getFields();
 			return $this->error($e->getMessage(), Http::STATUS_UNPROCESSABLE_ENTITY, 'invalid_input', $fields !== null ? ['fields' => $fields] : []);
+		} catch (ConflictException $e) {
+			return $this->error($e->getMessage(), Http::STATUS_CONFLICT, 'conflict');
 		} catch (\InvalidArgumentException $e) {
 			return $this->error($e->getMessage(), Http::STATUS_BAD_REQUEST, 'invalid_input');
 		} catch (NotAuthenticatedException) {

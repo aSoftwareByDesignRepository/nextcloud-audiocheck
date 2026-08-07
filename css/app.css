@@ -1,114 +1,15 @@
 /*
- * AudioCheck design system — WCAG 2.1 AA, responsive from 320px.
- * Tokens: --ac-* derived from Nextcloud CSS variables.
+ * AudioCheck — design-system shell parity (AZC tokens) + product surfaces.
+ * Tokens / chrome / patterns live in css/common/* (do not invent a second scale).
  */
+@import url('common/tokens.css');
+@import url('common/shell-chrome.css');
+@import url('common/page-patterns.css');
+@import url('common/accessibility.css');
 
-/* Nextcloud theming sets --color-* on body[data-theme-*], not :root. Theme-derived
- * tokens must be re-bound on body and the app shell — defining them only on :root
- * freezes light computed values for inherited --ac-bg-* / --ac-surface (ProjectCheck pattern). */
-:root {
-	--ac-space-1: 4px;
-	--ac-space-2: 8px;
-	--ac-space-3: 12px;
-	--ac-space-4: 16px;
-	--ac-space-5: 24px;
-	--ac-space-6: 32px;
-	--ac-space-7: 48px;
-	--ac-radius-sm: 6px;
-	--ac-radius-md: 12px;
-	--ac-radius-lg: 16px;
-	--ac-radius-pill: 999px;
-	--ac-fs-xs: 0.875rem;
-	--ac-fs-sm: 0.9375rem;
-	--ac-fs-base: 1rem;
-	--ac-fs-md: 1rem;
-	--ac-fs-lg: 1.25rem;
-	--ac-fs-xl: 1.5rem;
-	--ac-fs-2xl: 1.875rem;
-	--ac-line-tight: 1.2;
-	--ac-line-base: 1.45;
-	--ac-icon-sm: 1rem;
-	--ac-icon-md: 1.125rem;
-	--ac-icon-lg: 1.375rem;
-	--ac-icon-well: 2.25rem;
-	--ac-player-clearance: 0px;
-	--ac-player-h: 0px;
-	--ac-nav-w: 260px;
-	--ac-content-max: min(75rem, 100%);
-	--ac-touch: 44px;
-	/* Nextcloud breakpoints (literal values in @media — vars document intent only) */
-	--ac-bp-sm: 480px;
-	--ac-bp-tablet: 768px;
-	--ac-bp-desktop: 1024px;
-}
+/* AZ-PARITY-RADIUS-ENFORCER: shared controls use radius-md (not free-form pills). */
 
-body,
-#content[class*="app-audiocheck"] {
-	--ac-shadow-sm: 0 1px 2px color-mix(in srgb, var(--color-main-text) 8%, transparent);
-	--ac-shadow-md: 0 8px 24px color-mix(in srgb, var(--color-main-text) 12%, transparent);
-	--ac-bg-soft: color-mix(in srgb, var(--color-main-background) 96%, var(--color-main-text) 4%);
-	--ac-bg-card: var(--color-main-background);
-	--ac-surface: var(--color-main-background);
-	--ac-border: var(--color-border, color-mix(in srgb, var(--color-main-text) 24%, transparent));
-	--ac-border-strong: color-mix(in srgb, var(--color-main-text) 50%, var(--color-border, transparent));
-	/* Secondary text: NC maxcontrast (tuned per theme); safe mix fallback on older NC. */
-	--ac-muted: var(--color-text-maxcontrast, color-mix(in srgb, var(--color-main-text) 62%, transparent));
-	--ac-muted-strong: color-mix(in srgb, var(--color-main-text) 82%, var(--color-text-maxcontrast, transparent));
-	/* Content-kind accents — always derived from Nextcloud theme variables */
-	--ac-accent-music: var(--color-primary-element);
-	--ac-accent-music-text: var(--color-primary-element-text, var(--color-main-text));
-	--ac-accent-music-soft: color-mix(in srgb, var(--ac-accent-music) 14%, var(--color-main-background));
-	--ac-accent-audiobook: var(--color-warning, var(--color-primary-element));
-	--ac-accent-audiobook-text: var(--color-warning-text, var(--color-main-text));
-	--ac-accent-audiobook-soft: color-mix(in srgb, var(--ac-accent-audiobook) 16%, var(--color-main-background));
-	--ac-accent-auto: var(--color-text-maxcontrast, var(--color-main-text));
-	--ac-accent-auto-soft: color-mix(in srgb, var(--ac-accent-auto) 12%, var(--color-main-background));
-	/* Danger: tint + --color-error-text ink (NC tunes error-text per theme for main-background contrast) */
-	--ac-danger-ink: var(--color-error-text, var(--color-error));
-	--ac-danger-bg: color-mix(in srgb, var(--ac-danger-ink) 16%, var(--color-main-background));
-	--ac-danger-bg-hover: color-mix(in srgb, var(--ac-danger-ink) 24%, var(--color-main-background));
-	--ac-danger-border: color-mix(in srgb, var(--ac-danger-ink) 44%, var(--color-border, var(--ac-border)));
-	--ac-favorite-ink: var(--ac-danger-ink);
-	--ac-text: var(--color-main-text);
-	/* Mix INTO main-background so tints stay visible on every NC theme */
-	--ac-tint-info: color-mix(in srgb, var(--color-primary-element) 16%, var(--color-main-background));
-	--ac-tint-success: color-mix(in srgb, var(--color-success-text, var(--color-success)) 18%, var(--color-main-background));
-	--ac-tint-warning: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 22%, var(--color-main-background));
-	--ac-tint-danger: color-mix(in srgb, var(--color-error-text, var(--color-error)) 18%, var(--color-main-background));
-	--ac-accent: var(--color-primary-element);
-}
-
-/* Re-bind theme tokens on the main pane so backgrounds track ink even when NC
- * theme variables resolve differently on :root vs body (OS dark + user light, etc.). */
 #app-content.ac-app {
-	--ac-shadow-sm: 0 1px 2px color-mix(in srgb, var(--color-main-text) 8%, transparent);
-	--ac-shadow-md: 0 8px 24px color-mix(in srgb, var(--color-main-text) 12%, transparent);
-	--ac-bg-soft: color-mix(in srgb, var(--color-main-background) 96%, var(--color-main-text) 4%);
-	--ac-bg-card: var(--color-main-background);
-	--ac-surface: var(--color-main-background);
-	--ac-border: var(--color-border, color-mix(in srgb, var(--color-main-text) 24%, transparent));
-	--ac-border-strong: color-mix(in srgb, var(--color-main-text) 50%, var(--color-border, transparent));
-	--ac-muted: var(--color-text-maxcontrast, color-mix(in srgb, var(--color-main-text) 62%, transparent));
-	--ac-muted-strong: color-mix(in srgb, var(--color-main-text) 82%, var(--color-text-maxcontrast, transparent));
-	--ac-accent-music: var(--color-primary-element);
-	--ac-accent-music-text: var(--color-primary-element-text, var(--color-main-text));
-	--ac-accent-music-soft: color-mix(in srgb, var(--ac-accent-music) 14%, var(--color-main-background));
-	--ac-accent-audiobook: var(--color-warning, var(--color-primary-element));
-	--ac-accent-audiobook-text: var(--color-warning-text, var(--color-main-text));
-	--ac-accent-audiobook-soft: color-mix(in srgb, var(--ac-accent-audiobook) 16%, var(--color-main-background));
-	--ac-accent-auto: var(--color-text-maxcontrast, var(--color-main-text));
-	--ac-accent-auto-soft: color-mix(in srgb, var(--ac-accent-auto) 12%, var(--color-main-background));
-	--ac-danger-ink: var(--color-error-text, var(--color-error));
-	--ac-danger-bg: color-mix(in srgb, var(--ac-danger-ink) 16%, var(--color-main-background));
-	--ac-danger-bg-hover: color-mix(in srgb, var(--ac-danger-ink) 24%, var(--color-main-background));
-	--ac-danger-border: color-mix(in srgb, var(--ac-danger-ink) 44%, var(--color-border, var(--ac-border)));
-	--ac-favorite-ink: var(--ac-danger-ink);
-	--ac-text: var(--color-main-text);
-	--ac-tint-info: color-mix(in srgb, var(--color-primary-element) 16%, var(--color-main-background));
-	--ac-tint-success: color-mix(in srgb, var(--color-success-text, var(--color-success)) 18%, var(--color-main-background));
-	--ac-tint-warning: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 22%, var(--color-main-background));
-	--ac-tint-danger: color-mix(in srgb, var(--color-error-text, var(--color-error)) 18%, var(--color-main-background));
-	--ac-accent: var(--color-primary-element);
 	display: flex;
 	flex: 1 1 auto;
 	flex-direction: column;
@@ -121,7 +22,6 @@ body,
 	background: var(--color-main-background);
 	box-sizing: border-box;
 	color: var(--color-main-text);
-	--ac-fs-xs: 0.875rem;
 }
 
 /* Native widget scheme (scrollbars, select popups, spinners) must follow the
@@ -151,19 +51,6 @@ body[data-theme-dark-highcontrast] .ac-modal,
 body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	color-scheme: dark;
 }
-
-.ac-skip-link {
-	position: absolute;
-	left: -9999px;
-	top: var(--ac-space-2);
-	padding: var(--ac-space-2) var(--ac-space-4);
-	background: var(--color-primary-element);
-	color: var(--color-primary-element-text);
-	border-radius: var(--ac-radius-sm);
-	z-index: 2000;
-	font-weight: 600;
-}
-.ac-skip-link:focus { left: var(--ac-space-3); }
 
 .ac-sr-only {
 	position: absolute !important;
@@ -209,10 +96,10 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	flex-direction: column;
 	align-items: stretch;
 	width: 100%;
-	max-width: var(--ac-content-max);
-	margin: 0 auto;
-	padding: var(--ac-space-4) var(--ac-space-4) var(--ac-space-6);
-	padding-bottom: max(var(--ac-space-6), calc(var(--ac-space-4) + env(safe-area-inset-bottom, 0px)));
+	max-width: none;
+	margin: 0;
+	padding: var(--ac-space-5);
+	padding-bottom: max(var(--ac-space-7), calc(var(--ac-space-4) + env(safe-area-inset-bottom, 0px)));
 	box-sizing: border-box;
 	flex: 1 1 auto;
 	min-height: 0;
@@ -254,33 +141,34 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 
 .ac-page-header__main {
 	display: grid;
-	grid-template-columns: 48px 1fr;
+	grid-template-columns: 56px 1fr;
 	gap: var(--ac-space-4);
 	align-items: start;
 }
 .ac-page-header__icon {
 	display: grid;
 	place-items: center;
-	width: 48px;
-	height: 48px;
+	width: 56px;
+	height: 56px;
 	border-radius: var(--ac-radius-md);
 	background: var(--ac-tint-info);
 	color: var(--color-primary-element);
 }
-.ac-page-header__icon-svg { width: 24px; height: 24px; }
+.ac-page-header__icon-svg { width: 28px; height: 28px; }
 .ac-page-header__text h1,
 #ac-page-title {
 	margin: 0;
 	font-size: var(--ac-fs-2xl, var(--ac-fs-xl));
+	font-weight: 600;
 	line-height: var(--ac-line-tight, 1.2);
 }
 .ac-page-header__lead,
 #ac-page-lead {
 	margin: var(--ac-space-1) 0 0;
-	color: var(--ac-muted-strong);
-	font-size: var(--ac-fs-sm);
+	color: var(--ac-muted);
+	font-size: var(--ac-fs-md);
 	line-height: var(--ac-line-base, 1.45);
-	max-width: 42rem;
+	max-width: 60ch;
 }
 #ac-page-actions.ac-page-header__actions {
 	display: flex;
@@ -537,6 +425,19 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	flex-direction: column;
 	gap: var(--ac-space-1);
 }
+.ac-nav__children {
+	list-style: none;
+	margin: var(--ac-space-1) 0 0;
+	padding: 0 0 0 var(--ac-space-5);
+	display: flex;
+	flex-direction: column;
+	gap: var(--ac-space-1);
+}
+.ac-nav__link--child {
+	min-height: var(--ac-touch, 44px);
+	padding-inline-start: var(--ac-space-3);
+	font-weight: 500;
+}
 .ac-nav__icon {
 	display: inline-flex;
 	align-items: center;
@@ -639,7 +540,10 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	margin-top: 0;
 }
 .ac-section.ac-card.ac-library-shell {
-	padding: var(--ac-space-5);
+	padding: 0;
+	border: none;
+	background: transparent;
+	box-shadow: none;
 }
 
 .ac-section { margin-bottom: var(--ac-space-6); }
@@ -1627,81 +1531,12 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 .ac-btn--icon { padding: 0; width: var(--ac-touch); }
 .ac-btn--text { border: none; background: transparent; min-width: auto; }
 
-.ac-empty {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	text-align: center;
-	padding: var(--ac-space-7) var(--ac-space-5);
-}
-.ac-empty--page {
-	width: 100%;
-	max-width: 28rem;
-	margin: var(--ac-space-6) auto 0;
-	box-sizing: border-box;
-	background: var(--ac-bg-card);
-	border: 1px solid var(--ac-border);
-	border-radius: var(--ac-radius-lg);
-	box-shadow: var(--ac-shadow-sm);
-}
-.ac-page-body > .ac-empty--page {
-	max-width: 32rem;
-}
-.ac-grid > .ac-empty,
-.ac-grid > .ac-empty--page {
-	grid-column: 1 / -1;
-	justify-self: center;
-	margin-top: var(--ac-space-2);
-	margin-bottom: var(--ac-space-6);
-}
-.ac-empty__icon {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
-	width: 4rem;
-	height: 4rem;
-	margin: 0 0 var(--ac-space-4);
-	border-radius: 50%;
-	background: color-mix(in srgb, var(--color-primary-element) 14%, var(--ac-bg-card));
-	color: var(--color-primary-element);
-}
-.ac-empty__icon .ac-icon {
-	width: 2rem;
-	height: 2rem;
-}
-.ac-empty__icon--app {
-	background: linear-gradient(
-		145deg,
-		var(--color-primary-element) 0%,
-		color-mix(in srgb, var(--color-primary-element) 78%, var(--color-main-text)) 100%
-	);
-	color: var(--color-primary-element-text);
-	box-shadow:
-		0 2px 8px color-mix(in srgb, var(--color-primary-element) 24%, transparent),
-		inset 0 1px 0 color-mix(in srgb, var(--color-main-background) 20%, transparent);
-}
+/* Empty states: canonical rules in common/page-patterns.css (no card chrome). */
 .ac-empty__app-logo {
 	display: block;
-	width: 2.25rem;
-	height: 2.25rem;
+	width: 1.375rem;
+	height: 1.375rem;
 	object-fit: contain;
-}
-.ac-empty h2 {
-	margin: 0 0 var(--ac-space-3);
-	font-size: var(--ac-fs-xl);
-	line-height: 1.3;
-	font-weight: 700;
-}
-.ac-empty p {
-	color: var(--ac-muted-strong);
-	margin: 0;
-	max-width: 22rem;
-	line-height: 1.5;
-}
-#app-content.ac-app .ac-empty .ac-btn {
-	margin-top: var(--ac-space-5);
-	min-width: 10rem;
 }
 
 .ac-skeleton {
@@ -2612,33 +2447,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	}
 }
 
-#app-content.ac-app button.ac-btn--danger,
-.ac-modal button.ac-btn--danger {
-	background-color: var(--ac-danger-bg);
-	border-color: var(--ac-danger-border);
-	color: var(--ac-danger-ink);
-	font-weight: 700;
-}
-#app-content.ac-app button.ac-btn--danger:not(:disabled):hover,
-#app-content.ac-app button.ac-btn--danger:not(:disabled):focus-visible,
-.ac-modal button.ac-btn--danger:not(:disabled):hover,
-.ac-modal button.ac-btn--danger:not(:disabled):focus-visible {
-	background-color: var(--ac-danger-bg-hover);
-	border-color: color-mix(in srgb, var(--ac-danger-ink) 58%, var(--color-border, var(--ac-border)));
-	color: var(--ac-danger-ink);
-}
-.ac-btn--danger {
-	background-color: var(--ac-danger-bg);
-	border-color: var(--ac-danger-border);
-	color: var(--ac-danger-ink);
-	font-weight: 700;
-}
-.ac-btn--danger:hover,
-.ac-btn--danger:focus-visible {
-	background-color: var(--ac-danger-bg-hover);
-	border-color: color-mix(in srgb, var(--ac-danger-ink) 58%, var(--color-border, var(--ac-border)));
-	color: var(--ac-danger-ink);
-}
+/* Danger buttons: solid --ac-danger-fill via common/shell-chrome.css (WCAG AA). */
 @media (forced-colors: active) {
 	#app-content.ac-app button.ac-btn--danger,
 	.ac-modal button.ac-btn--danger,
@@ -3368,10 +3177,10 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	flex-direction: column;
 	gap: var(--ac-space-3);
 	padding: var(--ac-space-4);
-	border: 1px solid var(--ac-border-strong);
-	border-radius: 1rem;
+	border: 1px solid var(--ac-border);
+	border-radius: var(--ac-radius-md);
 	background: var(--ac-bg-card);
-	box-shadow: var(--ac-shadow-sm);
+	box-shadow: none;
 }
 
 .ac-now-section__label {
@@ -3541,8 +3350,9 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 
 .ac-now-track-action--active {
 	border-color: var(--color-primary-element);
-	background: color-mix(in srgb, var(--color-primary-element) 12%, var(--ac-bg-card));
-	color: var(--color-primary-element);
+	background: var(--color-primary-element-light, color-mix(in srgb, var(--color-primary-element) 12%, var(--ac-bg-card)));
+	/* Tint + light-text (same WCAG pattern as filter chips) — never primary ink on tint */
+	color: var(--color-primary-element-light-text, var(--color-main-text));
 }
 
 .ac-now-track-action .ac-icon {
@@ -4164,8 +3974,9 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	margin-left: var(--ac-space-2);
 }
 .ac-playlist-group__action {
-	min-height: var(--ac-touch-compact, 2rem);
-	padding: 0 var(--ac-space-2);
+	min-height: var(--ac-touch, 44px);
+	min-width: var(--ac-touch, 44px);
+	padding: 0 var(--ac-space-3);
 	font-size: var(--ac-fs-sm);
 }
 .ac-playlist-group--favorites .ac-media-folder-group__name::before {
@@ -4191,6 +4002,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	padding: var(--ac-space-4);
 	box-sizing: border-box;
 }
+dialog.ac-native-dialog.ac-modal__dialog,
 .ac-modal__dialog {
 	width: 100%;
 	max-width: min(440px, calc(100vw - var(--ac-space-4) * 2));
@@ -4199,6 +4011,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	box-shadow: var(--ac-shadow-md);
 	border: 1px solid var(--ac-border);
 	box-sizing: border-box;
+	color: var(--ac-text);
 }
 .ac-modal__dialog--wide { max-width: min(720px, calc(100vw - var(--ac-space-4) * 2)); }
 .ac-modal__header {
@@ -4258,6 +4071,19 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	.ac-modal__actions .ac-btn {
 		width: auto;
 	}
+}
+.ac-modal__inline-actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: var(--ac-space-2);
+	margin-top: var(--ac-space-4);
+}
+.ac-add-to-playlist__host {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ac-space-3);
+	min-height: 3rem;
 }
 body.ac-modal-open { overflow: hidden; }
 
@@ -5101,18 +4927,22 @@ body.ac-modal-open { overflow: hidden; }
 	display: flex;
 	flex-direction: column;
 	gap: var(--ac-space-4);
-	padding: var(--ac-space-4);
-	border: 1px solid var(--ac-border-strong);
-	border-radius: 1rem;
-	background: var(--ac-bg-card);
-	box-shadow: var(--ac-shadow-sm);
+	padding: 0;
+	/* Principle 14: layout host only — inner panels/cards own the frame */
+	border: none;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
 }
 .ac-section.ac-card.ac-library-shell.ac-library-shell--browse,
 .ac-library-shell.ac-library-shell--browse {
 	flex: none;
 	overflow: visible;
 	gap: var(--ac-space-2);
-	padding: var(--ac-space-3);
+	padding: 0;
+	border: none;
+	background: transparent;
+	box-shadow: none;
 }
 .ac-media-library-page .ac-browse-tabs,
 .ac-facet-browse-page .ac-browse-tabs {
@@ -5210,7 +5040,7 @@ body.ac-modal-open { overflow: hidden; }
 .ac-media-folder-group,
 .ac-music-folder-group,
 .ac-facet-group {
-	border-radius: 1rem;
+	border-radius: var(--ac-radius-md);
 	box-shadow: var(--ac-shadow-sm);
 }
 .ac-facet-browse-page .ac-facet-browse-toolbar,
@@ -5234,10 +5064,10 @@ body.ac-modal-open { overflow: hidden; }
 	flex-direction: column;
 	gap: var(--ac-space-3);
 	padding: var(--ac-space-4);
-	border: 1px solid var(--ac-border-strong);
-	border-radius: 1rem;
+	border: 1px solid var(--ac-border);
+	border-radius: var(--ac-radius-md);
 	background: var(--ac-bg-card);
-	box-shadow: var(--ac-shadow-sm);
+	box-shadow: none;
 }
 .ac-home-section__lead {
 	margin: 0;
@@ -5279,10 +5109,11 @@ body.ac-modal-open { overflow: hidden; }
 	gap: var(--ac-space-2);
 }
 .ac-home-hero--card {
-	padding: var(--ac-space-4);
-	border: 1px solid var(--ac-border);
-	border-radius: var(--ac-radius-md);
-	background: var(--ac-surface);
+	padding: var(--ac-space-4) 0;
+	border: none;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
 }
 .ac-home-hero__layout {
 	display: grid;

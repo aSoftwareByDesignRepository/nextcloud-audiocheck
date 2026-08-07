@@ -107,6 +107,18 @@
 				let playableCache = [];
 				let playAllBtn = null;
 
+				function showLoadError(err, retryFn) {
+					panel.replaceChildren();
+					if (moreWrap) moreWrap.textContent = '';
+					if (status) status.textContent = '';
+					C.setBusy(panel, false);
+					panel.appendChild(C.loadErrorState(
+						t('audiocheck', 'Could not load this page'),
+						(err && err.message) || t('audiocheck', 'Request failed.'),
+						retryFn,
+					));
+				}
+
 				function updatePlayAllVisibility() {
 					const show = activeTab === 'favorites';
 					if (window.AudioCheckPageChrome) {
@@ -306,12 +318,14 @@
 					const list = panel.querySelector('#' + idPrefix + '-track-list');
 					if (!list) return;
 					status.textContent = t('audiocheck', 'Loading…');
+					C.setBusy(panel, true);
 					moreWrap.textContent = '';
 					const params = { favorite: '1', limit: PAGE_SIZE, page, sort };
 					const q = searchQuery();
 					if (q) params.q = q;
 					if (hideListened) params.hideListened = 1;
 					AudioCheckApi.get('/apps/audiocheck/api/tracks', params).then((data) => {
+						C.setBusy(panel, false);
 						const items = data.items || [];
 						total = data.total != null ? data.total : items.length;
 						if (reset && !items.length) {
@@ -335,7 +349,7 @@
 							}));
 						}
 					}).catch((e) => {
-						status.textContent = e.message || t('audiocheck', 'Request failed.');
+						showLoadError(e, () => loadFavorites(true));
 					});
 				}
 
@@ -350,6 +364,7 @@
 					const host = panel.querySelector('.ac-facet-groups');
 					if (!host) return;
 					status.textContent = t('audiocheck', 'Loading…');
+					C.setBusy(panel, true);
 
 					const params = { type, page, limit: FACET_LIST_PAGE_SIZE };
 					const q = searchQuery();
@@ -358,6 +373,7 @@
 					}
 
 					AudioCheckApi.get('/apps/audiocheck/api/facets/{type}', null, { params }).then((data) => {
+						C.setBusy(panel, false);
 						let items = (data.items || []).slice();
 						total = data.total != null ? data.total : items.length;
 						if (reset && !items.length && page === 1) {
@@ -399,7 +415,7 @@
 							}));
 						}
 					}).catch((e) => {
-						status.textContent = e.message || t('audiocheck', 'Request failed.');
+						showLoadError(e, () => loadFacets(type, true));
 					});
 				}
 

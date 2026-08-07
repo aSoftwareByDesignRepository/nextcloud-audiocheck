@@ -28,17 +28,23 @@ $headerIcons = [
 $headerIcon = $headerIcons[$pageId] ?? 'home';
 $viewMetaJson = htmlspecialchars(json_encode($viewMeta, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
 $urlsJson = htmlspecialchars(json_encode($urls, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
+$htmlLang = (string)($_['htmlLang'] ?? str_replace('_', '-', $l->getLanguageCode()));
+$timezone = (string)($_['timezone'] ?? 'UTC');
+$locale = (string)($_['locale'] ?? $l->getLocaleCode());
 ?>
 <?php include __DIR__ . '/navigation.php'; ?>
 <div id="ac-nav-backdrop" class="ac-nav-backdrop" hidden></div>
 <div id="app-content" class="ac-app ac-app--<?php p($pageId); ?>"
+	lang="<?php p($htmlLang); ?>"
 	data-ac-view="<?php p($pageId); ?>"
+	data-ac-locale="<?php p($locale); ?>"
+	data-ac-timezone="<?php p($timezone); ?>"
 	data-ac-app-logo="<?php p((string)($_['appLogoUrl'] ?? '')); ?>"
 	data-ac-is-admin="<?php p(!empty($_['isAppAdmin']) ? '1' : '0'); ?>"
 	data-ac-urls="<?php print_unescaped($urlsJson); ?>"
 	data-ac-view-meta="<?php print_unescaped($viewMetaJson); ?>"
 	data-ac-speed-presets="<?php p(json_encode($_['speedPresets'] ?? range(50, 400, 25), JSON_THROW_ON_ERROR)); ?>">
-	<a class="ac-skip-link" href="#ac-main"><?php p($l->t('Skip to main content')); ?></a>
+	<a class="ac-skip-link" href="#ac-main-content"><?php p($l->t('Skip to main content')); ?></a>
 	<div id="ac-live-region" class="ac-sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 	<div id="ac-alert-region" class="ac-sr-only" role="alert" aria-live="assertive" aria-atomic="true"></div>
 	<button type="button" id="ac-nav-toggle" class="ac-nav-toggle" aria-controls="app-navigation" aria-expanded="false"
@@ -53,9 +59,11 @@ $urlsJson = htmlspecialchars(json_encode($urls, JSON_THROW_ON_ERROR | JSON_UNESC
 		<header class="ac-page-header" aria-labelledby="ac-page-title">
 			<nav class="ac-breadcrumb" aria-label="<?php p($l->t('Breadcrumb')); ?>">
 				<ol>
-					<li><a class="ac-breadcrumb__brand" href="<?php p((string)($urls['home'] ?? '#')); ?>"><?php p($l->t('AudioCheck')); ?></a></li>
+					<li class="ac-breadcrumb__item">
+						<a class="ac-breadcrumb__brand" href="<?php p((string)($urls['home'] ?? '#')); ?>"><?php p($l->t('AudioCheck')); ?></a>
+					</li>
 					<li class="ac-breadcrumb__sep" aria-hidden="true">/</li>
-					<li class="ac-breadcrumb__current" id="ac-breadcrumb-current" aria-current="page"><?php p($pageTitle); ?></li>
+					<li class="ac-breadcrumb__item ac-breadcrumb__item--current ac-breadcrumb__current" id="ac-breadcrumb-current" aria-current="page"><?php p($pageTitle); ?></li>
 				</ol>
 			</nav>
 			<div class="ac-page-header__main">
@@ -76,4 +84,4 @@ $urlsJson = htmlspecialchars(json_encode($urls, JSON_THROW_ON_ERROR | JSON_UNESC
 			</div>
 			<div id="ac-global-search" class="ac-global-search" hidden aria-hidden="true"></div>
 		</header>
-		<main id="ac-main" class="ac-main" role="main" tabindex="-1" data-ac-view="<?php p($pageId); ?>">
+		<main id="ac-main-content" class="ac-main ac-main-content" role="main" tabindex="-1" data-ac-view="<?php p($pageId); ?>">

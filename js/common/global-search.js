@@ -14,7 +14,7 @@
 			const active = AudioCheckRouter.getCurrentView();
 			if (active) return active;
 		}
-		return document.getElementById('ac-main')?.dataset?.acView
+		return document.getElementById('ac-main-content')?.dataset?.acView
 			|| document.getElementById('app-content')?.dataset?.acView
 			|| 'home';
 	}

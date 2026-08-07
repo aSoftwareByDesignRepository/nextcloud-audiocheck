@@ -158,34 +158,96 @@
 		return btn;
 	}
 
+	function playlistIdFrom(payload) {
+		const pl = payload && (payload.playlist || payload);
+		const id = pl && pl.id != null ? Number(pl.id) : NaN;
+		return Number.isFinite(id) && id >= 1 ? id : null;
+	}
+
+	function isDuplicatePlaylistItemError(err) {
+		const msg = String((err && err.message) || '');
+		return /already in playlist/i.test(msg) || (err && err.status === 422);
+	}
+
 	/**
 	 * @param {number|number[]} fileIds
 	 */
 	function openAddToPlaylist(fileIds) {
 		const ids = Array.isArray(fileIds) ? fileIds : [fileIds];
 		if (!ids.length) return;
+		let alive = true;
+		const abort = typeof AbortController !== 'undefined' ? new AbortController() : null;
 
 		C.openModal({
 			title: t('audiocheck', 'Add to playlist'),
-			primaryLabel: t('audiocheck', 'Done'),
 			cancelLabel: t('audiocheck', 'Close'),
-			render() {
+			hideDefaultActions: true,
+			onClose: () => {
+				alive = false;
+				if (abort) abort.abort();
+			},
+			render({ close }) {
 				const status = C.createElement('p', {
 					class: 'ac-field__hint',
 					attrs: { role: 'status', 'aria-live': 'polite' },
 					text: t('audiocheck', 'Loading…'),
 				});
+				const host = C.createElement('div', { class: 'ac-add-to-playlist__host' });
 				const list = C.createElement('ul', { class: 'ac-playlist-pick-list' });
-				const wrap = C.createElement('div', {}, [status, list]);
+				host.appendChild(list);
+				const footer = C.createElement('div', { class: 'ac-modal__inline-actions' });
+				footer.appendChild(C.createElement('button', {
+					type: 'button',
+					className: 'ac-btn',
+					text: t('audiocheck', 'Close'),
+					on: { click: () => close(false) },
+				}));
+				const wrap = C.createElement('div', { class: 'ac-add-to-playlist' }, [status, host, footer]);
 
-				AudioCheckApi.get('/apps/audiocheck/api/playlists').then((data) => {
-					const playlists = data.playlists || [];
-					list.textContent = '';
+				async function addIdsToPlaylist(playlistId, button) {
+					let added = 0;
+					let skipped = 0;
+					for (const fileId of ids) {
+						if (!alive) return { added, skipped, aborted: true };
+						try {
+							await AudioCheckApi.post(
+								'/apps/audiocheck/api/playlists/{id}/items',
+								{ fileId },
+								{ params: { id: playlistId }, signal: abort ? abort.signal : undefined },
+							);
+							added += 1;
+						} catch (e) {
+							if (!alive || (e && e.name === 'AbortError')) {
+								return { added, skipped, aborted: true };
+							}
+							if (isDuplicatePlaylistItemError(e)) {
+								skipped += 1;
+								continue;
+							}
+							throw e;
+						}
+					}
+					return { added, skipped, aborted: false };
+				}
+
+				function renderPlaylists(playlists) {
+					if (!alive) return;
+					host.textContent = '';
+					status.textContent = '';
 					if (!playlists.length) {
-						status.textContent = t('audiocheck', 'No playlists yet. Create one first.');
+						host.appendChild(C.emptyState(
+							t('audiocheck', 'No playlists yet'),
+							t('audiocheck', 'Create a playlist to save these tracks.'),
+							{
+								variant: 'section',
+								ctaLabel: t('audiocheck', 'Create playlist'),
+								onCta: () => showCreateForm(),
+							},
+						));
 						return;
 					}
 					status.textContent = t('audiocheck', 'Choose a playlist.');
+					const nextList = C.createElement('ul', { class: 'ac-playlist-pick-list' });
 					playlists.forEach((pl) => {
 						const li = C.createElement('li', { class: 'ac-playlist-pick-list__item' });
 						const btn = C.createElement('button', {
@@ -193,29 +255,107 @@
 							className: 'ac-btn ac-btn--text',
 							text: pl.name,
 							onClick: async () => {
+								const playlistId = playlistIdFrom(pl);
+								if (!playlistId) {
+									AudioCheckMessaging.toast(t('audiocheck', 'Request failed.'), 'error');
+									return;
+								}
 								btn.disabled = true;
 								try {
-									for (const fileId of ids) {
-										await AudioCheckApi.post('/apps/audiocheck/api/playlists/{id}/items', { fileId }, { params: { id: pl.id } });
-									}
+									const result = await addIdsToPlaylist(playlistId, btn);
+									if (!alive || result.aborted) return;
 									AudioCheckMessaging.toast(t('audiocheck', 'Added to playlist.'));
 								} catch (e) {
-									AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error');
+									if (alive) {
+										AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error');
+									}
 								} finally {
-									btn.disabled = false;
+									if (alive) btn.disabled = false;
 								}
 							},
 						});
 						li.appendChild(btn);
-						list.appendChild(li);
+						nextList.appendChild(li);
 					});
+					host.appendChild(nextList);
+				}
+
+				function showCreateForm() {
+					if (!alive) return;
+					host.textContent = '';
+					status.textContent = t('audiocheck', 'Name your new playlist.');
+					const row = C.createElement('div', { class: 'ac-form-row' });
+					const input = C.createElement('input', {
+						type: 'text',
+						id: 'ac-add-create-playlist-name',
+						className: 'ac-input',
+						attrs: {
+							maxlength: '255',
+							'aria-label': t('audiocheck', 'Playlist name'),
+							required: true,
+						},
+					});
+					row.appendChild(C.createElement('label', {
+						attrs: { for: 'ac-add-create-playlist-name' },
+						text: t('audiocheck', 'Playlist name'),
+					}));
+					row.appendChild(input);
+					const createBtn = C.createElement('button', {
+						type: 'button',
+						className: 'ac-btn ac-btn--primary',
+						text: t('audiocheck', 'Create playlist'),
+						onClick: async () => {
+							const name = input.value.trim();
+							if (!name) {
+								AudioCheckMessaging.toast(t('audiocheck', 'Enter a playlist name.'), 'warning');
+								input.focus();
+								return;
+							}
+							createBtn.disabled = true;
+							try {
+								const created = await AudioCheckApi.post(
+									'/apps/audiocheck/api/playlists',
+									{ name },
+									{ signal: abort ? abort.signal : undefined },
+								);
+								if (!alive) return;
+								const playlistId = playlistIdFrom(created);
+								if (!playlistId) {
+									throw new Error(t('audiocheck', 'Request failed.'));
+								}
+								const result = await addIdsToPlaylist(playlistId, createBtn);
+								if (!alive || result.aborted) return;
+								AudioCheckMessaging.toast(t('audiocheck', 'Added to playlist.'));
+								const data = await AudioCheckApi.get('/apps/audiocheck/api/playlists', undefined, {
+									signal: abort ? abort.signal : undefined,
+								});
+								if (!alive) return;
+								renderPlaylists(data.playlists || []);
+							} catch (e) {
+								if (!alive || (e && e.name === 'AbortError')) return;
+								AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error');
+							} finally {
+								if (alive) createBtn.disabled = false;
+							}
+						},
+					});
+					host.appendChild(row);
+					host.appendChild(createBtn);
+					setTimeout(() => { if (alive) input.focus(); }, 50);
+				}
+
+				AudioCheckApi.get('/apps/audiocheck/api/playlists', undefined, {
+					signal: abort ? abort.signal : undefined,
+				}).then((data) => {
+					if (!alive) return;
+					renderPlaylists(data.playlists || []);
 				}).catch((e) => {
+					if (!alive || (e && e.name === 'AbortError')) return;
 					status.textContent = e.message || t('audiocheck', 'Request failed.');
 				});
 
 				return wrap;
 			},
-			onSubmit: () => true,
 		});
 	}
 
@@ -240,22 +380,24 @@
 					input,
 				]);
 			},
-			onSubmit: () => {
-				const input = document.getElementById('ac-build-pl-name');
+			onSubmit: async ({ body }) => {
+				const input = body.querySelector('#ac-build-pl-name') || document.getElementById('ac-build-pl-name');
 				const name = (input && input.value || '').trim();
 				if (!name) {
 					AudioCheckMessaging.toast(t('audiocheck', 'Enter a playlist name.'), 'warning');
 					return false;
 				}
-				AudioCheckApi.post('/apps/audiocheck/api/playlists/build', { name, collectionKey })
-					.then((r) => {
-						AudioCheckMessaging.toast(t('audiocheck', 'Playlist created.'));
-						if (r.playlist && r.playlist.id) {
-							AudioCheckRouter.navigate('playlist', { playlistId: r.playlist.id }, true);
-						}
-					})
-					.catch((e) => AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error'));
-				return true;
+				try {
+					const r = await AudioCheckApi.post('/apps/audiocheck/api/playlists/build', { name, collectionKey });
+					AudioCheckMessaging.toast(t('audiocheck', 'Playlist created.'));
+					if (r.playlist && r.playlist.id) {
+						AudioCheckRouter.navigate('playlist', { playlistId: r.playlist.id }, true);
+					}
+					return true;
+				} catch (e) {
+					AudioCheckMessaging.toast(e.message || t('audiocheck', 'Request failed.'), 'error');
+					return false;
+				}
 			},
 		});
 	}

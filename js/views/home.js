@@ -43,7 +43,7 @@
 
 	function createHomeSection(title, id, leadText) {
 		const section = C.el('section', {
-			className: 'ac-card ac-section ac-home-section',
+			className: 'ac-section ac-home-section',
 			attrs: id ? { 'aria-labelledby': id } : {},
 		});
 		if (title) {
@@ -173,7 +173,7 @@
 			if (searchHintEl) shell.appendChild(searchHintEl);
 
 			const quickSection = C.el('section', {
-				className: 'ac-card ac-section ac-home-quick',
+				className: 'ac-section ac-home-quick ac-home-section',
 				attrs: { 'aria-labelledby': 'ac-home-quick-heading' },
 			});
 			if (LPU()) {

@@ -107,7 +107,7 @@
 
 	function createContentShell(ariaLabel) {
 		return C.el('section', {
-			className: 'ac-card ac-section ac-library-shell',
+			className: 'ac-section ac-library-shell',
 			attrs: { 'aria-label': ariaLabel || t('audiocheck', 'Library content') },
 		});
 	}
