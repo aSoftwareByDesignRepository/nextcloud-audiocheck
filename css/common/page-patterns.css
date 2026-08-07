@@ -1,0 +1,328 @@
+/*
+ * Shared page layout patterns — stack, empty states, settings chips, disclosure.
+ * Design-system §3: empty states are centered, not boxed cards (principle 14).
+ */
+
+/* ── Page stack (vertical rhythm inside main) ───────────────── */
+#app-content.ac-app .ac-page-stack,
+#app-content.ac-app .ac-page-body {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: var(--ac-space-5);
+	width: 100%;
+	min-width: 0;
+}
+
+#app-content.ac-app .ac-page-stack > *,
+#app-content.ac-app .ac-page-body > * {
+	margin: 0;
+}
+
+/* ── Empty / loading (no box-in-a-box) ───────────────────────── */
+#app-content.ac-app .ac-empty,
+#app-content.ac-app .ac-empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--ac-space-3);
+	text-align: center;
+	padding: var(--ac-space-7) var(--ac-space-5);
+	color: var(--ac-muted);
+	background: transparent;
+	border: none;
+	box-shadow: none;
+}
+
+#app-content.ac-app .ac-empty--page,
+#app-content.ac-app .ac-empty-state--page {
+	width: 100%;
+	max-width: 42ch;
+	margin: var(--ac-space-6) auto 0;
+	box-sizing: border-box;
+	/* Principle 14: never frame empty states as cards */
+	background: transparent;
+	border: none;
+	border-radius: 0;
+	box-shadow: none;
+}
+
+#app-content.ac-app .ac-page-body > .ac-empty--page,
+#app-content.ac-app .ac-page-body > .ac-empty-state--page {
+	max-width: 42ch;
+}
+
+#app-content.ac-app .ac-grid > .ac-empty,
+#app-content.ac-app .ac-grid > .ac-empty--page {
+	grid-column: 1 / -1;
+	justify-self: center;
+	margin-top: var(--ac-space-2);
+	margin-bottom: var(--ac-space-6);
+}
+
+#app-content.ac-app .ac-empty__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: var(--ac-icon-well);
+	height: var(--ac-icon-well);
+	margin: 0;
+	border-radius: var(--ac-radius-md);
+	background: var(--ac-tint-info);
+	color: var(--color-primary-element);
+	box-shadow: none;
+}
+
+#app-content.ac-app .ac-empty__icon .ac-icon {
+	width: var(--ac-icon-lg);
+	height: var(--ac-icon-lg);
+}
+
+#app-content.ac-app .ac-empty__icon--app {
+	background: var(--ac-tint-info);
+	color: var(--color-primary-element);
+	box-shadow: none;
+}
+
+#app-content.ac-app .ac-empty h2,
+#app-content.ac-app .ac-empty-state__title {
+	margin: 0;
+	font-size: var(--ac-fs-lg);
+	font-weight: 600;
+	line-height: var(--ac-line-tight);
+	color: var(--ac-text);
+}
+
+#app-content.ac-app .ac-empty p,
+#app-content.ac-app .ac-empty-state__text {
+	margin: 0;
+	max-width: 42ch;
+	font-size: var(--ac-fs-sm);
+	line-height: var(--ac-line-base);
+	color: var(--ac-muted);
+}
+
+#app-content.ac-app .ac-empty .ac-btn {
+	margin-top: var(--ac-space-2);
+	min-width: 10rem;
+	min-height: var(--ac-touch-lg, 48px);
+}
+
+#app-content.ac-app .ac-empty--section {
+	padding: var(--ac-space-5) var(--ac-space-4);
+}
+
+/* ── Settings in-page chip bar (SETTINGS-PAGES-STANDARD spirit) ─ */
+#app-content.ac-app .ac-settings-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--ac-space-2);
+	margin: 0 0 var(--ac-space-2);
+	padding: 0;
+	list-style: none;
+}
+
+#app-content.ac-app .ac-settings-chips__btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: var(--ac-touch, 44px);
+	padding: var(--ac-space-2) var(--ac-space-4);
+	border: 1px solid var(--ac-border);
+	border-radius: var(--ac-radius-pill);
+	background: var(--ac-bg-soft);
+	color: var(--ac-text);
+	font-size: var(--ac-fs-sm);
+	font-weight: 600;
+	cursor: pointer;
+	touch-action: manipulation;
+	text-decoration: none;
+	box-sizing: border-box;
+}
+
+#app-content.ac-app .ac-settings-chips__btn[aria-current="true"],
+#app-content.ac-app .ac-settings-chips__btn[aria-current="page"],
+#app-content.ac-app .ac-settings-chips__btn.is-active {
+	/* SETTINGS-PAGES-STANDARD: tinted bg + main-text ink (not primary-on-dark) */
+	background: var(--ac-tint-info);
+	border-color: var(--color-primary-element);
+	color: var(--ac-text);
+	box-shadow: inset 0 -2px 0 var(--color-primary-element);
+}
+
+#app-content.ac-app .ac-settings-chips__btn:focus-visible {
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 2px;
+}
+
+/* ── Progressive disclosure (help / advanced) ───────────────── */
+#app-content.ac-app .ac-disclosure {
+	border: 1px solid var(--ac-border);
+	border-radius: var(--ac-radius-md);
+	background: var(--ac-bg-card);
+}
+
+#app-content.ac-app .ac-disclosure__summary {
+	display: flex;
+	align-items: center;
+	gap: var(--ac-space-2);
+	min-height: var(--ac-touch, 44px);
+	padding: var(--ac-space-3) var(--ac-space-4);
+	cursor: pointer;
+	font-weight: 600;
+	font-size: var(--ac-fs-md);
+	list-style: none;
+}
+
+#app-content.ac-app .ac-disclosure__summary::-webkit-details-marker {
+	display: none;
+}
+
+#app-content.ac-app .ac-disclosure__body {
+	padding: 0 var(--ac-space-4) var(--ac-space-4);
+}
+
+/* ── Access mode radios (Open / Restricted) ─────────────────── */
+#app-content.ac-app .ac-access-mode {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ac-space-2);
+	margin: 0 0 var(--ac-space-4);
+}
+
+#app-content.ac-app .ac-access-mode__option {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--ac-space-3);
+	min-height: var(--ac-touch, 44px);
+	padding: var(--ac-space-3) var(--ac-space-4);
+	border: 1px solid var(--ac-border);
+	border-radius: var(--ac-radius-md);
+	background: var(--ac-bg-card);
+	cursor: pointer;
+}
+
+#app-content.ac-app .ac-access-mode__option:has(input:checked) {
+	border-color: var(--color-primary-element);
+	background: var(--ac-bg-card);
+	box-shadow: inset 4px 0 0 var(--color-primary-element);
+}
+
+#app-content.ac-app .ac-access-mode__option input {
+	margin-top: 0.2rem;
+	accent-color: var(--color-primary-element);
+	width: 1.25rem;
+	height: 1.25rem;
+	flex-shrink: 0;
+}
+
+#app-content.ac-app .ac-access-mode__label {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ac-space-1);
+	min-width: 0;
+}
+
+#app-content.ac-app .ac-access-mode__name {
+	font-weight: 600;
+	color: var(--ac-text);
+}
+
+#app-content.ac-app .ac-access-mode__hint {
+	font-size: var(--ac-fs-sm);
+	/* Prefer maxcontrast on card surfaces — tinted fills fail AA for muted ink */
+	color: var(--color-text-maxcontrast, var(--ac-muted));
+	max-width: 60ch;
+	line-height: var(--ac-line-base);
+}
+
+#app-content.ac-app .ac-allowlists[hidden] {
+	display: none !important;
+}
+
+/* Author display rules (flex/grid cards) can beat the UA [hidden] stylesheet.
+   Force one-section settings + savebar to actually leave the accessibility tree. */
+#app-content.ac-app .ac-app-settings-page .ac-section[hidden],
+#app-content.ac-app .ac-app-settings-page [data-ac-settings-savebar][hidden],
+#app-content.ac-app .ac-app-settings-page [hidden] {
+	display: none !important;
+}
+
+#app-content.ac-app .ac-entity-picker__suggest[hidden],
+#app-content.ac-app #ac-chapters-section[hidden],
+#app-content.ac-app .ac-sleep-timer-banner[hidden],
+#app-content.ac-app .ac-nav__children[hidden] {
+	display: none !important;
+}
+
+/* Flat settings topic (no card wrapping a bordered fieldset) */
+#app-content.ac-app .ac-settings-topic {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ac-space-4);
+	margin: 0 0 var(--ac-space-5);
+	padding: 0;
+	border: none;
+	background: transparent;
+	box-shadow: none;
+}
+
+#app-content.ac-app .ac-settings-topic__title {
+	margin: 0;
+	font-size: var(--ac-fs-xl, 1.25rem);
+	font-weight: 700;
+	color: var(--ac-text);
+	line-height: 1.3;
+}
+
+#app-content.ac-app .ac-settings-topic__lead {
+	margin: 0;
+	max-width: 60ch;
+	color: var(--color-text-maxcontrast, var(--ac-muted));
+	font-size: var(--ac-fs-sm);
+	line-height: var(--ac-line-base, 1.5);
+}
+
+#app-content.ac-app .ac-fieldset--plain {
+	margin: 0;
+	padding: 0;
+	border: none;
+	min-width: 0;
+}
+
+/* Autosave status line */
+#app-content.ac-app .ac-autosave-status {
+	min-height: var(--ac-touch, 44px);
+	display: flex;
+	align-items: center;
+	gap: var(--ac-space-2);
+	font-size: var(--ac-fs-sm);
+	color: var(--ac-muted);
+	font-weight: 500;
+}
+
+#app-content.ac-app .ac-autosave-status[data-state="saved"] {
+	color: var(--color-success-text, var(--color-success));
+}
+
+#app-content.ac-app .ac-autosave-status[data-state="error"] {
+	color: var(--ac-danger-ink);
+}
+
+@media (max-width: 768px) {
+	#app-content.ac-app .ac-settings-chips {
+		flex-direction: column;
+	}
+
+	#app-content.ac-app .ac-settings-chips__btn {
+		width: 100%;
+		justify-content: flex-start;
+	}
+
+	#app-content.ac-app .ac-form-actions .ac-btn--primary,
+	#app-content.ac-app .ac-empty .ac-btn--primary {
+		width: 100%;
+	}
+}

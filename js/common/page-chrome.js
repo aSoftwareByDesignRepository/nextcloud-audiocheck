@@ -74,7 +74,7 @@
 			appContent.className = appContent.className.replace(/\bac-app--\S+/g, '').trim();
 			appContent.classList.add('ac-app', 'ac-app--' + viewId);
 		}
-		const main = document.getElementById('ac-main');
+		const main = document.getElementById('ac-main-content');
 		if (main) main.dataset.acView = viewId;
 
 		const lead = document.getElementById('ac-page-lead');

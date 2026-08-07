@@ -1,0 +1,155 @@
+/*
+ * AudioCheck shell chrome — skip link, page header, buttons, cards.
+ * Adapted from InventoryCheck / ArbeitszeitCheck shell-chrome for design-system parity.
+ * Product-specific player chrome stays in app.css.
+ */
+
+/* Skip links (AZ parity) — CRITICAL: absolute off-screen or flex layout collapses */
+#app-content.ac-app .ac-skip-link,
+#content[class*="app-audiocheck"] .ac-skip-link {
+	position: absolute !important;
+	left: -9999px;
+	top: var(--ac-space-2);
+	z-index: 3000;
+	padding: var(--ac-space-2) var(--ac-space-4);
+	background: var(--color-primary-element);
+	color: var(--color-primary-element-text);
+	border-radius: 0 0 var(--ac-radius-sm) 0;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+#app-content.ac-app .ac-skip-link:focus,
+#app-content.ac-app .ac-skip-link:focus-visible {
+	left: 0;
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 2px;
+}
+
+/* Shell fills #app-content — reading measure belongs on prose only */
+#app-content.ac-app #app-content-wrapper.ac-shell,
+#app-content.ac-app .ac-shell {
+	max-width: none;
+	width: 100%;
+	box-sizing: border-box;
+	padding: var(--ac-space-5);
+	padding-bottom: max(var(--ac-space-7), calc(var(--ac-space-4) + env(safe-area-inset-bottom, 0px)));
+}
+
+#app-content.ac-app #app-content-wrapper.ac-shell--constrained {
+	max-width: 72rem;
+	margin-inline: auto;
+}
+
+#app-content.ac-app #app-content-wrapper.ac-shell--minimal {
+	max-width: 40rem;
+	margin-inline: auto;
+}
+
+/* Page header geometry (AZC: 56×56 icon well) */
+#app-content.ac-app .ac-page-header__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	width: 56px;
+	height: 56px;
+	border-radius: var(--ac-radius-md);
+	background: var(--ac-tint-info);
+	color: var(--color-primary-element);
+}
+
+#app-content.ac-app .ac-page-header__icon .ac-icon,
+#app-content.ac-app .ac-page-header__icon-svg {
+	width: 28px;
+	height: 28px;
+}
+
+#app-content.ac-app .ac-page-header__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: var(--ac-space-2);
+	min-height: var(--ac-touch, 44px);
+}
+
+#app-content.ac-app .ac-page-header__lead {
+	margin: var(--ac-space-1) 0 0;
+	max-width: 60ch;
+	font-size: var(--ac-fs-md);
+	line-height: var(--ac-line-base);
+	color: var(--ac-muted);
+}
+
+#app-content.ac-app #ac-page-title {
+	margin: 0;
+	font-size: var(--ac-fs-2xl);
+	font-weight: 600;
+	line-height: var(--ac-line-tight);
+	color: var(--ac-text);
+}
+
+/* Buttons — primary touch ≥ 48px for page actions */
+#app-content.ac-app .ac-btn,
+.ac-modal .ac-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--ac-space-2);
+	min-height: var(--ac-touch, 44px);
+	min-width: var(--ac-touch, 44px);
+	padding: var(--ac-space-2) var(--ac-space-4);
+	border-radius: var(--ac-radius-md);
+	font-size: var(--ac-fs-md);
+	font-weight: 600;
+	line-height: var(--ac-line-tight);
+	cursor: pointer;
+	touch-action: manipulation;
+	box-sizing: border-box;
+}
+
+#app-content.ac-app .ac-page-header__actions .ac-btn--primary,
+#app-content.ac-app .ac-page-header__actions .ac-btn--danger,
+#app-content.ac-app .ac-form-actions .ac-btn--primary,
+#app-content.ac-app .ac-form-actions .ac-btn--danger {
+	min-height: var(--ac-touch-lg, 48px);
+}
+
+#app-content.ac-app button.ac-btn--danger,
+.ac-modal button.ac-btn--danger,
+#app-content.ac-app .ac-btn--danger,
+.ac-modal .ac-btn--danger {
+	background-color: var(--ac-danger-fill);
+	border-color: transparent;
+	color: var(--ac-danger-on-fill);
+	font-weight: 700;
+}
+
+#app-content.ac-app button.ac-btn--danger:not(:disabled):hover,
+#app-content.ac-app button.ac-btn--danger:not(:disabled):focus-visible,
+.ac-modal button.ac-btn--danger:not(:disabled):hover,
+.ac-modal button.ac-btn--danger:not(:disabled):focus-visible,
+#app-content.ac-app .ac-btn--danger:hover,
+#app-content.ac-app .ac-btn--danger:focus-visible,
+.ac-modal .ac-btn--danger:hover,
+.ac-modal .ac-btn--danger:focus-visible {
+	background-color: var(--ac-danger-fill-hover);
+	border-color: transparent;
+	color: var(--ac-danger-on-fill);
+}
+
+/* Cards — one visible frame (principle 14) */
+#app-content.ac-app .ac-card {
+	background: var(--ac-bg-card);
+	border: 1px solid var(--ac-border);
+	border-radius: var(--ac-radius-md);
+	box-shadow: none;
+}
+
+/* Breadcrumb current item */
+#app-content.ac-app .ac-breadcrumb__item--current,
+#app-content.ac-app .ac-breadcrumb__current {
+	font-weight: 600;
+	color: var(--ac-text);
+}

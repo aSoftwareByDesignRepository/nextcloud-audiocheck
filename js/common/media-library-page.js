@@ -186,6 +186,7 @@
 					panel.replaceChildren();
 					moreWrap.textContent = '';
 					status.textContent = '';
+					C.setBusy(panel, false);
 					panel.appendChild(C.emptyState(
 						t('audiocheck', 'Nothing here yet'),
 						message,
@@ -194,6 +195,19 @@
 							ctaLabel: extraCta ? extraCta.label : t('audiocheck', 'Open Library'),
 							onCta: extraCta ? extraCta.onClick : () => AudioCheckRouter.navigate('library', {}, true),
 						},
+					));
+				}
+
+				function showLoadError(err, retryFn) {
+					panel.replaceChildren();
+					moreWrap.textContent = '';
+					status.textContent = '';
+					C.setBusy(panel, false);
+					panel.appendChild(C.loadErrorState(
+						t('audiocheck', 'Could not load this page'),
+						(err && err.message) || t('audiocheck', 'Request failed.'),
+						retryFn,
+						{ icon: emptyIcon },
 					));
 				}
 
@@ -211,12 +225,14 @@
 					const list = panel.querySelector('#' + idPrefix + '-track-list');
 					if (!list) return;
 					status.textContent = t('audiocheck', 'Loading…');
+					C.setBusy(panel, true);
 					moreWrap.textContent = '';
 					const params = { kind: config.kind, limit: PAGE_SIZE, page, sort };
 					const q = searchQuery();
 					if (q) params.q = q;
 					if (hideListened) params.hideListened = 1;
 					AudioCheckApi.get('/apps/audiocheck/api/tracks', params).then((data) => {
+						C.setBusy(panel, false);
 						const items = data.items || [];
 						total = data.total != null ? data.total : items.length;
 						if (reset && !items.length) {
@@ -239,7 +255,7 @@
 							}));
 						}
 					}).catch((e) => {
-						status.textContent = e.message || t('audiocheck', 'Request failed.');
+						showLoadError(e, () => loadTracks(true));
 					});
 				}
 
@@ -308,6 +324,7 @@
 					const host = panel.querySelector('.ac-facet-groups');
 					if (!host) return;
 					status.textContent = t('audiocheck', 'Loading…');
+					C.setBusy(panel, true);
 
 					AudioCheckApi.get('/apps/audiocheck/api/facets/{type}', null, {
 						params: (() => {
@@ -317,6 +334,7 @@
 							return p;
 						})(),
 					}).then((data) => {
+						C.setBusy(panel, false);
 						const items = (data.items || []).slice();
 						const facetTotal = data.total != null ? data.total : items.length;
 						const q = searchQuery();
@@ -345,7 +363,7 @@
 							}));
 						}
 					}).catch((e) => {
-						status.textContent = e.message || t('audiocheck', 'Request failed.');
+						showLoadError(e, () => loadFolders(true));
 					});
 				}
 
@@ -358,11 +376,13 @@
 					const grid = panel.querySelector('#' + idPrefix + '-album-grid');
 					if (!grid) return;
 					status.textContent = t('audiocheck', 'Loading…');
+					C.setBusy(panel, true);
 					moreWrap.textContent = '';
 					const params = { kind: config.kind, limit: PAGE_SIZE, page, sort };
 					const q = searchQuery();
 					if (q) params.q = q;
 					AudioCheckApi.get('/apps/audiocheck/api/collections', params).then((data) => {
+						C.setBusy(panel, false);
 						const items = data.items || [];
 						total = data.total != null ? data.total : items.length;
 						if (reset && !items.length) {
@@ -398,7 +418,7 @@
 							}));
 						}
 					}).catch((e) => {
-						status.textContent = e.message || t('audiocheck', 'Request failed.');
+						showLoadError(e, () => loadAlbums(true));
 					});
 				}
 

@@ -14,7 +14,13 @@ return [
 		['name' => 'page#nowPlaying', 'url' => '/now-playing', 'verb' => 'GET'],
 		['name' => 'page#library', 'url' => '/library', 'verb' => 'GET'],
 		['name' => 'page#settings', 'url' => '/settings', 'verb' => 'GET'],
-		['name' => 'page#appSettings', 'url' => '/app-settings', 'verb' => 'GET'],
+		['name' => 'page#appSettingsIndex', 'url' => '/app-settings', 'verb' => 'GET'],
+		[
+			'name' => 'page#appSettings',
+			'url' => '/app-settings/{section}',
+			'verb' => 'GET',
+			'requirements' => ['section' => 'access|admins|defaults|support'],
+		],
 
 		['name' => 'api#listTracks', 'url' => '/api/tracks', 'verb' => 'GET'],
 		['name' => 'api#getTrackInfo', 'url' => '/api/tracks/{fileId}', 'verb' => 'GET'],

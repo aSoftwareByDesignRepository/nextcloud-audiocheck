@@ -21,7 +21,10 @@ const a11yRoutes = [
 	'/apps/audiocheck/now-playing',
 	'/apps/audiocheck/library',
 	'/apps/audiocheck/settings',
-	'/apps/audiocheck/app-settings',
+	'/apps/audiocheck/app-settings/access',
+	'/apps/audiocheck/app-settings/admins',
+	'/apps/audiocheck/app-settings/defaults',
+	'/apps/audiocheck/app-settings/support',
 ];
 
 const viewports = [
@@ -107,7 +110,7 @@ async function applyTheme(page, themeId) {
  * @param {import('@playwright/test').Page} page
  */
 async function waitForShell(page) {
-	await page.waitForSelector('#app-content.ac-app #ac-main, #ac-denied-main, .ac-denied', { timeout: 30_000 });
+	await page.waitForSelector('#app-content.ac-app #ac-main-content, #ac-denied-main, .ac-denied', { timeout: 30_000 });
 	await page.waitForFunction(() => {
 		const body = getComputedStyle(document.body);
 		return body.getPropertyValue('--color-main-text').trim() !== ''
@@ -121,7 +124,7 @@ async function waitForShell(page) {
 async function assertNoHorizontalOverflow(page) {
 	const overflow = await page.evaluate(() => {
 		const root = document.querySelector('#app-content.ac-app') || document.body;
-		const main = document.getElementById('ac-main');
+		const main = document.getElementById('ac-main-content');
 		const shell = document.querySelector('#app-content-wrapper.ac-shell, .ac-shell');
 		const rootOverflow = root.scrollWidth > root.clientWidth + 2;
 		const mainOverflow = main ? main.scrollWidth > main.clientWidth + 2 : false;
@@ -179,7 +182,7 @@ async function assertThemeTokensResolved(page) {
 async function assertTouchTargets(page) {
 	const result = await page.evaluate(() => {
 		const nodes = [
-			...document.querySelectorAll('#ac-nav-toggle, #app-content.ac-app button.ac-btn, .ac-nav__link'),
+			...document.querySelectorAll('#ac-nav-toggle, #app-content.ac-app button.ac-btn, .ac-nav__link, .ac-playlist-group__action'),
 		].slice(0, 40);
 		const undersized = [];
 		for (const el of nodes) {
@@ -313,7 +316,7 @@ test.describe('AudioCheck visual shell snapshots', () => {
 
 				const metrics = await page.evaluate(() => {
 					const header = document.querySelector('.ac-page-header');
-					const main = document.getElementById('ac-main');
+					const main = document.getElementById('ac-main-content');
 					const hRect = header ? header.getBoundingClientRect() : null;
 					const mRect = main ? main.getBoundingClientRect() : null;
 					return {
@@ -341,7 +344,7 @@ test.describe('AudioCheck keyboard chrome', () => {
 		await page.locator('a.ac-skip-link').focus();
 		await page.keyboard.press('Enter');
 		const focused = await page.evaluate(() => document.activeElement && document.activeElement.id);
-		expect(focused).toBe('ac-main');
+		expect(focused).toBe('ac-main-content');
 	});
 
 	test('mobile nav drawer opens and traps focus', async ({ page }) => {

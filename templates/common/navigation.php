@@ -22,11 +22,12 @@ $navGroups = $_['navigationGroups'] ?? [];
 			<?php endif; ?>
 			<ul class="ac-nav__list">
 				<?php foreach (($group['items'] ?? []) as $item): ?>
-				<li class="ac-nav__item<?php if (($item['id'] ?? '') === 'now-playing'): ?> ac-nav__item--now-playing<?php endif; ?>"
+				<li class="ac-nav__item<?php if (($item['id'] ?? '') === 'now-playing'): ?> ac-nav__item--now-playing<?php endif; ?><?php if (!empty($item['children'])): ?> ac-nav__item--has-children<?php endif; ?><?php if (!empty($item['expanded'])): ?> is-expanded<?php endif; ?>"
 					data-ac-nav-id="<?php p((string)$item['id']); ?>"<?php if (($item['id'] ?? '') === 'now-playing'): ?> hidden<?php endif; ?>>
 					<a href="<?php p((string)$item['url']); ?>"
 						class="ac-nav__link<?php if (!empty($item['active'])): ?> ac-nav__link--active is-active active<?php endif; ?>"
-						<?php if (!empty($item['active'])): ?>aria-current="page"<?php endif; ?>>
+						<?php if (!empty($item['active']) && empty($item['children'])): ?>aria-current="page"<?php endif; ?>
+						<?php if (!empty($item['children'])): ?>aria-expanded="<?php p(!empty($item['expanded']) ? 'true' : 'false'); ?>"<?php endif; ?>>
 						<span class="ac-nav__icon" aria-hidden="true">
 							<?php print_unescaped(IconCatalog::render((string)($item['icon'] ?? 'browse'))); ?>
 						</span>
@@ -37,6 +38,21 @@ $navGroups = $_['navigationGroups'] ?? [];
 							<?php endif; ?>
 						</span>
 					</a>
+					<?php if (!empty($item['children']) && is_array($item['children'])): ?>
+						<ul class="ac-nav__children" <?php if (empty($item['expanded'])): ?>hidden<?php endif; ?>>
+							<?php foreach ($item['children'] as $child): ?>
+								<li class="ac-nav__item ac-nav__item--child" data-ac-nav-id="<?php p((string)$child['id']); ?>">
+									<a href="<?php p((string)$child['url']); ?>"
+										class="ac-nav__link ac-nav__link--child<?php if (!empty($child['active'])): ?> ac-nav__link--active is-active active<?php endif; ?>"
+										<?php if (!empty($child['active'])): ?>aria-current="page"<?php endif; ?>>
+										<span class="ac-nav__label">
+											<span class="ac-nav__name"><?php p((string)$child['label']); ?></span>
+										</span>
+									</a>
+								</li>
+							<?php endforeach; ?>
+						</ul>
+					<?php endif; ?>
 				</li>
 				<?php endforeach; ?>
 			</ul>

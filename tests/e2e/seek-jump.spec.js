@@ -135,10 +135,12 @@ test.describe('AudioCheck seek jump (±30s)', () => {
 				&& fwd.getBoundingClientRect().height >= 44;
 		}, null, { timeout: 25_000 });
 
-		const back = page.getByRole('button', { name: /Jump back 30 seconds/i });
-		const fwd = page.getByRole('button', { name: /Jump forward 30 seconds/i });
+		const back = page.locator('#ac-now-jump-back');
+		const fwd = page.locator('#ac-now-jump-forward');
 		await expect(back).toBeVisible();
 		await expect(fwd).toBeVisible();
+		await expect(back).toHaveAttribute('aria-label', /(Jump back 30 seconds|30 Sekunden zurück)/i);
+		await expect(fwd).toHaveAttribute('aria-label', /(Jump forward 30 seconds|30 Sekunden vor)/i);
 
 		// Ensure media has metadata, park mid-track (or as far as duration allows), then jump.
 		await page.waitForFunction(() => {
@@ -324,8 +326,8 @@ test.describe('AudioCheck seek jump (±30s)', () => {
 		const fwd = page.locator('#ac-mini-jump-forward');
 		await expect(back).toBeVisible();
 		await expect(fwd).toBeVisible();
-		await expect(back).toHaveAttribute('aria-label', /Jump back 30 seconds/i);
-		await expect(fwd).toHaveAttribute('aria-label', /Jump forward 30 seconds/i);
+		await expect(back).toHaveAttribute('aria-label', /(Jump back 30 seconds|30 Sekunden zurück)/i);
+		await expect(fwd).toHaveAttribute('aria-label', /(Jump forward 30 seconds|30 Sekunden vor)/i);
 
 		const sizes = await page.evaluate(() => {
 			const b = document.getElementById('ac-mini-jump-back');

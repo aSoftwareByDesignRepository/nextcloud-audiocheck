@@ -1,0 +1,116 @@
+/**
+ * Accessibility — scoped to AudioCheck (WCAG 2.1 AA).
+ * Focus rings, reduced motion, high contrast, forced-colors.
+ * Never restyle Nextcloud core chrome outside #content.app-audiocheck.
+ */
+
+#content.app-audiocheck a:focus-visible,
+#content.app-audiocheck button:focus-visible,
+#content.app-audiocheck input:focus-visible,
+#content.app-audiocheck select:focus-visible,
+#content.app-audiocheck textarea:focus-visible,
+#content.app-audiocheck [tabindex="0"]:focus-visible,
+#content.app-audiocheck .ac-btn:focus-visible,
+#content.app-audiocheck .ac-nav__link:focus-visible,
+#content.app-audiocheck .ac-breadcrumb a:focus-visible,
+#content[class*="app-audiocheck"] a:focus-visible,
+#content[class*="app-audiocheck"] button:focus-visible,
+#content[class*="app-audiocheck"] input:focus-visible,
+#content[class*="app-audiocheck"] select:focus-visible,
+#content[class*="app-audiocheck"] textarea:focus-visible,
+.ac-modal a:focus-visible,
+.ac-modal button:focus-visible,
+.ac-modal input:focus-visible,
+.ac-modal select:focus-visible,
+.ac-modal textarea:focus-visible {
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 2px;
+}
+
+/* Mouse click must not leave a permanent ring (WCAG 2.4.7 / DS principle 5). */
+#content.app-audiocheck a:focus:not(:focus-visible),
+#content.app-audiocheck button:focus:not(:focus-visible),
+#content.app-audiocheck input:focus:not(:focus-visible),
+#content.app-audiocheck select:focus:not(:focus-visible),
+#content.app-audiocheck textarea:focus:not(:focus-visible),
+#content[class*="app-audiocheck"] a:focus:not(:focus-visible),
+#content[class*="app-audiocheck"] button:focus:not(:focus-visible),
+#content[class*="app-audiocheck"] input:focus:not(:focus-visible),
+#content[class*="app-audiocheck"] select:focus:not(:focus-visible),
+#content[class*="app-audiocheck"] textarea:focus:not(:focus-visible),
+.ac-modal a:focus:not(:focus-visible),
+.ac-modal button:focus:not(:focus-visible),
+.ac-modal input:focus:not(:focus-visible),
+.ac-modal select:focus:not(:focus-visible),
+.ac-modal textarea:focus:not(:focus-visible) {
+	outline: none;
+}
+
+@supports not selector(:focus-visible) {
+	#content.app-audiocheck a:focus,
+	#content.app-audiocheck button:focus,
+	#content.app-audiocheck input:focus,
+	#content.app-audiocheck select:focus,
+	#content.app-audiocheck textarea:focus,
+	#content.app-audiocheck [tabindex="0"]:focus {
+		outline: 2px solid var(--color-primary-element);
+		outline-offset: 2px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#content.app-audiocheck *,
+	#content.app-audiocheck *::before,
+	#content.app-audiocheck *::after,
+	#content[class*="app-audiocheck"] *,
+	#content[class*="app-audiocheck"] *::before,
+	#content[class*="app-audiocheck"] *::after,
+	.ac-modal,
+	.ac-modal * {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+@media (prefers-contrast: more) {
+	#content.app-audiocheck .ac-btn,
+	#content[class*="app-audiocheck"] .ac-btn,
+	.ac-modal .ac-btn {
+		border-width: 2px;
+	}
+}
+
+@media (forced-colors: active) {
+	#content.app-audiocheck .ac-btn,
+	#content[class*="app-audiocheck"] .ac-btn,
+	.ac-modal .ac-btn,
+	dialog.ac-native-dialog .ac-btn {
+		border: 2px solid ButtonText;
+		forced-color-adjust: none;
+	}
+}
+
+/* ===== NATIVE <dialog> (Nextcloud core sets dialog { display: block }) ===== */
+
+dialog.ac-native-dialog:not([open]) {
+	display: none !important;
+	pointer-events: none;
+}
+
+dialog.ac-native-dialog[open] {
+	margin: auto;
+	padding: 0;
+	max-width: min(36rem, calc(100vw - 2rem));
+	max-height: min(90dvh, calc(100vh - 2rem));
+	border: 1px solid var(--ac-border);
+	border-radius: var(--ac-radius-md);
+	background: var(--ac-bg-card);
+	color: var(--ac-text);
+	box-shadow: var(--ac-shadow-md);
+}
+
+dialog.ac-native-dialog::backdrop {
+	background: color-mix(in srgb, var(--color-main-text) 45%, transparent);
+}

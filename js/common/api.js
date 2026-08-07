@@ -55,6 +55,7 @@
 			access_denied: t('audiocheck', 'You do not have permission to do this.'),
 			not_found: t('audiocheck', 'The requested item could not be found.'),
 			rate_limit_exceeded: t('audiocheck', 'Too many requests. Please wait a moment and try again.'),
+			conflict: t('audiocheck', 'Policy was changed elsewhere. Reload and try again.'),
 			internal_error: t('audiocheck', 'Something went wrong on the server. Please try again.'),
 		};
 		if (code && byCode[code]) return byCode[code];
