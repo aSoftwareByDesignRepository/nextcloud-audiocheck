@@ -115,7 +115,7 @@ class LibraryService
 		return [
 			'library' => $this->getLibrary($userId, $id),
 			'alreadyExisted' => false,
-			'rescanRecommended' => false,
+			'rescanRecommended' => true,
 		];
 	}
 
@@ -889,6 +889,7 @@ class LibraryService
 
 		$result = $qb->executeQuery();
 		$items = [];
+		$libraryRoots = $type === 'folders' ? $this->enabledLibraryFolderPaths($userId) : [];
 		while ($row = $result->fetch()) {
 			if ($type === 'folders') {
 				$path = (string)$row['rel_path'];
@@ -898,9 +899,12 @@ class LibraryService
 					continue;
 				}
 				// Count tracks recursively per folder prefix so counts match listTracks(folder=…).
+				// Stop at enabled library roots — do not surface / or parent folders outside scope.
 				$current = $folder;
 				while ($current !== '.' && $current !== '' && $current !== 'files') {
-					$items[$current] = ($items[$current] ?? 0) + $count;
+					if ($this->isFolderFacetPathInScope($current, $libraryRoots)) {
+						$items[$current] = ($items[$current] ?? 0) + $count;
+					}
 					$parent = dirname($current);
 					if ($parent === $current) {
 						break;
@@ -1030,10 +1034,62 @@ class LibraryService
 
 	private function joinLibraryForEffectiveKind(IQueryBuilder $qb, string $trackAlias = 't'): void
 	{
-		$qb->leftJoin($trackAlias, 'ac_libraries', 'lib', $qb->expr()->andX(
+		// INNER JOIN + enabled: Browse/Music/Audiobooks never surface tracks
+		// outside the user's current library folders (orphans, null library_id,
+		// or rows left after a library was removed).
+		$qb->innerJoin($trackAlias, 'ac_libraries', 'lib', $qb->expr()->andX(
 			$qb->expr()->eq('lib.id', $trackAlias . '.library_id'),
 			$qb->expr()->eq('lib.user_id', $trackAlias . '.user_id'),
+			$qb->expr()->eq('lib.enabled', $qb->createNamedParameter(1, \PDO::PARAM_INT)),
 		));
+	}
+
+	/**
+	 * @return list<string> Enabled library folder paths (leading /, no trailing slash).
+	 */
+	private function enabledLibraryFolderPaths(string $userId): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('folder_path')->from('ac_libraries')
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->andWhere($qb->expr()->eq('enabled', $qb->createNamedParameter(1, \PDO::PARAM_INT)));
+		$result = $qb->executeQuery();
+		$paths = [];
+		while ($row = $result->fetch()) {
+			$path = rtrim((string)($row['folder_path'] ?? ''), '/');
+			if ($path === '') {
+				$path = '/';
+			} elseif ($path[0] !== '/') {
+				$path = '/' . $path;
+			}
+			$paths[] = $path;
+		}
+		$result->closeCursor();
+		return $paths;
+	}
+
+	/**
+	 * Folder facets must not invent ancestors above configured library roots
+	 * (e.g. /Privat or / when libraries are /Privat/Music).
+	 *
+	 * @param list<string> $libraryRoots
+	 */
+	private function isFolderFacetPathInScope(string $folderPath, array $libraryRoots): bool
+	{
+		if ($libraryRoots === []) {
+			return false;
+		}
+		$folderPath = rtrim($folderPath, '/') ?: '/';
+		foreach ($libraryRoots as $root) {
+			$root = rtrim($root, '/') ?: '/';
+			if ($root === '/') {
+				return true;
+			}
+			if ($folderPath === $root || str_starts_with($folderPath, $root . '/')) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private function applyEffectiveKindFilter(IQueryBuilder $qb, ?string $kind): void
@@ -1290,10 +1346,11 @@ class LibraryService
 		// func()->max() takes no alias parameter (unlike count()), so alias
 		// explicitly — otherwise the result column name is driver-defined and
 		// the row lookup below silently falls back to 0.
-		$qb->selectAlias($qb->func()->max('last_seen_at'), 'max_seen')
-			->addSelect($qb->func()->count('id', 'track_count'))
-			->from('ac_tracks')
-			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+		$qb->selectAlias($qb->func()->max('t.last_seen_at'), 'max_seen')
+			->addSelect($qb->func()->count('t.id', 'track_count'))
+			->from('ac_tracks', 't');
+		$this->joinLibraryForEffectiveKind($qb);
+		$qb->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)));
 		$result = $qb->executeQuery();
 		$row = $result->fetch();
 		$result->closeCursor();
@@ -1412,8 +1469,9 @@ class LibraryService
 		}
 		$qb = $this->db->getQueryBuilder();
 		$qb->select($qb->func()->count('t.id', 'c'))
-			->from('ac_tracks', 't')
-			->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
+			->from('ac_tracks', 't');
+		$this->joinLibraryForEffectiveKind($qb);
+		$qb->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)))
 			->andWhere($qb->expr()->in('t.file_id', $qb->createNamedParameter($favoriteIds, IQueryBuilder::PARAM_INT_ARRAY)));
 		$result = $qb->executeQuery();
 		$count = (int)($result->fetch()['c'] ?? 0);
@@ -1457,8 +1515,9 @@ class LibraryService
 	private function listUserTrackFileIds(string $userId): array
 	{
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('file_id')->from('ac_tracks')
-			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+		$qb->select('t.file_id')->from('ac_tracks', 't');
+		$this->joinLibraryForEffectiveKind($qb);
+		$qb->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)));
 		$result = $qb->executeQuery();
 		$ids = [];
 		while ($row = $result->fetch()) {

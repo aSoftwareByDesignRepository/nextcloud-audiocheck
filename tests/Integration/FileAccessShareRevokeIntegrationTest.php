@@ -104,12 +104,17 @@ final class FileAccessShareRevokeIntegrationTest extends TestCase
 
 		/** @var FileAccessService $access */
 		$access = \OC::$server->get(FileAccessService::class);
-		$ownerFolder = $access->getUserFolder(self::OWNER_PRUNE);
+		$ownerFolder = $access->getUserFolder(self::OWNER_PRUNE)->newFolder('SharePruneLib');
 		$path = 'audiocheck-share-prune-' . uniqid('', true) . '.mp3';
 		/** @var File $file */
 		$file = $ownerFolder->newFile($path);
 		$file->putContent($this->minimalMp3Bytes());
 		$fileId = (int)$file->getId();
+
+		/** @var \OCA\AudioCheck\Service\LibraryService $libraries */
+		$libraries = \OC::$server->get(\OCA\AudioCheck\Service\LibraryService::class);
+		$libraries->addLibrary(self::OWNER_PRUNE, null, true, \OCA\AudioCheck\Service\LibraryService::CONTENT_KIND_AUTO, '/SharePruneLib');
+		$this->seedRootLibrary(self::RECIPIENT_PRUNE);
 
 		/** @var ShareManager $shareManager */
 		$shareManager = \OC::$server->get(ShareManager::class);
@@ -151,6 +156,26 @@ final class FileAccessShareRevokeIntegrationTest extends TestCase
 			IntegrationTestUsers::create($uid, self::PASSWORD);
 			$this->users[] = $uid;
 		}
+	}
+
+	private function seedRootLibrary(string $userId): void
+	{
+		/** @var FileAccessService $access */
+		$access = \OC::$server->get(FileAccessService::class);
+		$home = $access->getUserFolder($userId);
+		$db = \OC::$server->get(\OCP\IDBConnection::class);
+		$qb = $db->getQueryBuilder();
+		$qb->insert('ac_libraries')
+			->values([
+				'user_id' => $qb->createNamedParameter($userId),
+				'folder_path' => $qb->createNamedParameter('/'),
+				'root_file_id' => $qb->createNamedParameter($home->getId(), \PDO::PARAM_INT),
+				'include_subfolders' => $qb->createNamedParameter(1, \PDO::PARAM_INT),
+				'content_kind' => $qb->createNamedParameter('auto'),
+				'enabled' => $qb->createNamedParameter(1, \PDO::PARAM_INT),
+				'created_at' => $qb->createNamedParameter(time(), \PDO::PARAM_INT),
+			]);
+		$qb->executeStatement();
 	}
 
 	private function flushMounts(): void

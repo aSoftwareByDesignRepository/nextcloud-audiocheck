@@ -90,7 +90,6 @@
 		"AudioCheck decides from file type, length, and genre.": "AudioCheck decides from file type, length, and genre.",
 		"AudioCheck indexes audio inside the folder. Subfolders are included when enabled in Settings.": "AudioCheck indexes audio inside the folder. Subfolders are included when enabled in Settings.",
 		"AudioCheck navigation": "AudioCheck navigation",
-		"AudioCheck will stop scanning this folder. Your files are not deleted.": "AudioCheck will stop scanning this folder. Your files are not deleted.",
 		"Author": "Author",
 		"Authors": "Authors",
 		"Auto-detect": "Auto-detect",
@@ -212,7 +211,6 @@
 		"Folder marked as listened.": "Folder marked as listened.",
 		"Folder marked as not listened.": "Folder marked as not listened.",
 		"Folder options": "Folder options",
-		"Folder removed.": "Folder removed.",
 		"Folder settings for {folder}": "Folder settings for {folder}",
 		"Folders": "Folders",
 		"Folders AudioCheck scans for music and audiobooks.": "Folders AudioCheck scans for music and audiobooks.",
@@ -355,7 +353,6 @@
 		"Open Library": "Open Library",
 		"Open menu": "Open menu",
 		"Open Music": "Open Music",
-		"Open Music or Audiobooks — listen to albums, playlists, and chapters.": "Open Music or Audiobooks — listen to albums, playlists, and chapters.",
 		"Open Music or Home — play albums, playlists, and audiobooks.": "Open Music or Home — play albums, playlists, and audiobooks.",
 		"Open Music, Audiobooks, or Home — play albums, playlists, and chapters.": "Open Music, Audiobooks, or Home — play albums, playlists, and chapters.",
 		"Open now playing": "Open now playing",
@@ -596,7 +593,6 @@
 		"Use the folder picker from Files integration.": "Use the folder picker from Files integration.",
 		"Used when AudioCheck starts with no saved queue. Changing speed while listening applies to the whole queue.": "Used when AudioCheck starts with no saved queue. Changing speed while listening applies to the whole queue.",
 		"Used when you start playing a new track.": "Used when you start playing a new track.",
-		"Usually plays in the browser: MP3, MP4, M4A, M4B, AAC, OGG, Opus, WAV. FLAC, WMA, and AIFF may need another app or browser.": "Usually plays in the browser: MP3, MP4, M4A, M4B, AAC, OGG, Opus, WAV. FLAC, WMA, and AIFF may need another app or browser.",
 		"Volume": "Volume",
 		"Volume controls": "Volume controls",
 		"Volume up / down": "Volume up / down",
@@ -647,7 +643,13 @@
 		"Create playlist": "Create playlist",
 		"Create a playlist to save these tracks.": "Create a playlist to save these tracks.",
 		"Name your new playlist.": "Name your new playlist.",
-		"Policy was changed elsewhere. Reload and try again.": "Policy was changed elsewhere. Reload and try again."
+		"Policy was changed elsewhere. Reload and try again.": "Policy was changed elsewhere. Reload and try again.",
+		"AudioCheck will stop using this folder in your library. Files stay in Nextcloud Files — they are only removed from AudioCheck.": "AudioCheck will stop using this folder in your library. Files stay in Nextcloud Files — they are only removed from AudioCheck.",
+		"Folder removed from your library.": "Folder removed from your library.",
+		"Browse, Music, and Audiobooks only show audio inside these folders.": "Browse, Music, and Audiobooks only show audio inside these folders.",
+		"Only folders you add appear in your library.": "Only folders you add appear in your library.",
+		"Usually plays in the browser: MP3, M4A, M4B, AAC, OGG, Opus, WAV. FLAC, WMA, and AIFF may need another app or browser.": "Usually plays in the browser: MP3, M4A, M4B, AAC, OGG, Opus, WAV. FLAC, WMA, and AIFF may need another app or browser.",
+		"Common audio types that play in most browsers.": "Common audio types that play in most browsers."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

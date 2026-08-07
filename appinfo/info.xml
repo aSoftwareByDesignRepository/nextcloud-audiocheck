@@ -97,7 +97,7 @@ Die App ist unter AGPL-3.0-or-later **kostenfrei**. Für diese Web-App ist im au
 - PHP 8.2–8.5
 - MySQL oder PostgreSQL
 	]]></description>
-	<version>1.2.16</version>
+	<version>1.2.17</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Alexander Mäule</author>
 	<namespace>AudioCheck</namespace>

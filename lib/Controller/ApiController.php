@@ -343,7 +343,7 @@ class ApiController extends Controller
 				isset($body['contentKind']) ? (string)$body['contentKind'] : LibraryService::CONTENT_KIND_AUTO,
 				$folderPath,
 			);
-			if ($result['rescanRecommended']) {
+			if (!$result['alreadyExisted'] || $result['rescanRecommended']) {
 				$this->scan->queueScan($userId);
 			}
 			return $result;
@@ -370,6 +370,8 @@ class ApiController extends Controller
 	{
 		return $this->safe(function (string $userId) use ($id): array {
 			$this->library->removeLibrary($userId, $id);
+			// Drop catalog rows that no longer belong to any enabled library.
+			$this->scan->purgeTracksOutsideLibraries($userId);
 			return [];
 		});
 	}

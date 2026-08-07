@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.2.17 - 2026-08-07
+
+### Fixed
+
+- **Browse showed audio outside Library folders** — the catalog no longer indexes or lists tracks that are not under an enabled library root (for example only `Privat/Music` and `Privat/Audiobooks`). File events outside those folders are ignored; moving audio out of a library removes it from AudioCheck (files stay in Nextcloud Files).
+- **Removing a library left stale tracks** — deleting a library folder now purges its catalog rows so Browse/Music/Audiobooks update immediately.
+- **Empty-library scan no longer walks the whole home** — with no library folders configured, scan clears the catalog instead of falling back to `/`.
+- **Folders facet invented parent paths** — Browse → Folders no longer surfaces ancestors above your configured roots (such as `/Privat` or `/`).
+
+### Changed
+
+- **Library UX copy** — clearer remove confirmation and “How it works” steps that state only added folders appear in the library.
+- **Nextcloud** — `max-version` remains **34** (current stable **34.0.2**).
+
+### Tests
+
+- Integration coverage for library scope (out-of-library writes, orphan purge, remove-library, folder facets, empty catalog).
+- Unit/contract gates and mutation gauntlet for indexing, browse joins, and remove-library purge.
+
 ## 1.2.16 - 2026-08-04
 
 ### Changed
