@@ -15,5 +15,6 @@ final class LibraryServiceFolderFacetTest extends TestCase
 		$this->assertStringContainsString('Count tracks recursively per folder prefix so counts match listTracks(folder=…).', $source);
 		$this->assertStringContainsString("while (\$current !== '.' && \$current !== '' && \$current !== 'files')", $source);
 		$this->assertStringContainsString("\$like = \$this->db->escapeLikeParameter(\$folderPath) . '/%';", $source);
+		$this->assertStringContainsString('isFolderFacetPathInScope', $source);
 	}
 }

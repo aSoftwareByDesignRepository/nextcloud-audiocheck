@@ -175,20 +175,13 @@ class ScanService
 		try {
 			$roots = $this->listLibraryRoots($userId);
 			if ($roots === []) {
-				$defaultPath = trim($this->config->getAppValue(Application::APP_ID, AccessControlService::KEY_DEFAULT_LIBRARY_FOLDER, '/'), '/');
-				$userFolder = $this->fileAccess->getFolderByRelativePath($userId, $defaultPath === '' ? '/' : '/' . $defaultPath);
-				if ($userFolder === null) {
-					$this->clearCursor($userId);
-					$this->setStatus($userId, self::STATUS_IDLE, null, $now, 0);
-					return;
-				}
-				$roots[] = [
-					'id' => 0,
-					'folder_path' => $defaultPath === '' ? '/' : '/' . $defaultPath,
-					'root_file_id' => $userFolder->getId(),
-					'include_subfolders' => $this->userWantsScanSubfolders($userId) ? 1 : 0,
-					'content_kind' => LibraryService::CONTENT_KIND_AUTO,
-				];
+				// No configured libraries ⇒ empty catalog. Never fall back to the
+				// whole user home (admin default_library_folder is a picker hint only).
+				$this->purgeTracksOutsideLibraries($userId);
+				$this->metadata->garbageCollectOrphans();
+				$this->clearCursor($userId);
+				$this->setStatus($userId, self::STATUS_IDLE, null, $now, 0);
+				return;
 			}
 
 			for ($ri = $rootIdx; $ri < count($roots); $ri++) {
@@ -248,6 +241,7 @@ class ScanService
 			}
 
 			$this->pruneByScanGeneration($userId, $scanGen);
+			$this->purgeTracksOutsideLibraries($userId);
 			$this->metadata->garbageCollectOrphans();
 			$this->clearCursor($userId);
 
@@ -274,13 +268,19 @@ class ScanService
 			return;
 		}
 		if ($node instanceof File && $this->fileAccess->isAllowedAudioFile($node)) {
-			$now = $this->timeFactory->getTime();
 			$library = $this->resolveLibraryForFile($userId, $node);
-			$libraryId = $library !== null ? (int)($library['id'] ?? 0) : null;
-			$contentKind = $library !== null
-				? (string)($library['content_kind'] ?? LibraryService::CONTENT_KIND_AUTO)
-				: LibraryService::CONTENT_KIND_AUTO;
-			$this->upsertTrack($userId, $node, $libraryId !== null && $libraryId > 0 ? $libraryId : null, $now, $now, true, $contentKind);
+			$libraryId = $library !== null ? (int)($library['id'] ?? 0) : 0;
+			if ($libraryId < 1) {
+				// Outside every enabled library (or no libraries): never index.
+				$fileId = $this->safeNodeId($node);
+				if ($fileId !== null) {
+					$this->deleteTrackForFile($userId, $fileId);
+				}
+				return;
+			}
+			$now = $this->timeFactory->getTime();
+			$contentKind = (string)($library['content_kind'] ?? LibraryService::CONTENT_KIND_AUTO);
+			$this->upsertTrack($userId, $node, $libraryId, $now, $now, true, $contentKind);
 		}
 	}
 
@@ -414,14 +414,20 @@ class ScanService
 			$stack = $batch['stack'];
 			foreach ($batch['files'] as $node) {
 				$library = $this->resolveLibraryForFile($userId, $node);
-				$libraryId = $library !== null ? (int)($library['id'] ?? 0) : null;
-				$contentKind = $library !== null
-					? (string)($library['content_kind'] ?? LibraryService::CONTENT_KIND_AUTO)
-					: LibraryService::CONTENT_KIND_AUTO;
+				$libraryId = $library !== null ? (int)($library['id'] ?? 0) : 0;
+				if ($libraryId < 1) {
+					$fileId = $this->safeNodeId($node);
+					if ($fileId !== null) {
+						$this->deleteTrackForFile($userId, $fileId);
+					}
+					$processed++;
+					continue;
+				}
+				$contentKind = (string)($library['content_kind'] ?? LibraryService::CONTENT_KIND_AUTO);
 				$this->upsertTrack(
 					$userId,
 					$node,
-					$libraryId !== null && $libraryId > 0 ? $libraryId : null,
+					$libraryId,
 					$now,
 					$now,
 					true,
@@ -484,7 +490,7 @@ class ScanService
 		$roots = $this->listLibraryRoots($userId);
 		$qb = $this->db->getQueryBuilder();
 		$like = $this->db->escapeLikeParameter($oldRel) . '/%';
-		$qb->select('id', 'rel_path', 'library_id')
+		$qb->select('id', 'file_id', 'rel_path', 'library_id')
 			->from('ac_tracks')
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
 			->andWhere($qb->expr()->orX(
@@ -500,9 +506,12 @@ class ScanService
 				? $newRel
 				: $newRel . substr($rel, strlen($oldRel));
 			$library = $this->resolveLibraryForRelPath($userId, $next, $roots);
-			$libraryId = $library !== null ? (int)($library['id'] ?? 0) : null;
-			if ($libraryId !== null && $libraryId < 1) {
-				$libraryId = null;
+			$libraryId = $library !== null ? (int)($library['id'] ?? 0) : 0;
+			if ($libraryId < 1) {
+				// Left every enabled library — drop from the catalog (files stay on disk).
+				$this->deleteTrackForFile($userId, (int)$row['file_id']);
+				$updated++;
+				continue;
 			}
 			$prevLibraryId = $row['library_id'] !== null && $row['library_id'] !== ''
 				? (int)$row['library_id']
@@ -513,10 +522,7 @@ class ScanService
 			$uq = $this->db->getQueryBuilder();
 			$uq->update('ac_tracks')
 				->set('rel_path', $uq->createNamedParameter($next))
-				->set('library_id', $uq->createNamedParameter(
-					$libraryId,
-					$libraryId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT,
-				))
+				->set('library_id', $uq->createNamedParameter($libraryId, \PDO::PARAM_INT))
 				->where($uq->expr()->eq('id', $uq->createNamedParameter((int)$row['id'], \PDO::PARAM_INT)));
 			$uq->executeStatement();
 			$updated++;
@@ -715,13 +721,19 @@ class ScanService
 	private function upsertTrack(string $userId, File $file, ?int $libraryId, int $scanGeneration, int $addedAt, bool $forceMetadata = false, string $libraryContentKind = LibraryService::CONTENT_KIND_AUTO): void
 	{
 		$resolved = $this->resolveLibraryForFile($userId, $file);
-		if ($resolved !== null) {
-			$resolvedId = (int)($resolved['id'] ?? 0);
-			if ($resolvedId > 0) {
-				$libraryId = $resolvedId;
-			}
-			$libraryContentKind = (string)($resolved['content_kind'] ?? LibraryService::CONTENT_KIND_AUTO);
+		if ($resolved === null) {
+			// Never persist out-of-library audio — callers should already skip,
+			// but harden against races and future entry points.
+			$this->deleteTrackForFile($userId, (int)$file->getId());
+			return;
 		}
+		$resolvedId = (int)($resolved['id'] ?? 0);
+		if ($resolvedId < 1) {
+			$this->deleteTrackForFile($userId, (int)$file->getId());
+			return;
+		}
+		$libraryId = $resolvedId;
+		$libraryContentKind = (string)($resolved['content_kind'] ?? LibraryService::CONTENT_KIND_AUTO);
 		$policyApplies = $libraryContentKind !== LibraryService::CONTENT_KIND_AUTO;
 		try {
 			$metaId = $this->metadata->analyzeFile($file, $forceMetadata || $policyApplies, $libraryContentKind);
@@ -734,6 +746,10 @@ class ScanService
 		if (str_starts_with($relPath, $userHome)) {
 			$relPath = substr($relPath, strlen($userHome));
 		}
+		if ($relPath === '' || ($relPath[0] ?? '') !== '/') {
+			$relPath = '/' . ltrim($relPath, '/');
+		}
+		$relPath = rtrim($relPath, '/') ?: '/';
 
 		$existing = $this->findTrack($userId, $file->getId());
 		if ($existing !== null) {
@@ -754,7 +770,7 @@ class ScanService
 					'mtime' => $qb->createNamedParameter($file->getMTime(), \PDO::PARAM_INT),
 					'size' => $qb->createNamedParameter($file->getSize(), \PDO::PARAM_INT),
 					'etag' => $qb->createNamedParameter($file->getEtag()),
-					'library_id' => $qb->createNamedParameter($libraryId, $libraryId === null || $libraryId < 1 ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
+					'library_id' => $qb->createNamedParameter($libraryId, \PDO::PARAM_INT),
 					'added_at' => $qb->createNamedParameter($addedAt, \PDO::PARAM_INT),
 					'last_seen_at' => $qb->createNamedParameter($scanGeneration, \PDO::PARAM_INT),
 				]);
@@ -805,13 +821,53 @@ class ScanService
 			$fileId = (int)$row['file_id'];
 			$stale = (int)$row['last_seen_at'] < $scanGeneration;
 			if (!$this->fileAccess->isFileAccessible($userId, $fileId) || $stale) {
-				$dq = $this->db->getQueryBuilder();
-				$dq->delete('ac_tracks')
-					->where($dq->expr()->eq('id', $dq->createNamedParameter((int)$row['id'], \PDO::PARAM_INT)));
-				$dq->executeStatement();
+				$this->deleteTrackForFile($userId, $fileId);
 			}
 		}
 		$result->closeCursor();
+	}
+
+	/**
+	 * Drop index rows that are not under an enabled library root.
+	 * Defense-in-depth after scans, library removal, and path rewrites.
+	 *
+	 * @return int Number of tracks removed
+	 */
+	public function purgeTracksOutsideLibraries(string $userId): int
+	{
+		if ($userId === '') {
+			return 0;
+		}
+		$roots = $this->listLibraryRoots($userId);
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id', 'file_id', 'rel_path', 'library_id')
+			->from('ac_tracks')
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->orderBy('id', 'ASC');
+		$result = $qb->executeQuery();
+		$removed = 0;
+		while ($row = $result->fetch()) {
+			$relPath = (string)($row['rel_path'] ?? '');
+			$resolved = $roots === [] ? null : $this->resolveLibraryForRelPath($userId, $relPath, $roots);
+			$resolvedId = $resolved !== null ? (int)($resolved['id'] ?? 0) : 0;
+			$currentId = $row['library_id'] !== null && $row['library_id'] !== ''
+				? (int)$row['library_id']
+				: 0;
+			if ($resolvedId < 1) {
+				$this->deleteTrackForFile($userId, (int)$row['file_id']);
+				$removed++;
+				continue;
+			}
+			if ($currentId !== $resolvedId) {
+				$uq = $this->db->getQueryBuilder();
+				$uq->update('ac_tracks')
+					->set('library_id', $uq->createNamedParameter($resolvedId, \PDO::PARAM_INT))
+					->where($uq->expr()->eq('id', $uq->createNamedParameter((int)$row['id'], \PDO::PARAM_INT)));
+				$uq->executeStatement();
+			}
+		}
+		$result->closeCursor();
+		return $removed;
 	}
 
 	/** @param array<string, mixed>|null $row @return array{scanGen:int,rootIdx:int,walkStack:list<array{path:string,offset:int}>} */

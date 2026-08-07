@@ -83,14 +83,20 @@ final class NodeRenameIntegrationTest extends TestCase
 		/** @var FileAccessService $access */
 		$access = \OC::$server->get(FileAccessService::class);
 		$home = $access->getUserFolder(self::USER);
+		/** @var Folder $lib */
+		$lib = $home->newFolder('AudioLib');
 		/** @var Folder $srcDir */
-		$srcDir = $home->newFolder('AudioSrc');
+		$srcDir = $lib->newFolder('AudioSrc');
 		/** @var Folder $dstDir */
-		$dstDir = $home->newFolder('AudioDst');
+		$dstDir = $lib->newFolder('AudioDst');
 		/** @var File $file */
 		$file = $srcDir->newFile('chapter.mp3');
 		$file->putContent($this->minimalMp3Bytes());
 		$fileId = (int)$file->getId();
+
+		/** @var \OCA\AudioCheck\Service\LibraryService $libraries */
+		$libraries = \OC::$server->get(\OCA\AudioCheck\Service\LibraryService::class);
+		$libraries->addLibrary(self::USER, null, true, \OCA\AudioCheck\Service\LibraryService::CONTENT_KIND_AUTO, '/AudioLib');
 
 		/** @var ScanService $scan */
 		$scan = \OC::$server->get(ScanService::class);
@@ -142,12 +148,18 @@ final class NodeRenameIntegrationTest extends TestCase
 		/** @var FileAccessService $access */
 		$access = \OC::$server->get(FileAccessService::class);
 		$home = $access->getUserFolder(self::USER);
+		/** @var Folder $lib */
+		$lib = $home->newFolder('BookLib');
 		/** @var Folder $book */
-		$book = $home->newFolder('BookOld');
+		$book = $lib->newFolder('BookOld');
 		/** @var File $file */
 		$file = $book->newFile('ch1.mp3');
 		$file->putContent($this->minimalMp3Bytes());
 		$fileId = (int)$file->getId();
+
+		/** @var \OCA\AudioCheck\Service\LibraryService $libraries */
+		$libraries = \OC::$server->get(\OCA\AudioCheck\Service\LibraryService::class);
+		$libraries->addLibrary(self::USER, null, true, \OCA\AudioCheck\Service\LibraryService::CONTENT_KIND_AUTO, '/BookLib');
 
 		/** @var ScanService $scan */
 		$scan = \OC::$server->get(ScanService::class);
@@ -157,9 +169,9 @@ final class NodeRenameIntegrationTest extends TestCase
 		$this->assertStringContainsString('BookOld', (string)$before);
 
 		$oldBookPath = $book->getPath();
-		$book->move($home->getPath() . '/BookNew');
+		$book->move($lib->getPath() . '/BookNew');
 		/** @var Folder $renamed */
-		$renamed = $home->get('BookNew');
+		$renamed = $lib->get('BookNew');
 		$this->assertInstanceOf(Folder::class, $renamed);
 
 		// Supply vacated source that still exposes the old path (NonExistingFile shape).
@@ -202,9 +214,9 @@ final class NodeRenameIntegrationTest extends TestCase
 
 		/** @var ScanService $scan */
 		$scan = \OC::$server->get(ScanService::class);
-		// Index while outside the library (library_id should be null).
+		// Index while outside the library must NOT create a catalog row.
 		$scan->handleNodeEvent(self::USER, $file, 'written');
-		$this->assertNull($this->trackLibraryId(self::USER, $fileId));
+		$this->assertFalse($this->trackExists(self::USER, $fileId));
 
 		$oldPath = $inbox->getPath();
 		$inbox->move($libraryRoot->getPath() . '/InboxAlbum');
@@ -219,6 +231,7 @@ final class NodeRenameIntegrationTest extends TestCase
 
 		$scan->handleRename(self::USER, $sourceWithPath, $moved);
 
+		$this->assertTrue($this->trackExists(self::USER, $fileId));
 		$this->assertStringContainsString('LibRoot', (string)$this->trackRelPath(self::USER, $fileId));
 		$this->assertSame($libraryId, $this->trackLibraryId(self::USER, $fileId));
 		// Must not leave reconcile for a background scan.
@@ -267,7 +280,7 @@ final class NodeRenameIntegrationTest extends TestCase
 
 		$scan->handleRename(self::USER, $sourceWithPath, $moved);
 
-		$this->assertNull($this->trackLibraryId(self::USER, $fileId));
+		$this->assertFalse($this->trackExists(self::USER, $fileId));
 		$status = $scan->getStatus(self::USER);
 		$this->assertNotSame(ScanService::STATUS_QUEUED, $status['status']);
 	}

@@ -43,6 +43,9 @@ final class LibraryNestedScanUxContractTest extends TestCase
 		$this->assertStringContainsString('Scanning starts automatically', $js);
 		$this->assertStringContainsString('Add music folder', $js);
 		$this->assertStringContainsString('Add audiobook folder', $js);
+		$this->assertStringContainsString('only show audio inside these folders', $js);
+		$this->assertStringContainsString('Only folders you add appear in your library.', $js);
+		$this->assertStringContainsString('they are only removed from AudioCheck', $js);
 	}
 
 	public function testSettingsHintNamesAuthorBookChapterPattern(): void
@@ -64,6 +67,14 @@ final class LibraryNestedScanUxContractTest extends TestCase
 				$t,
 			);
 			$this->assertArrayHasKey('Pick a folder from Files — scanning starts automatically.', $t);
+			$this->assertArrayHasKey(
+				'Browse, Music, and Audiobooks only show audio inside these folders.',
+				$t,
+			);
+			$this->assertArrayHasKey(
+				'AudioCheck will stop using this folder in your library. Files stay in Nextcloud Files — they are only removed from AudioCheck.',
+				$t,
+			);
 			$this->assertNotSame('', trim((string)$t['Folder options']));
 			$this->assertNotSame('', trim((string)$t['Include nested folders']));
 		}

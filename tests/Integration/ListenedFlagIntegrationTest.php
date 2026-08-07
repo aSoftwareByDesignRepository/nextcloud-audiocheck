@@ -170,13 +170,23 @@ final class ListenedFlagIntegrationTest extends TestCase
 	{
 		/** @var FileAccessService $access */
 		$access = \OC::$server->get(FileAccessService::class);
-		$folder = $access->getUserFolder($user);
+		$home = $access->getUserFolder($user);
+		if (!$home->nodeExists('ListenedLib')) {
+			$home->newFolder('ListenedLib');
+		}
+		/** @var \OCP\Files\Folder $folder */
+		$folder = $home->get('ListenedLib');
 		if ($folder->nodeExists($name)) {
 			$folder->get($name)->delete();
 		}
 		/** @var File $file */
 		$file = $folder->newFile($name);
 		$file->putContent($this->minimalMp3Bytes());
+
+		/** @var \OCA\AudioCheck\Service\LibraryService $libraries */
+		$libraries = \OC::$server->get(\OCA\AudioCheck\Service\LibraryService::class);
+		$libraries->addLibrary($user, null, true, \OCA\AudioCheck\Service\LibraryService::CONTENT_KIND_AUTO, '/ListenedLib');
+
 		$this->indexAudioFile($user, $file);
 
 		return (int)$file->getId();

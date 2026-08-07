@@ -39,10 +39,15 @@ final class UserDeletedPurgeIntegrationTest extends TestCase
 
 		/** @var FileAccessService $access */
 		$access = \OC::$server->get(FileAccessService::class);
+		$lib = $access->getUserFolder(self::USER)->newFolder('PurgeLib');
 		/** @var File $file */
-		$file = $access->getUserFolder(self::USER)->newFile('purge-me.mp3');
+		$file = $lib->newFile('purge-me.mp3');
 		$file->putContent($this->minimalMp3Bytes());
 		$fileId = (int)$file->getId();
+
+		/** @var \OCA\AudioCheck\Service\LibraryService $libraries */
+		$libraries = \OC::$server->get(\OCA\AudioCheck\Service\LibraryService::class);
+		$libraries->addLibrary(self::USER, null, true, \OCA\AudioCheck\Service\LibraryService::CONTENT_KIND_AUTO, '/PurgeLib');
 
 		/** @var ScanService $scan */
 		$scan = \OC::$server->get(ScanService::class);

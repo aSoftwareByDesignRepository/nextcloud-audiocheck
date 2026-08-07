@@ -90,7 +90,6 @@
 		"AudioCheck decides from file type, length, and genre.": "AudioCheck entscheidet anhand von Dateityp, Länge und Genre.",
 		"AudioCheck indexes audio inside the folder. Subfolders are included when enabled in Settings.": "AudioCheck indexiert Audio in diesem Ordner. Unterordner werden einbezogen, wenn das in den Einstellungen aktiviert ist.",
 		"AudioCheck navigation": "AudioCheck-Navigation",
-		"AudioCheck will stop scanning this folder. Your files are not deleted.": "AudioCheck scannt diesen Ordner nicht mehr. Deine Dateien werden nicht gelöscht.",
 		"Author": "Autor",
 		"Authors": "Autoren",
 		"Auto-detect": "Automatisch erkennen",
@@ -212,7 +211,6 @@
 		"Folder marked as listened.": "Ordner als gehoert markiert.",
 		"Folder marked as not listened.": "Ordner als nicht gehoert markiert.",
 		"Folder options": "Ordneroptionen",
-		"Folder removed.": "Ordner entfernt.",
 		"Folder settings for {folder}": "Ordner-Einstellungen für {folder}",
 		"Folders": "Ordner",
 		"Folders AudioCheck scans for music and audiobooks.": "Ordner, die AudioCheck nach Musik und Hörbüchern durchsucht.",
@@ -355,7 +353,6 @@
 		"Open Library": "Bibliothek öffnen",
 		"Open menu": "Menü öffnen",
 		"Open Music": "Musik öffnen",
-		"Open Music or Audiobooks — listen to albums, playlists, and chapters.": "Musik oder Hörbücher öffnen — Alben, Playlists und Kapitel anhören.",
 		"Open Music or Home — play albums, playlists, and audiobooks.": "Musik oder Start öffnen — Alben, Playlists und Hörbücher abspielen.",
 		"Open Music, Audiobooks, or Home — play albums, playlists, and chapters.": "Musik, Hörbücher oder Start öffnen — Alben, Playlists und Kapitel abspielen.",
 		"Open now playing": "Aktuelle Wiedergabe öffnen",
@@ -596,7 +593,6 @@
 		"Use the folder picker from Files integration.": "Verwende die Ordnerauswahl aus der Dateien-Integration.",
 		"Used when AudioCheck starts with no saved queue. Changing speed while listening applies to the whole queue.": "Wird verwendet, wenn AudioCheck ohne gespeicherte Warteschlange startet. Eine Änderung der Geschwindigkeit beim Hören gilt für die ganze Warteschlange.",
 		"Used when you start playing a new track.": "Wird verwendet, wenn du einen neuen Titel startest.",
-		"Usually plays in the browser: MP3, MP4, M4A, M4B, AAC, OGG, Opus, WAV. FLAC, WMA, and AIFF may need another app or browser.": "Spielt im Browser meist: MP3, MP4, M4A, M4B, AAC, OGG, Opus, WAV. FLAC, WMA und AIFF benötigen ggf. eine andere App oder einen anderen Browser.",
 		"Volume": "Lautstärke",
 		"Volume controls": "Lautstärkeregelung",
 		"Volume up / down": "Lauter / leiser",
@@ -647,7 +643,13 @@
 		"Create playlist": "Playlist erstellen",
 		"Create a playlist to save these tracks.": "Erstelle eine Playlist, um diese Titel zu speichern.",
 		"Name your new playlist.": "Benenne deine neue Playlist.",
-		"Policy was changed elsewhere. Reload and try again.": "Die Richtlinie wurde woanders geändert. Neu laden und erneut versuchen."
+		"Policy was changed elsewhere. Reload and try again.": "Die Richtlinie wurde woanders geändert. Neu laden und erneut versuchen.",
+		"AudioCheck will stop using this folder in your library. Files stay in Nextcloud Files — they are only removed from AudioCheck.": "AudioCheck verwendet diesen Ordner nicht mehr in deiner Bibliothek. Dateien bleiben in Nextcloud Dateien — sie werden nur aus AudioCheck entfernt.",
+		"Folder removed from your library.": "Ordner aus deiner Bibliothek entfernt.",
+		"Browse, Music, and Audiobooks only show audio inside these folders.": "Durchsuchen, Musik und Hörbücher zeigen nur Audio in diesen Ordnern.",
+		"Only folders you add appear in your library.": "Nur Ordner, die du hinzufügst, erscheinen in deiner Bibliothek.",
+		"Usually plays in the browser: MP3, M4A, M4B, AAC, OGG, Opus, WAV. FLAC, WMA, and AIFF may need another app or browser.": "Spielt im Browser meist: MP3, M4A, M4B, AAC, OGG, Opus, WAV. FLAC, WMA und AIFF benötigen ggf. eine andere App oder einen anderen Browser.",
+		"Common audio types that play in most browsers.": "Übliche Audioformate, die in den meisten Browsern abspielen."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

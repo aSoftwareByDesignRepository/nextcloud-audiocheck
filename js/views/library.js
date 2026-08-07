@@ -532,12 +532,12 @@
 					onClick: () => {
 						C.confirmDialog({
 							title: t('audiocheck', 'Remove folder?'),
-							message: t('audiocheck', 'AudioCheck will stop scanning this folder. Your files are not deleted.'),
+							message: t('audiocheck', 'AudioCheck will stop using this folder in your library. Files stay in Nextcloud Files — they are only removed from AudioCheck.'),
 							confirmLabel: t('audiocheck', 'Remove'),
 							danger: true,
 							onConfirm: async () => {
 								await AudioCheckApi.del('/apps/audiocheck/api/libraries/{id}', null, { params: { id: lib.id } });
-								AudioCheckMessaging.toast(t('audiocheck', 'Folder removed.'));
+								AudioCheckMessaging.toast(t('audiocheck', 'Folder removed from your library.'));
 								refresh();
 							},
 						});
@@ -743,7 +743,7 @@
 			[
 				t('audiocheck', 'Add music folder or Add audiobook folder — pick the matching folder in Files.'),
 				t('audiocheck', 'Scanning starts automatically. Use Scan now if you add files later.'),
-				t('audiocheck', 'Open Music or Audiobooks — listen to albums, playlists, and chapters.'),
+				t('audiocheck', 'Browse, Music, and Audiobooks only show audio inside these folders.'),
 			].forEach((text) => steps.appendChild(C.el('li', { text })));
 			howBody.appendChild(steps);
 			howBody.appendChild(C.el('p', {
@@ -753,7 +753,7 @@
 			}));
 			body.appendChild(C.collapsibleSectionCard(
 				t('audiocheck', 'How it works'),
-				t('audiocheck', 'Add folders, scan, then open Music or Audiobooks.'),
+				t('audiocheck', 'Only folders you add appear in your library.'),
 				howBody,
 				'ac-library-how-heading',
 			));
