@@ -60,5 +60,29 @@ final class SettingsPagesContractTest extends TestCase
 		$nav = (string) file_get_contents($this->root . '/templates/common/navigation.php');
 		self::assertStringContainsString('children', $nav);
 		self::assertStringContainsString('ac-nav__children', $nav);
+		self::assertStringContainsString('is-expanded', $nav);
+		self::assertStringContainsString('aria-expanded', $nav);
+		self::assertStringContainsString("empty(\$item['expanded'])", $nav);
+		self::assertMatchesRegularExpression(
+			'/class="ac-nav__children"[\s\S]*?empty\(\$item\[\'expanded\'\]\)[\s\S]*?hidden/s',
+			$nav,
+		);
+	}
+
+	public function testAppSettingsNavExpandsOnlyWhenActive(): void
+	{
+		$php = (string) file_get_contents($this->root . '/lib/Controller/PageController.php');
+		self::assertMatchesRegularExpression(
+			"/\\\$mapped\\['expanded'\\]\\s*=\\s*\\\$activeView\\s*===\\s*'app-settings'/s",
+			$php,
+		);
+		$js = (string) file_get_contents($this->root . '/js/common/router.js');
+		self::assertStringContainsString('syncAppSettingsNavExpansion', $js);
+		self::assertStringContainsString("syncAppSettingsNavExpansion(li, viewId === 'app-settings')", $js);
+		self::assertDoesNotMatchRegularExpression(
+			"/is-expanded['\"],\\s*true\\)/s",
+			$js,
+			'Must not force App settings permanently expanded.',
+		);
 	}
 }

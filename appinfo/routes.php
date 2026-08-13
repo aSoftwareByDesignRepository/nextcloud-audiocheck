@@ -14,6 +14,7 @@ return [
 		['name' => 'page#nowPlaying', 'url' => '/now-playing', 'verb' => 'GET'],
 		['name' => 'page#library', 'url' => '/library', 'verb' => 'GET'],
 		['name' => 'page#settings', 'url' => '/settings', 'verb' => 'GET'],
+		['name' => 'page#getTheApp', 'url' => '/get-the-app', 'verb' => 'GET'],
 		['name' => 'page#appSettingsIndex', 'url' => '/app-settings', 'verb' => 'GET'],
 		[
 			'name' => 'page#appSettings',

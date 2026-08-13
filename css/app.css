@@ -433,6 +433,15 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	flex-direction: column;
 	gap: var(--ac-space-1);
 }
+/*
+ * Author `display: flex` beats the UA `[hidden] { display: none }` rule.
+ * Nav children live under #app-navigation — NOT #app-content — so the override
+ * must be scoped here. Collapse unless the parent carries .is-expanded (SSR + SPA).
+ */
+#app-navigation.ac-nav .ac-nav__children[hidden],
+#app-navigation.ac-nav .ac-nav__item--has-children:not(.is-expanded) > .ac-nav__children {
+	display: none !important;
+}
 .ac-nav__link--child {
 	min-height: var(--ac-touch, 44px);
 	padding-inline-start: var(--ac-space-3);

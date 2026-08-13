@@ -8,6 +8,7 @@ use OCA\AudioCheck\AppInfo\Application;
 use OCA\AudioCheck\Service\AccessControlService;
 use OCA\AudioCheck\Service\PlaybackStateService;
 use OCA\AudioCheck\Service\SettingsSectionCatalog;
+use OCA\AudioCheck\Support\MobileAppLinks;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
@@ -32,6 +33,7 @@ class PageController extends Controller
 		private IL10N $l10n,
 		private IConfig $config,
 		private SettingsSectionCatalog $settingsSections,
+		private MobileAppLinks $mobileAppLinks,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -104,6 +106,17 @@ class PageController extends Controller
 	public function settings(): TemplateResponse
 	{
 		return $this->shell('settings', $this->l10n->t('Settings'), $this->l10n->t('Personal playback and scan preferences.'));
+	}
+
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function getTheApp(): TemplateResponse
+	{
+		return $this->shell(
+			'get-the-app',
+			$this->l10n->t('Get the App'),
+			$this->l10n->t('Official Android app — features and Google Play download.'),
+		);
 	}
 
 	#[NoAdminRequired]
@@ -215,6 +228,7 @@ class PageController extends Controller
 			'views/now-playing',
 			'views/library',
 			'views/settings',
+			'views/get-the-app',
 			'common/support-us',
 			'views/app-settings',
 			'app',
@@ -240,6 +254,7 @@ class PageController extends Controller
 		];
 		$account = [
 			['id' => 'settings', 'label' => $this->l10n->t('Settings'), 'hint' => $this->l10n->t('Playback and scan preferences'), 'route' => 'audiocheck.page.settings', 'icon' => 'settings'],
+			['id' => 'get-the-app', 'label' => $this->l10n->t('Get the App'), 'hint' => $this->l10n->t('Android app on Google Play'), 'route' => 'audiocheck.page.getTheApp', 'icon' => 'smartphone'],
 		];
 		if ($this->access->isAppAdmin($userId)) {
 			$settingsChildren = [];
@@ -329,6 +344,7 @@ class PageController extends Controller
 			'now-playing' => ['title' => $this->l10n->t('Now playing'), 'help' => $this->l10n->t('Full player, queue, and chapters.'), 'icon' => 'play'],
 			'library' => ['title' => $this->l10n->t('Library'), 'help' => $this->l10n->t('Choose folders to scan, then index your audio.'), 'icon' => 'folder'],
 			'settings' => ['title' => $this->l10n->t('Settings'), 'help' => $this->l10n->t('Personal playback and scan preferences.'), 'icon' => 'settings'],
+			'get-the-app' => ['title' => $this->l10n->t('Get the App'), 'help' => $this->l10n->t('Official Android app — features and Google Play download.'), 'icon' => 'smartphone'],
 			'app-settings' => ['title' => $this->l10n->t('App settings'), 'help' => $this->l10n->t('Access policy and defaults for AudioCheck.'), 'icon' => 'admin-settings'],
 		];
 		foreach (SettingsSectionCatalog::SECTIONS as $sectionId) {
@@ -351,6 +367,7 @@ class PageController extends Controller
 				['section' => $sectionId],
 			);
 		}
+		$lang = $this->l10n->getLanguageCode();
 		return [
 			'home' => $this->urlGenerator->linkToRoute('audiocheck.page.index'),
 			'appSettings' => $this->urlGenerator->linkToRoute(
@@ -358,6 +375,10 @@ class PageController extends Controller
 				['section' => SettingsSectionCatalog::DEFAULT_SECTION],
 			),
 			'settingsSections' => $settingsSections,
+			'getTheApp' => $this->urlGenerator->linkToRoute('audiocheck.page.getTheApp'),
+			'playStore' => $this->mobileAppLinks->playStoreUrl(),
+			'mobileProductPage' => $this->mobileAppLinks->productPageUrl($lang),
+			'mobilePrivacyPage' => $this->mobileAppLinks->privacyPageUrl($lang),
 			'apiTracks' => $this->urlGenerator->linkToRoute('audiocheck.api.listTracks'),
 			'apiCollections' => $this->urlGenerator->linkToRoute('audiocheck.api.listCollections'),
 			'apiProgress' => $this->urlGenerator->linkToRoute('audiocheck.api.getProgress'),

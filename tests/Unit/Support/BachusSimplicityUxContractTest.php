@@ -32,12 +32,16 @@ final class BachusSimplicityUxContractTest extends TestCase {
 	public function testAppSettingsUsesAccessModeOpenRestricted(): void {
 		$js = (string) file_get_contents($this->root . '/js/views/app-settings.js');
 		$this->assertStringContainsString('ac-access-mode', $js);
+		$this->assertStringContainsString('ac-access-mode__copy', $js);
+		$this->assertStringContainsString('ac-access-mode__name', $js);
+		$this->assertStringContainsString('ac-access-mode__hint', $js);
 		$this->assertStringContainsString("t('audiocheck', 'Open')", $js);
 		$this->assertStringContainsString("t('audiocheck', 'Restricted')", $js);
 		$this->assertStringContainsString('data-ac-access-allowlists', $js);
 		$this->assertStringContainsString('syncAccessModeUi', $js);
 		$this->assertStringContainsString("t('audiocheck', 'Save access')", $js);
 		$this->assertStringNotContainsString("t('audiocheck', 'Restrict who may open the app')", $js);
+		$this->assertStringNotContainsString('ac-access-mode__label', $js);
 	}
 
 	public function testAppSettingsHasInPageSectionChips(): void {

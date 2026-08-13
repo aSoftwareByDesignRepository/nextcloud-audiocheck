@@ -23,6 +23,7 @@ $headerIcons = [
 	'now-playing' => 'play',
 	'library' => 'folder',
 	'settings' => 'settings',
+	'get-the-app' => 'smartphone',
 	'app-settings' => 'admin-settings',
 ];
 $headerIcon = $headerIcons[$pageId] ?? 'home';

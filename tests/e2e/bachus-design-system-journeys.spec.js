@@ -78,6 +78,13 @@ test.describe('Bachus design-system journeys', () => {
 	test('app-settings multipage: access mode, scoped save, section URLs', async ({ page }) => {
 		await gotoApp(page, '/apps/audiocheck/app-settings');
 		await expect(page).toHaveURL(/\/apps\/audiocheck\/app-settings\/access\/?$/);
+		const settingsParent = page.locator('[data-ac-nav-id="app-settings"]');
+		const settingsChildren = settingsParent.locator(':scope > .ac-nav__children');
+		await expect(settingsParent).toHaveClass(/is-expanded/);
+		await expect(settingsParent.locator(':scope > .ac-nav__link')).toHaveAttribute('aria-expanded', 'true');
+		await expect(settingsChildren).toBeVisible();
+		await expect(settingsChildren).not.toHaveAttribute('hidden', '');
+
 		await expect(page.locator('.ac-settings-chips')).toBeVisible({ timeout: 30000 });
 		await expect(page.locator('.ac-access-mode')).toBeVisible();
 		await expect(page.locator('button', { hasText: /Save access|Zugriff speichern/i })).toBeVisible();
@@ -98,11 +105,26 @@ test.describe('Bachus design-system journeys', () => {
 		await expect(page.locator('#ac-settings-admins')).toBeVisible();
 		await expect(page.locator('#ac-settings-access')).toHaveCount(0);
 		await expect(page.locator('button', { hasText: /Save admins|Admins speichern|Administratoren speichern/i })).toBeVisible();
+		await expect(settingsParent).toHaveClass(/is-expanded/);
 
 		await page.locator('[data-ac-settings-chip="support"]').click();
 		await expect(page).toHaveURL(/\/apps\/audiocheck\/app-settings\/support\/?$/);
 		await expect(page.locator('#ac-settings-support')).toBeVisible();
 		await expect(page.locator('[data-ac-settings-savebar]')).toHaveCount(0);
+	});
+
+	test('app-settings nav children collapse when leaving settings', async ({ page }) => {
+		await gotoApp(page, '/apps/audiocheck/app-settings/access');
+		const settingsParent = page.locator('[data-ac-nav-id="app-settings"]');
+		const settingsChildren = settingsParent.locator(':scope > .ac-nav__children');
+		await expect(settingsParent).toHaveClass(/is-expanded/);
+		await expect(settingsChildren).toBeVisible();
+
+		await page.locator('[data-ac-nav-id="home"] > .ac-nav__link').click();
+		await expect(page).toHaveURL(/\/apps\/audiocheck\/?$/);
+		await expect(settingsParent).not.toHaveClass(/is-expanded/);
+		await expect(settingsParent.locator(':scope > .ac-nav__link')).toHaveAttribute('aria-expanded', 'false');
+		await expect(settingsChildren).toBeHidden();
 	});
 
 	test('now-playing advanced options stay behind disclosure', async ({ page }) => {
@@ -190,6 +212,45 @@ test.describe('Bachus design-system journeys', () => {
 		}
 	});
 
+	test('get-the-app: features are not links; play and actions are unmistakable buttons', async ({ page }) => {
+		await gotoApp(page, '/apps/audiocheck/get-the-app');
+		await expect(page.locator('.ac-get-app__play')).toBeVisible({ timeout: 30000 });
+		await expect(page.locator('.ac-get-app__feature')).toHaveCount(5);
+		const featureTags = await page.locator('.ac-get-app__feature').evaluateAll((nodes) => nodes.map((n) => n.tagName));
+		expect(featureTags.every((t) => t === 'LI')).toBeTruthy();
+		await expect(page.locator('a.ac-get-app__feature')).toHaveCount(0);
+		await expect(page.locator('a.ac-get-app__play')).toHaveCount(1);
+		const playBox = await page.locator('a.ac-get-app__play').boundingBox();
+		expect(playBox).not.toBeNull();
+		expect(playBox.height).toBeGreaterThanOrEqual(44);
+
+		const actionCount = await page.locator('a.ac-get-app__action').count();
+		expect(actionCount).toBeGreaterThanOrEqual(1);
+		const actionStyles = await page.locator('a.ac-get-app__action').first().evaluate((el) => {
+			const s = window.getComputedStyle(el);
+			return {
+				cursor: s.cursor,
+				borderWidth: s.borderTopWidth,
+				background: s.backgroundColor,
+			};
+		});
+		expect(actionStyles.cursor).toBe('pointer');
+		expect(Number.parseFloat(actionStyles.borderWidth)).toBeGreaterThanOrEqual(2);
+
+		const featureStyles = await page.locator('.ac-get-app__feature').first().evaluate((el) => {
+			const s = window.getComputedStyle(el);
+			return { cursor: s.cursor, borderRadius: s.borderRadius };
+		});
+		expect(featureStyles.cursor).toBe('default');
+
+		const results = await new AxeBuilder({ page })
+			.withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+			.disableRules(['color-contrast'])
+			.analyze();
+		const blockers = results.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious');
+		expect(blockers, JSON.stringify(blockers.map((v) => v.id))).toEqual([]);
+	});
+
 	test('axe serious/critical = 0 on primary Bachus routes', async ({ page }) => {
 		const routes = [
 			'/apps/audiocheck/',
@@ -197,6 +258,7 @@ test.describe('Bachus design-system journeys', () => {
 			'/apps/audiocheck/settings',
 			'/apps/audiocheck/app-settings/access',
 			'/apps/audiocheck/app-settings/support',
+			'/apps/audiocheck/get-the-app',
 			'/apps/audiocheck/now-playing',
 		];
 		for (const route of routes) {

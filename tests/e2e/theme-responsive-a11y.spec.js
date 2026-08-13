@@ -21,6 +21,7 @@ const a11yRoutes = [
 	'/apps/audiocheck/now-playing',
 	'/apps/audiocheck/library',
 	'/apps/audiocheck/settings',
+	'/apps/audiocheck/get-the-app',
 	'/apps/audiocheck/app-settings/access',
 	'/apps/audiocheck/app-settings/admins',
 	'/apps/audiocheck/app-settings/defaults',

@@ -202,6 +202,11 @@
 	border-radius: var(--ac-radius-md);
 	background: var(--ac-bg-card);
 	cursor: pointer;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#app-content.ac-app .ac-access-mode__option:hover {
+	border-color: color-mix(in srgb, var(--color-primary-element) 40%, var(--ac-border));
 }
 
 #app-content.ac-app .ac-access-mode__option:has(input:checked) {
@@ -210,28 +215,45 @@
 	box-shadow: inset 4px 0 0 var(--color-primary-element);
 }
 
-#app-content.ac-app .ac-access-mode__option input {
-	margin-top: 0.2rem;
+#app-content.ac-app .ac-access-mode__option:has(input:focus-visible) {
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 2px;
+}
+
+#app-content.ac-app .ac-access-mode__option input,
+#app-content.ac-app .ac-access-mode__input {
+	margin-top: 0.15rem;
 	accent-color: var(--color-primary-element);
 	width: 1.25rem;
 	height: 1.25rem;
 	flex-shrink: 0;
 }
 
-#app-content.ac-app .ac-access-mode__label {
+/*
+ * Markup uses .ac-access-mode__copy (not __label). Stack title above hint —
+ * otherwise inline spans smash into "OpenEveryone…".
+ */
+#app-content.ac-app .ac-access-mode__copy {
 	display: flex;
 	flex-direction: column;
+	align-items: flex-start;
 	gap: var(--ac-space-1);
 	min-width: 0;
+	flex: 1 1 auto;
 }
 
 #app-content.ac-app .ac-access-mode__name {
+	display: block;
 	font-weight: 600;
+	font-size: var(--ac-fs-base, 1rem);
+	line-height: var(--ac-line-tight, 1.25);
 	color: var(--ac-text);
 }
 
 #app-content.ac-app .ac-access-mode__hint {
+	display: block;
 	font-size: var(--ac-fs-sm);
+	font-weight: 400;
 	/* Prefer maxcontrast on card surfaces — tinted fills fail AA for muted ink */
 	color: var(--color-text-maxcontrast, var(--ac-muted));
 	max-width: 60ch;
@@ -252,8 +274,7 @@
 
 #app-content.ac-app .ac-entity-picker__suggest[hidden],
 #app-content.ac-app #ac-chapters-section[hidden],
-#app-content.ac-app .ac-sleep-timer-banner[hidden],
-#app-content.ac-app .ac-nav__children[hidden] {
+#app-content.ac-app .ac-sleep-timer-banner[hidden] {
 	display: none !important;
 }
 
@@ -311,6 +332,296 @@
 	color: var(--ac-danger-ink);
 }
 
+/* ── Get the App (official mobile companion) ─────────────────── */
+#app-content.ac-app .ac-get-app-page {
+	max-width: 44rem;
+	gap: var(--ac-space-6, 1.5rem);
+}
+
+#app-content.ac-app .ac-get-app__hero {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--ac-space-3);
+	padding: var(--ac-space-5) var(--ac-space-5);
+	border: 1px solid var(--ac-border);
+	border-radius: var(--ac-radius-lg, 12px);
+	background:
+		linear-gradient(
+			165deg,
+			color-mix(in srgb, var(--color-primary-element) 14%, var(--color-main-background)) 0%,
+			var(--color-main-background) 58%
+		);
+	box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-main-background) 55%, transparent);
+}
+
+#app-content.ac-app .ac-get-app__icon-well {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	color: var(--color-primary-element);
+}
+
+#app-content.ac-app .ac-get-app__icon-well .ac-icon {
+	display: block;
+	width: 1.35rem;
+	height: 1.35rem;
+}
+
+#app-content.ac-app .ac-get-app__eyebrow {
+	margin: 0;
+	font-size: var(--ac-fs-sm);
+	font-weight: 650;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: var(--color-primary-element);
+}
+
+#app-content.ac-app .ac-get-app__title {
+	margin: 0;
+	font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+	font-weight: 750;
+	line-height: var(--ac-line-tight, 1.2);
+	color: var(--ac-text);
+}
+
+#app-content.ac-app .ac-get-app__lead {
+	margin: 0;
+	max-width: 52ch;
+	font-size: var(--ac-fs-base, 1rem);
+	line-height: var(--ac-line-base);
+	color: var(--color-text-maxcontrast, var(--ac-muted));
+}
+
+#app-content.ac-app .ac-get-app__cta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ac-space-3);
+	width: 100%;
+	margin-top: var(--ac-space-2);
+}
+
+#app-content.ac-app .ac-get-app__play {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--ac-space-2);
+	min-height: var(--ac-touch-lg, 48px);
+	padding: var(--ac-space-2) var(--ac-space-5);
+	border-radius: var(--ac-radius-md, 10px);
+	border: 1px solid var(--color-primary-element);
+	background: var(--color-primary-element);
+	color: var(--color-primary-element-text);
+	font-weight: 700;
+	font-size: var(--ac-fs-base, 1rem);
+	text-decoration: none;
+	cursor: pointer;
+	box-shadow: 0 1px 2px color-mix(in srgb, var(--color-primary-element) 35%, transparent);
+	transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+#app-content.ac-app .ac-get-app__play:hover {
+	background: var(--color-primary-element-hover, var(--color-primary-element));
+	border-color: var(--color-primary-element-hover, var(--color-primary-element));
+	color: var(--color-primary-element-text);
+}
+
+#app-content.ac-app .ac-get-app__play:focus-visible {
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 3px;
+}
+
+#app-content.ac-app .ac-get-app__play-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	width: 1.5rem;
+	height: 1.5rem;
+	color: var(--color-primary-element-text);
+	background: transparent;
+}
+
+/* Beat the global `#app-content.ac-app .ac-icon { color: main-text }` rule. */
+#app-content.ac-app .ac-get-app__play .ac-icon,
+#app-content.ac-app .ac-get-app__play-icon .ac-icon {
+	display: block;
+	width: 1.35rem;
+	height: 1.35rem;
+	color: var(--color-primary-element-text);
+	stroke: currentColor;
+	stroke-width: 2.25;
+}
+
+#app-content.ac-app .ac-get-app__secondary {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--ac-space-2);
+	min-height: var(--ac-touch, 44px);
+	padding: var(--ac-space-2) var(--ac-space-4);
+	border: 2px solid var(--color-primary-element);
+	border-radius: var(--ac-radius-md, 10px);
+	background: transparent;
+	color: var(--color-primary-element);
+	font-weight: 700;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+#app-content.ac-app .ac-get-app__secondary:hover {
+	background: color-mix(in srgb, var(--color-primary-element) 10%, var(--color-main-background));
+}
+
+#app-content.ac-app .ac-get-app__secondary:focus-visible {
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 3px;
+}
+
+#app-content.ac-app .ac-get-app__price-hint {
+	flex: 1 1 100%;
+	margin: 0;
+	max-width: 56ch;
+	font-size: var(--ac-fs-sm);
+	line-height: var(--ac-line-base);
+	color: var(--color-text-maxcontrast, var(--ac-muted));
+}
+
+#app-content.ac-app .ac-get-app__section-title {
+	margin: 0 0 var(--ac-space-4);
+	font-size: var(--ac-fs-lg, 1.125rem);
+	font-weight: 700;
+	line-height: var(--ac-line-tight, 1.25);
+	color: var(--ac-text);
+}
+
+#app-content.ac-app .ac-get-app__features {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	border-top: 1px solid var(--ac-border);
+}
+
+#app-content.ac-app .ac-get-app__feature {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--ac-space-3);
+	margin: 0;
+	padding: var(--ac-space-3) 0;
+	border: 0;
+	border-bottom: 1px solid var(--ac-border);
+	border-radius: 0;
+	background: transparent;
+	cursor: default;
+	user-select: text;
+}
+
+#app-content.ac-app .ac-get-app__feature-copy {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--ac-space-1);
+	min-width: 0;
+}
+
+#app-content.ac-app .ac-get-app__feature-title {
+	display: block;
+	font-weight: 650;
+	font-size: var(--ac-fs-base, 1rem);
+	color: var(--ac-text);
+	line-height: var(--ac-line-tight, 1.25);
+}
+
+#app-content.ac-app .ac-get-app__feature-hint {
+	display: block;
+	font-size: var(--ac-fs-sm);
+	font-weight: 400;
+	color: var(--color-text-maxcontrast, var(--ac-muted));
+	max-width: 42ch;
+	line-height: var(--ac-line-base);
+}
+
+#app-content.ac-app .ac-get-app__icon-well--feature {
+	width: 2.25rem;
+	height: 2.25rem;
+	margin-top: 0.05rem;
+	border-radius: var(--ac-radius-sm, 8px);
+	color: var(--color-main-text);
+	background: color-mix(in srgb, var(--color-main-text) 10%, var(--color-main-background));
+	border: 1px solid color-mix(in srgb, var(--color-main-text) 18%, var(--ac-border));
+}
+
+#app-content.ac-app .ac-get-app__icon-well--feature .ac-icon {
+	width: 1.2rem;
+	height: 1.2rem;
+	stroke-width: 2.25;
+}
+
+#app-content.ac-app .ac-get-app__actions {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ac-space-3);
+	width: 100%;
+	max-width: 28rem;
+}
+
+#app-content.ac-app .ac-get-app__action {
+	display: inline-flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ac-space-3);
+	width: 100%;
+	min-height: var(--ac-touch-lg, 48px);
+	padding: var(--ac-space-3) var(--ac-space-4);
+	border: 2px solid var(--color-primary-element);
+	border-radius: var(--ac-radius-md, 10px);
+	background: transparent;
+	color: var(--color-primary-element);
+	font-weight: 700;
+	font-size: var(--ac-fs-base, 1rem);
+	line-height: var(--ac-line-tight, 1.25);
+	text-decoration: none;
+	cursor: pointer;
+	box-shadow: none;
+	transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+#app-content.ac-app .ac-get-app__action:hover {
+	background: var(--color-primary-element);
+	color: var(--color-primary-element-text);
+	border-color: var(--color-primary-element);
+}
+
+#app-content.ac-app .ac-get-app__action:focus-visible {
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 3px;
+}
+
+#app-content.ac-app .ac-get-app__action-label {
+	flex: 1 1 auto;
+	min-width: 0;
+	text-align: start;
+}
+
+#app-content.ac-app .ac-get-app__action-external {
+	flex: 0 0 auto;
+	font-size: 1.1em;
+	line-height: 1;
+	opacity: 0.9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#app-content.ac-app .ac-get-app__action,
+	#app-content.ac-app .ac-get-app__play {
+		transition: none;
+	}
+}
+
 @media (max-width: 768px) {
 	#app-content.ac-app .ac-settings-chips {
 		flex-direction: column;
@@ -322,7 +633,17 @@
 	}
 
 	#app-content.ac-app .ac-form-actions .ac-btn--primary,
-	#app-content.ac-app .ac-empty .ac-btn--primary {
+	#app-content.ac-app .ac-empty .ac-btn--primary,
+	#app-content.ac-app .ac-get-app__play {
 		width: 100%;
+	}
+
+	#app-content.ac-app .ac-get-app__hero {
+		padding: var(--ac-space-4);
+	}
+
+	#app-content.ac-app .ac-get-app__action {
+		width: 100%;
+		max-width: none;
 	}
 }

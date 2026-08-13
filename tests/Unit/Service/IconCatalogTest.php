@@ -19,7 +19,7 @@ final class IconCatalogTest extends TestCase
 
 	public function testTransportIconsExist(): void
 	{
-		foreach (['previous', 'next', 'pause', 'volume-high', 'volume-mute', 'rotate-ccw', 'rotate-cw'] as $name) {
+		foreach (['previous', 'next', 'pause', 'volume-high', 'volume-mute', 'rotate-ccw', 'rotate-cw', 'smartphone'] as $name) {
 			$svg = IconCatalog::render($name);
 			$this->assertStringContainsString('class="ac-icon"', $svg, $name);
 			$this->assertStringContainsString('stroke="currentColor"', $svg, $name);

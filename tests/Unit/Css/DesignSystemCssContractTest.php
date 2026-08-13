@@ -156,6 +156,46 @@ final class DesignSystemCssContractTest extends TestCase {
 		);
 	}
 
+	public function testNavChildrenHiddenBeatsAuthorDisplayFlex(): void {
+		// Regression: display:flex on .ac-nav__children overrode UA [hidden], so App
+		// settings submenu stayed permanently expanded. Override must target #app-navigation.
+		self::assertMatchesRegularExpression(
+			'/#app-navigation\.ac-nav\s+\.ac-nav__children\[hidden\][^{]*\{[^}]*display:\s*none\s*!important/s',
+			$this->appCss,
+		);
+		self::assertMatchesRegularExpression(
+			'/#app-navigation\.ac-nav\s+\.ac-nav__item--has-children:not\(\.is-expanded\)\s*>\s*\.ac-nav__children[^{]*\{[^}]*display:\s*none\s*!important/s',
+			$this->appCss,
+		);
+		self::assertDoesNotMatchRegularExpression(
+			'/#app-content\.ac-app\s+\.ac-nav__children\[hidden\]/s',
+			$this->patternsCss,
+			'Nav children live outside #app-content — a content-scoped override never matches.',
+		);
+	}
+
+	public function testAccessModeCopyStacksNameAboveHint(): void {
+		// Regression: CSS styled .ac-access-mode__label while JS emitted __copy,
+		// so title+hint smashed into "OpenEveryone…".
+		self::assertMatchesRegularExpression(
+			'/\.ac-access-mode__copy[^{]*\{[^}]*display:\s*flex[^}]*flex-direction:\s*column/s',
+			$this->patternsCss,
+		);
+		self::assertMatchesRegularExpression(
+			'/\.ac-access-mode__name[^{]*\{[^}]*display:\s*block/s',
+			$this->patternsCss,
+		);
+		self::assertMatchesRegularExpression(
+			'/\.ac-access-mode__hint[^{]*\{[^}]*display:\s*block/s',
+			$this->patternsCss,
+		);
+		self::assertStringNotContainsString('.ac-access-mode__label', $this->patternsCss);
+		$js = (string) file_get_contents(dirname(__DIR__, 3) . '/js/views/app-settings.js');
+		self::assertStringContainsString("class: 'ac-access-mode__copy'", $js);
+		self::assertStringContainsString("class: 'ac-access-mode__name'", $js);
+		self::assertStringContainsString("class: 'ac-access-mode__hint'", $js);
+	}
+
 	public function testPageHeaderUsesAzcIconWellGeometry(): void {
 		self::assertMatchesRegularExpression(
 			'/\.ac-page-header__icon[^{]*\{[^}]*width:\s*56px/s',

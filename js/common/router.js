@@ -14,6 +14,7 @@
 		'now-playing': { path: '/now-playing', view: 'now-playing' },
 		library: { path: '/library', view: 'library' },
 		settings: { path: '/settings', view: 'settings' },
+		'get-the-app': { path: '/get-the-app', view: 'get-the-app' },
 		'app-settings': { path: new RegExp('^/app-settings(?:/(' + SETTINGS_SECTION_RE + '))?/?$'), view: 'app-settings' },
 	};
 
@@ -88,6 +89,25 @@
 		shell.classList.toggle('ac-shell--library-browse', LIBRARY_BROWSE_VIEWS.has(viewId));
 	}
 
+	/**
+	 * App-settings subnav expands only while that view is active (SETTINGS-PAGES-STANDARD).
+	 * Always sync class + aria-expanded + hidden together so CSS/a11y cannot drift.
+	 */
+	function syncAppSettingsNavExpansion(parentLi, expanded) {
+		if (!parentLi) return false;
+		const open = !!expanded;
+		const link = parentLi.querySelector(':scope > .ac-nav__link');
+		parentLi.classList.toggle('is-expanded', open);
+		if (link) {
+			link.setAttribute('aria-expanded', open ? 'true' : 'false');
+		}
+		const kids = parentLi.querySelector(':scope > .ac-nav__children');
+		if (kids) {
+			kids.hidden = !open;
+		}
+		return open;
+	}
+
 	function updateNavActive(viewId, params) {
 		const section = viewId === 'app-settings'
 			? normalizeSettingsSection(params && params.settingsSection)
@@ -110,10 +130,7 @@
 				link.removeAttribute('aria-current');
 			}
 			if (navId === 'app-settings') {
-				li.classList.toggle('is-expanded', viewId === 'app-settings');
-				link.setAttribute('aria-expanded', viewId === 'app-settings' ? 'true' : 'false');
-				const kids = li.querySelector('.ac-nav__children');
-				if (kids) kids.hidden = viewId !== 'app-settings';
+				syncAppSettingsNavExpansion(li, viewId === 'app-settings');
 			}
 		});
 	}
@@ -170,6 +187,8 @@
 
 	window.AudioCheckRouter = {
 		register(viewId, handlers) { views[viewId] = handlers; },
+		/** @internal exported for unit / mutation tests */
+		syncAppSettingsNavExpansion,
 		init(container) {
 			root = container;
 			window.addEventListener('popstate', () => {
