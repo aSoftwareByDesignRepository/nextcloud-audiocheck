@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.2.18 - 2026-08-13
+
+### Added
+
+- **Locales:** Danish, Spanish, French, Italian, Norwegian Bokmål, Dutch, Polish, Swedish, and Brazilian Portuguese catalogs (`l10n/*.json` / `*.js`) with msgid parity against English.
+
+### Changed
+
+- **l10n parity checker:** `scripts/check-l10n-parity.php` accepts the expanded locale set and stricter catalog checks.
+- **Nextcloud:** `max-version` remains **34** (current stable **34.0.3**).
+
 ## 1.2.17 - 2026-08-07
 
 ### Fixed
