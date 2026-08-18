@@ -20,6 +20,7 @@ final class MobileAppLinksTest extends TestCase
 			$links->playStoreUrl(),
 		);
 		self::assertSame('de.softwarebydesign.audiocheck', $links->playStorePackageId());
+		self::assertTrue($links->playListed());
 		self::assertSame(MobileAppLinks::PLAY_STORE_URL, $links->playStoreUrl());
 	}
 

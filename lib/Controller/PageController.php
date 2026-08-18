@@ -202,6 +202,7 @@ class PageController extends Controller
 			'common/api',
 			'common/icons',
 			'common/components',
+			'common/app-feedback',
 			'common/track-list-ui',
 			'common/entity-picker',
 			'common/folder-picker',

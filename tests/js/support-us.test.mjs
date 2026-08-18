@@ -91,6 +91,7 @@ const mount = document.createElement('div');
 const section = api.render(mount, { appId: 'audiocheck', shellPrefix: 'ac' });
 assert.ok(section);
 assert.equal(section.getAttribute('data-support-us'), '1');
+assert.equal(section.getAttribute('data-support-us-presentation'), 'embed');
 assert.equal(section.id, 'ac-support-us');
 assert.ok(String(section.className).includes('ac-card'));
 assert.ok(String(section.className).includes('ac-support-us'));
@@ -105,6 +106,10 @@ function collectText(node) {
 }
 const noMobileText = collectText(section);
 assert.ok(noMobileText.includes('Check Partner'));
+assert.ok(noMobileText.includes('Setup & training'));
+assert.ok(noMobileText.includes('Ask about setup or training'));
+assert.ok(noMobileText.includes('Commissioned feature'));
+assert.ok(noMobileText.includes('(opens in a new tab)'));
 assert.ok(noMobileText.includes('invoiceable service'));
 assert.ok(noMobileText.includes('individual partner offer'));
 assert.ok(noMobileText.includes('bookable help on an invoice, choose an option below'));

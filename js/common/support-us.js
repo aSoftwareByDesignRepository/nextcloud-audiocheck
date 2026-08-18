@@ -143,8 +143,9 @@
 		var introId = PREFIX + '-support-us-intro';
 		var partnerTitleId = PREFIX + '-support-us-partner-title';
 		var primaryBtn = opts.primaryBtnClass || ('button primary ' + PREFIX + '-support-us__cta ' + PREFIX + '-support-us__cta--primary');
-		var secondaryBtn = opts.secondaryBtnClass || ('button ' + PREFIX + '-support-us__cta');
+		var secondaryBtn = opts.secondaryBtnClass || ('button ' + PREFIX + '-support-us__cta ' + PREFIX + '-support-us__cta--secondary');
 		var hasMobile = !!(L.hasOfficialMobileLicenses && L.licensePageUrl);
+		var secondaryLabelId = PREFIX + '-support-us-secondary-label';
 
 		// Match Block A to Block E: never mention mobile when the license CTA is hidden.
 		var introKey = hasMobile
@@ -157,7 +158,8 @@
 			id: PREFIX + '-support-us',
 			'aria-labelledby': titleId,
 			'aria-describedby': introId,
-			'data-support-us': '1'
+			'data-support-us': '1',
+			'data-support-us-presentation': 'embed'
 		});
 
 		var header = el('header', { className: shell + '-section__header ' + PREFIX + '-support-us__header' }, [
@@ -175,28 +177,43 @@
 			])
 		]);
 
-		function ctaClass(base, withPrimaryMod) {
-			if (base.indexOf(PREFIX + '-support-us__cta') !== -1) {
-				return base;
+		function ctaClass(base, modifier) {
+			var cls = String(base || '');
+			if (cls.indexOf(PREFIX + '-support-us__cta') === -1) {
+				cls += ' ' + PREFIX + '-support-us__cta';
 			}
-			return withPrimaryMod
-				? (base + ' ' + PREFIX + '-support-us__cta ' + PREFIX + '-support-us__cta--primary')
-				: (base + ' ' + PREFIX + '-support-us__cta');
+			if (modifier && cls.indexOf(PREFIX + '-support-us__cta--' + modifier) === -1) {
+				cls += ' ' + PREFIX + '-support-us__cta--' + modifier;
+			}
+			return cls.replace(/^\s+/, '');
+		}
+
+		function newTabHint() {
+			return el('span', {
+				className: PREFIX + '-support-us__new-tab',
+				text: t(appId, '(opens in a new tab)')
+			});
+		}
+
+		function externalLink(href, label) {
+			var a = el('a', {
+				href: href,
+				target: '_blank',
+				rel: 'noopener noreferrer'
+			});
+			a.appendChild(document.createTextNode(label));
+			a.appendChild(newTabHint());
+			return a;
 		}
 
 		var primaryCta = el('a', {
-			className: ctaClass(primaryBtn, true),
+			className: ctaClass(primaryBtn, 'primary'),
 			href: L.partnerMailto,
 			text: t(appId, 'Ask for a partner offer')
 		});
 		var hint = el('p', { className: PREFIX + '-support-us__hint' });
 		hint.appendChild(document.createTextNode(t(appId, 'Packages and terms:') + ' '));
-		hint.appendChild(el('a', {
-			href: L.supportPageUrl,
-			target: '_blank',
-			rel: 'noopener noreferrer',
-			text: t(appId, 'Open support page')
-		}));
+		hint.appendChild(externalLink(L.supportPageUrl, t(appId, 'Open support page')));
 
 		var primary = el('div', {
 			className: PREFIX + '-support-us__primary',
@@ -219,35 +236,39 @@
 			hint
 		]);
 
-		function optionCard(href, label, hintText) {
+		function optionCard(href, title, label, hintText) {
 			return el('div', { className: PREFIX + '-support-us__option' }, [
-				el('a', {
-					className: ctaClass(secondaryBtn, false),
-					href: href,
-					text: label
-				}),
+				el('h4', { className: PREFIX + '-support-us__option-title', text: title }),
 				el('p', {
 					className: PREFIX + '-support-us__option-hint',
 					text: hintText
+				}),
+				el('a', {
+					className: ctaClass(secondaryBtn, 'secondary'),
+					href: href,
+					text: label
 				})
 			]);
 		}
 
-		var secondaryChildren = [
+		var optionNodes = [
 			optionCard(
 				L.onboardingMailto,
+				t(appId, 'Setup & training'),
 				t(appId, 'Ask about setup or training'),
 				t(appId, 'Remote onboarding or a workshop so your team can roll out cleanly — billed as a service.')
 			),
 			optionCard(
 				L.featureMailto,
+				t(appId, 'Commissioned feature'),
 				t(appId, 'Request a commissioned feature'),
 				t(appId, 'A scoped change with acceptance criteria and a delivery date — billed as project work.')
 			)
 		];
 		if (hasMobile) {
-			secondaryChildren.push(optionCard(
+			optionNodes.push(optionCard(
 				L.licensePageUrl,
+				t(appId, 'Mobile & terminal'),
 				t(appId, 'Official mobile & terminal licenses'),
 				t(appId, 'Named seats for the official apps — a software licence on invoice.')
 			));
@@ -256,23 +277,20 @@
 		var secondary = el('div', {
 			className: PREFIX + '-support-us__secondary',
 			role: 'group',
-			'aria-label': t(appId, 'Additional invoiceable options')
-		}, secondaryChildren);
+			'aria-labelledby': secondaryLabelId
+		}, [
+			el('h3', {
+				id: secondaryLabelId,
+				className: PREFIX + '-support-us__secondary-title',
+				text: t(appId, 'Additional invoiceable options')
+			}),
+			el('div', { className: PREFIX + '-support-us__options' }, optionNodes)
+		]);
 
 		var more = el('p', { className: PREFIX + '-support-us__more' });
-		more.appendChild(el('a', {
-			href: L.appsPageUrl,
-			target: '_blank',
-			rel: 'noopener noreferrer',
-			text: t(appId, 'More Check apps')
-		}));
+		more.appendChild(externalLink(L.appsPageUrl, t(appId, 'More Check apps')));
 		more.appendChild(sepDot());
-		more.appendChild(el('a', {
-			href: L.sponsorsUrl,
-			target: '_blank',
-			rel: 'noopener noreferrer',
-			text: t(appId, 'GitHub Sponsors (voluntary, no invoice SLA)')
-		}));
+		more.appendChild(externalLink(L.sponsorsUrl, t(appId, 'GitHub Sponsors (voluntary, no invoice SLA)')));
 
 		var contact = el('p', { className: PREFIX + '-support-us__contact' });
 		contact.appendChild(el('a', { href: L.contactMailto, text: L.contactEmail }));

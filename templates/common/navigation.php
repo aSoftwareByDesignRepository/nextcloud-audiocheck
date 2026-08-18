@@ -58,4 +58,5 @@ $navGroups = $_['navigationGroups'] ?? [];
 			</ul>
 		</div>
 	<?php endforeach; ?>
+	<?php include __DIR__ . '/../parts/feedback-nav-footer.php'; ?>
 </nav>
