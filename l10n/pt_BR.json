@@ -574,7 +574,7 @@
 		"Subfolders": "Subpastas",
 		"Subfolders for {folder}": "Subpastas para {folder}",
 		"Support": "Suporte",
-		"Support & us": "Apoie-nos e nós",
+		"Support & us": "Support e nós",
 		"Supported formats": "Formatos suportados",
 		"System tags from the Files app appear here when assigned to your audio files.": "As etiquetas de sistema do aplicativo Arquivos aparecem aqui quando são atribuídas aos seus arquivos de áudio.",
 		"System tags from the Files app. Open a tag to see matching tracks.": "Marcas de sistema do aplicativo Arquivos. Abra uma etiqueta para ver as faixas correspondentes.",
@@ -675,7 +675,16 @@
 		"{time} left": "{time} esquerda",
 		"{title}, listened": "{title}, escutado",
 		"← / →": "← / →",
-		"↑ / ↓": "↑ / ↓"
+		"↑ / ↓": "↑ / ↓",
+		"Report a problem": "Relatar um problema",
+		"Suggest an improvement": "Sugerir uma melhoria",
+		"Open GitHub Issues": "Abrir GitHub Issues",
+		"Email is best-effort — no reply SLA. Need booked help? Use Support & us.": "E-mail sem SLA de resposta. Precisa de ajuda agendada? Use Support e nós.",
+		"Report this problem": "Relatar este problema",
+		"(opens in a new tab)": "(abre em uma nova aba)",
+		"Setup & training": "Implantação e treinamento",
+		"Commissioned feature": "Funcionalidade sob encomenda",
+		"Mobile & terminal": "Celular e terminal"
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

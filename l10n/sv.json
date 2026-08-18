@@ -675,7 +675,16 @@
 		"{time} left": "{time} vänster",
 		"{title}, listened": "{title}, lyssnade",
 		"← / →": "← / →",
-		"↑ / ↓": "↑ / ↓"
+		"↑ / ↓": "↑ / ↓",
+		"Report a problem": "Rapportera ett problem",
+		"Suggest an improvement": "Föreslå en förbättring",
+		"Open GitHub Issues": "Öppna GitHub Issues",
+		"Email is best-effort — no reply SLA. Need booked help? Use Support & us.": "E-post utan svars-SLA. Behöver du bokad hjälp? Använd Support & vi.",
+		"Report this problem": "Rapportera det här problemet",
+		"(opens in a new tab)": "(öppnas i en ny flik)",
+		"Setup & training": "Installation och utbildning",
+		"Commissioned feature": "Beställd funktion",
+		"Mobile & terminal": "Mobil och terminal"
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

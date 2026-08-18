@@ -675,7 +675,16 @@
 		"{time} left": "{time} gauche",
 		"{title}, listened": "{title}, écouté",
 		"← / →": "← / →",
-		"↑ / ↓": "↑ / ↓"
+		"↑ / ↓": "↑ / ↓",
+		"Report a problem": "Signaler un problème",
+		"Suggest an improvement": "Proposer une amélioration",
+		"Open GitHub Issues": "Ouvrir GitHub Issues",
+		"Email is best-effort — no reply SLA. Need booked help? Use Support & us.": "E-mail sans engagement de réponse. Pour une aide réservée, utilisez Support et nous.",
+		"Report this problem": "Signaler ce problème",
+		"(opens in a new tab)": "(s’ouvre dans un nouvel onglet)",
+		"Setup & training": "Mise en place et formation",
+		"Commissioned feature": "Fonction sur commande",
+		"Mobile & terminal": "Mobile et terminal"
 	},
 	"pluralForm": "nplurals=2; plural=(n > 1);"
 }

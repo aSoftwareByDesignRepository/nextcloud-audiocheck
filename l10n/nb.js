@@ -676,7 +676,16 @@ OC.L10N.register(
 	"{time} left" : "{time} igjen",
 	"{title}, listened" : "{title}, lyttet",
 	"← \/ →" : "← \/ →",
-	"↑ \/ ↓" : "↑ \/ ↓"
+	"↑ \/ ↓" : "↑ \/ ↓",
+	"(opens in a new tab)" : "(åpnes i en ny fane)",
+	"Email is best-effort — no reply SLA. Need booked help? Use Support & us." : "E-post uten svar-SLA. Trenger du booket hjelp? Bruk Support & vi.",
+	"Commissioned feature" : "Bestilt funksjon",
+	"Report a problem" : "Rapporter et problem",
+	"Suggest an improvement" : "Foreslå en forbedring",
+	"Report this problem" : "Rapporter dette problemet",
+	"Open GitHub Issues" : "Åpne GitHub Issues",
+	"Mobile & terminal" : "Mobil og terminal",
+	"Setup & training" : "Oppsett og opplæring"
 	},
 	"nplurals=2; plural=(n != 1);"
 );

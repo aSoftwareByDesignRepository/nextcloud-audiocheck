@@ -676,7 +676,16 @@ OC.L10N.register(
 	"{time} left" : "{time} gauche",
 	"{title}, listened" : "{title}, écouté",
 	"← \/ →" : "← \/ →",
-	"↑ \/ ↓" : "↑ \/ ↓"
+	"↑ \/ ↓" : "↑ \/ ↓",
+	"(opens in a new tab)" : "(s’ouvre dans un nouvel onglet)",
+	"Email is best-effort — no reply SLA. Need booked help? Use Support & us." : "E-mail sans engagement de réponse. Pour une aide réservée, utilisez Support et nous.",
+	"Commissioned feature" : "Fonction sur commande",
+	"Report a problem" : "Signaler un problème",
+	"Suggest an improvement" : "Proposer une amélioration",
+	"Report this problem" : "Signaler ce problème",
+	"Open GitHub Issues" : "Ouvrir GitHub Issues",
+	"Mobile & terminal" : "Mobile et terminal",
+	"Setup & training" : "Mise en place et formation"
 	},
 	"nplurals=2; plural=(n > 1);"
 );
