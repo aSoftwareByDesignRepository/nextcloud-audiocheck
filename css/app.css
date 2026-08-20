@@ -5587,8 +5587,8 @@ body.ac-modal-open { overflow: hidden; }
 	min-width: 0;
 	width: 100%;
 	box-sizing: border-box;
-	padding: var(--ac-space-2, 8px) var(--ac-space-3, 12px)
-		max(var(--ac-space-3, 12px), env(safe-area-inset-bottom, 0px));
+	padding: var(--ac-space-2, 0.5rem) var(--ac-space-3, 0.75rem)
+		max(var(--ac-space-3, 0.75rem), env(safe-area-inset-bottom, 0px));
 	border-top: 1px solid var(--ac-border, color-mix(in srgb, var(--color-main-text) 12%, var(--color-main-background)));
 	background: transparent;
 	z-index: 1;
@@ -5597,14 +5597,17 @@ body.ac-modal-open { overflow: hidden; }
 .ac-nav-footer__popover {
 	position: relative;
 	display: flex;
-	justify-content: center;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--ac-space-2, 0.5rem);
 }
 
 .ac-nav-footer__trigger {
 	display: inline-flex;
-	gap: var(--ac-space-3, 12px);
-	min-height: var(--ac-touch-min, 44px);
-	padding: var(--ac-space-2, 8px) var(--ac-space-3, 12px);
+	gap: var(--ac-space-3, 0.75rem);
+	min-height: 44px;
+	min-width: 44px;
+	padding: var(--ac-space-2, 0.5rem) var(--ac-space-3, 0.75rem);
 	border-radius: var(--ac-radius-sm, 6px);
 	box-sizing: border-box;
 	border: none;
@@ -5630,16 +5633,21 @@ body.ac-modal-open { overflow: hidden; }
 	outline: none;
 }
 
+.ac-nav-footer__trigger-icon .ac-icon {
+	width: 20px;
+	height: 20px;
+}
+
 .ac-nav-footer__menu {
 	position: absolute;
-	bottom: calc(100% + var(--ac-space-2, 8px));
+	bottom: calc(100% + var(--ac-space-2, 0.5rem));
 	left: 50%;
 	transform: translateX(-50%);
 	min-width: max-content;
 	max-width: calc(100vw - 2rem);
 	list-style: none;
 	margin: 0;
-	padding: var(--ac-space-2, 8px);
+	padding: var(--ac-space-2, 0.5rem);
 	background: var(--color-main-background);
 	border: 1px solid var(--ac-border, var(--color-border));
 	border-radius: var(--ac-radius-md, 12px);
@@ -5659,14 +5667,17 @@ body.ac-modal-open { overflow: hidden; }
 .ac-nav-footer__menu-item {
 	display: flex;
 	align-items: center;
-	gap: var(--ac-space-3, 12px);
-	min-height: var(--ac-touch-min, 44px);
-	padding: var(--ac-space-2, 8px) var(--ac-space-3, 12px);
+	gap: var(--ac-space-3, 0.75rem);
+	min-height: 44px;
+	min-width: 44px;
+	padding: var(--ac-space-2, 0.5rem) var(--ac-space-3, 0.75rem);
 	border-radius: var(--ac-radius-sm, 6px);
 	color: var(--color-main-text);
 	text-decoration: none;
 	font-size: var(--ac-fs-sm, 0.875rem);
-	white-space: nowrap;
+	line-height: var(--ac-line-base, 1.45);
+	white-space: normal;
+	overflow-wrap: anywhere;
 }
 
 .ac-nav-footer__menu-item:hover {
@@ -5682,10 +5693,24 @@ body.ac-modal-open { overflow: hidden; }
 	outline: none;
 }
 
+.ac-nav-footer__menu-icon .ac-icon {
+	width: 18px;
+	height: 18px;
+}
+
+.ac-nav-footer__note {
+	margin: 0;
+	font-size: var(--ac-fs-xs, 0.75rem);
+	line-height: 1.45;
+	color: var(--color-text-maxcontrast);
+	text-align: center;
+	overflow-wrap: anywhere;
+}
+
 @media (width < 480px) {
 	.ac-nav-footer__menu {
-		left: var(--ac-space-2, 8px);
-		right: var(--ac-space-2, 8px);
+		left: var(--ac-space-2, 0.5rem);
+		right: var(--ac-space-2, 0.5rem);
 		transform: none;
 		min-width: 0;
 	}
@@ -5709,7 +5734,7 @@ body.ac-modal-open { overflow: hidden; }
 	align-items: center;
 	min-height: 44px;
 	min-width: 44px;
-	margin-top: var(--ac-space-2, 8px);
+	margin-top: var(--ac-space-2, 0.5rem);
 	padding: 0;
 	font-size: var(--ac-fs-sm, 0.875rem);
 	line-height: 1.45;
@@ -5722,6 +5747,10 @@ body.ac-modal-open { overflow: hidden; }
 .ac-nav-footer__toast-link:focus-visible {
 	outline: 2px solid var(--color-primary-element);
 	outline-offset: 2px;
+}
+
+.ac-nav-footer__toast-link:focus:not(:focus-visible) {
+	outline: none;
 }
 
 @media (prefers-contrast: more) {
@@ -5737,26 +5766,30 @@ body.ac-modal-open { overflow: hidden; }
 	}
 
 	.ac-nav-footer__trigger:focus-visible,
-	.ac-nav-footer__menu-item:focus-visible {
+	.ac-nav-footer__menu-item:focus-visible,
+	.ac-nav-footer__toast-link:focus-visible {
 		outline-width: 3px;
 	}
 }
 
 @media (forced-colors: active) {
-	.ac-nav-footer__menu-item {
+	.ac-nav-footer__menu-item,
+	.ac-nav-footer__toast-link {
 		forced-color-adjust: none;
 		color: LinkText;
 	}
 
 	.ac-nav-footer__trigger:focus-visible,
-	.ac-nav-footer__menu-item:focus-visible {
+	.ac-nav-footer__menu-item:focus-visible,
+	.ac-nav-footer__toast-link:focus-visible {
 		outline: 3px solid Highlight;
 	}
 }
 
 @media (prefers-reduced-motion: reduce) {
 	.ac-nav-footer__trigger,
-	.ac-nav-footer__menu-item {
+	.ac-nav-footer__menu-item,
+	.ac-nav-footer__toast-link {
 		transition: none;
 	}
 }
