@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.2.20 - 2026-08-25
+
+### Fixed (Dashboard — Continue desklet icons / theming)
+- Ship `app-dashboard.svg` / `app-dark.svg` and `AppIconService`; stop using white header `app.svg` on the dashboard
+- Fix `WidgetButton` argument order (link vs label) so “Open AudioCheck” is not replaced by a raw `/index.php/apps/audiocheck/` path
+- Register `desklet-nextcloud.css` for theme-safe list icons, 44px touch targets, and focus rings
+- Cover placeholder no longer relies on `prefers-color-scheme` (invisible under Nextcloud dark + OS light)
+
 ## 1.2.19 - 2026-08-19
 
 ### Changed

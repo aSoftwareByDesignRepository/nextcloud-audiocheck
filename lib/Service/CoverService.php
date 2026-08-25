@@ -218,16 +218,20 @@ class CoverService
 		return $response;
 	}
 
+	/**
+	 * Theme-agnostic cover placeholder for Nextcloud (and OS) light/dark UIs.
+	 *
+	 * Do not gate colours on OS color-scheme media queries: Nextcloud dark theme
+	 * often leaves the OS scheme on light, so dark-on-dark silhouettes vanish
+	 * (WCAG fail). Fixed mid-contrast slate + light figure stays readable on
+	 * both surfaces.
+	 */
 	private function defaultPlaceholder(): DataDisplayResponse
 	{
 		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-hidden="true">'
-			. '<style>'
-			. '@media (prefers-color-scheme:dark){.a{fill:rgba(255,255,255,.18)}.b{fill:rgba(255,255,255,.34)}}'
-			. '@media (prefers-color-scheme:light){.a{fill:rgba(0,0,0,.10)}.b{fill:rgba(0,0,0,.26)}}'
-			. '</style>'
-			. '<rect class="a" width="200" height="200"/>'
-			. '<circle class="b" cx="100" cy="80" r="30"/>'
-			. '<rect class="b" x="60" y="120" width="80" height="12" rx="6"/>'
+			. '<rect width="200" height="200" fill="#4b5563"/>'
+			. '<circle cx="100" cy="80" r="30" fill="#e5e7eb"/>'
+			. '<rect x="60" y="120" width="80" height="12" rx="6" fill="#e5e7eb"/>'
 			. '</svg>';
 		return new DataDisplayResponse($svg, Http::STATUS_OK, [
 			'Content-Type' => 'image/svg+xml',

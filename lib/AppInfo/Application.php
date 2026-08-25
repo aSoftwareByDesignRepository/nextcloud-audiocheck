@@ -20,6 +20,7 @@ use OCA\AudioCheck\Middleware\AppAccessMiddleware;
 use OCA\AudioCheck\Repair\EnsureAudioCheckSchema;
 use OCA\AudioCheck\Repair\UninstallDropTables;
 use OCA\AudioCheck\Service\AccessControlService;
+use OCA\AudioCheck\Service\AppIconService;
 use OCA\AudioCheck\Service\CoverService;
 use OCA\AudioCheck\Service\FileAccessService;
 use OCA\AudioCheck\Service\LibraryService;
@@ -205,6 +206,13 @@ class Application extends App implements IBootstrap
 		});
 
 
+		$context->registerService(AppIconService::class, function ($c): AppIconService {
+			return new AppIconService(
+				$c->query(\OCP\IURLGenerator::class),
+				$c->query(\OCP\App\IAppManager::class),
+			);
+		});
+
 		$context->registerService(ContinueWidget::class, function ($c): ContinueWidget {
 			return new ContinueWidget(
 				$c->query(\OCP\IL10N::class),
@@ -212,6 +220,7 @@ class Application extends App implements IBootstrap
 				$c->query(PlaybackStateService::class),
 				$c->query(AccessControlService::class),
 				$c->query(\OCP\IUserSession::class),
+				$c->query(AppIconService::class),
 			);
 		});
 
@@ -253,7 +262,7 @@ class Application extends App implements IBootstrap
 					'id' => self::APP_ID,
 					'order' => 12,
 					'href' => $url->linkToRoute('audiocheck.page.index'),
-					'icon' => $url->imagePath(self::APP_ID, 'app.svg'),
+					'icon' => $container->get(AppIconService::class)->headerIconPath(),
 					'name' => $l->t('AudioCheck'),
 				];
 			});
