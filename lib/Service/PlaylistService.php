@@ -288,6 +288,7 @@ class PlaylistService
 				'mimetype' => $mime,
 				'kind' => (string)($row['kind'] ?? 'music'),
 				'browserPlayable' => $mime === '' || $this->fileAccess->isLikelyBrowserPlayable($mime),
+				'nativePlayable' => $mime === '' || $this->fileAccess->isLikelyNativeMobilePlayable($mime),
 				'unavailable' => !$accessible,
 			];
 		}

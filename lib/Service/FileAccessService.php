@@ -76,6 +76,30 @@ class FileAccessService
 		'audio/webm',
 	];
 
+	/**
+	 * Mimes decodable by Expo Audio (ExoPlayer / AVPlayer) without server transcoding.
+	 * Superset of {@see BROWSER_WELL_SUPPORTED_MIMES} — FLAC is native on mobile but not in HTML5.
+	 *
+	 * @var list<string>
+	 */
+	public const NATIVE_MOBILE_PLAYABLE_MIMES = [
+		'audio/mpeg',
+		'audio/mp4',
+		'audio/x-m4a',
+		'audio/m4a',
+		'audio/m4b',
+		'audio/x-m4b',
+		'audio/ogg',
+		'audio/vorbis',
+		'audio/opus',
+		'audio/wav',
+		'audio/x-wav',
+		'audio/aac',
+		'audio/webm',
+		'audio/flac',
+		'audio/x-flac',
+	];
+
 	/** @var list<string> */
 	public const COVER_IMAGE_MIMES = [
 		'image/jpeg',
@@ -339,6 +363,18 @@ class FileAccessService
 	{
 		$mime = strtolower(trim($mime));
 		if (in_array($mime, self::BROWSER_WELL_SUPPORTED_MIMES, true)) {
+			return true;
+		}
+		if ($mime === 'video/mp4' && ($filename === null || $this->isAudioContainerFilename($filename))) {
+			return true;
+		}
+		return false;
+	}
+
+	public function isLikelyNativeMobilePlayable(string $mime, ?string $filename = null): bool
+	{
+		$mime = strtolower(trim($mime));
+		if (in_array($mime, self::NATIVE_MOBILE_PLAYABLE_MIMES, true)) {
 			return true;
 		}
 		if ($mime === 'video/mp4' && ($filename === null || $this->isAudioContainerFilename($filename))) {

@@ -685,6 +685,7 @@ OC.L10N.register(
 	"{time} left" : "{time} igjen",
 	"{title}, listened" : "{title}, lyttet",
 	"← \/ →" : "← \/ →",
-	"↑ \/ ↓" : "↑ \/ ↓",
-},
-"nplurals=2; plural=(n != 1);");
+	"↑ \/ ↓" : "↑ \/ ↓"
+	},
+	"nplurals=2; plural=(n != 1);"
+);

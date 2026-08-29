@@ -454,6 +454,7 @@ class PlaybackStateService
 			'kind' => (string)($row['kind'] ?? 'music'),
 			'mimetype' => (string)($row['mimetype'] ?? ''),
 			'browserPlayable' => $this->isBrowserPlayableMime((string)($row['mimetype'] ?? '')),
+			'nativePlayable' => $this->isNativePlayableMime((string)($row['mimetype'] ?? '')),
 		];
 	}
 
@@ -465,6 +466,16 @@ class PlaybackStateService
 		}
 
 		return $this->fileAccess->isLikelyBrowserPlayable($mime);
+	}
+
+	private function isNativePlayableMime(string $mime): bool
+	{
+		$mime = trim($mime);
+		if ($mime === '') {
+			return true;
+		}
+
+		return $this->fileAccess->isLikelyNativeMobilePlayable($mime);
 	}
 
 	private function listenedThresholdMs(string $userId, int $durationMs): int

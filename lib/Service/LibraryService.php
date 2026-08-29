@@ -1196,6 +1196,7 @@ class LibraryService
 			'sizeBytes' => max(0, (int)($row['size'] ?? 0)),
 			'mimetype' => (string)($row['mimetype'] ?? ''),
 			'browserPlayable' => $this->isBrowserPlayableMime((string)($row['mimetype'] ?? '')),
+			'nativePlayable' => $this->isNativePlayableMime((string)($row['mimetype'] ?? '')),
 			'hasChapters' => (int)($row['has_chapters'] ?? 0) === 1,
 			'coverState' => (string)($row['cover_state'] ?? 'none'),
 			'addedAt' => (int)($row['added_at'] ?? 0),
@@ -1265,6 +1266,16 @@ class LibraryService
 		}
 
 		return $this->fileAccess->isLikelyBrowserPlayable($mime);
+	}
+
+	private function isNativePlayableMime(string $mime): bool
+	{
+		$mime = trim($mime);
+		if ($mime === '') {
+			return true;
+		}
+
+		return $this->fileAccess->isLikelyNativeMobilePlayable($mime);
 	}
 
 	/** @return array<string, mixed>|null */
@@ -1423,6 +1434,7 @@ class LibraryService
 			'durationMs' => 0,
 			'mimetype' => $file->getMimeType(),
 			'browserPlayable' => $this->fileAccess->isLikelyBrowserPlayable($file->getMimeType(), $file->getName()),
+			'nativePlayable' => $this->fileAccess->isLikelyNativeMobilePlayable($file->getMimeType(), $file->getName()),
 			'hasChapters' => false,
 			'coverState' => 'none',
 			'addedAt' => 0,

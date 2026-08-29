@@ -79,6 +79,19 @@ final class FileAccessServiceTest extends TestCase
 		$this->assertFalse($svc->isLikelyBrowserPlayable('audio/aiff'));
 	}
 
+	public function testNativeMobilePlayableClassification(): void
+	{
+		$root = $this->createMock(IRootFolder::class);
+		$svc = new FileAccessService($root, $this->createMock(IEncryptionManager::class), $this->createMock(IConfig::class));
+		$this->assertTrue($svc->isLikelyNativeMobilePlayable('audio/mpeg'));
+		$this->assertTrue($svc->isLikelyNativeMobilePlayable('audio/flac'));
+		$this->assertTrue($svc->isLikelyNativeMobilePlayable('audio/x-flac'));
+		$this->assertTrue($svc->isLikelyNativeMobilePlayable('video/mp4', 'podcast.m4a'));
+		$this->assertFalse($svc->isLikelyNativeMobilePlayable('audio/x-ms-wma'));
+		$this->assertFalse($svc->isLikelyNativeMobilePlayable('audio/aiff'));
+		$this->assertFalse($svc->isLikelyNativeMobilePlayable('video/mp4', 'movie.mov'));
+	}
+
 	public function testNormalizeLibraryFolderPathStripsUserFilesPrefix(): void
 	{
 		$userFolder = $this->createMock(Folder::class);
