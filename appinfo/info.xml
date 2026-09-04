@@ -11,7 +11,7 @@
 	<description><![CDATA[
 # AudioCheck — your audio library inside Nextcloud
 
-Your audio files already live in Files. AudioCheck indexes the folders you choose, streams with live permission checks, and keeps a **persistent mini-player** while you browse the rest of Nextcloud.
+Your audio files already live in Files. AudioCheck indexes the folders you choose and streams them with live permission checks.
 
 The app is **free** under AGPL-3.0-or-later. There is no seat license for this web app in the shipped package.
 
@@ -25,7 +25,7 @@ The app is **free** under AGPL-3.0-or-later. There is no seat license for this w
 - Files actions: Play in AudioCheck / Play folder as album
 - Browse by artists, authors, genres, series, folders, tags and favorites
 - Optional access restriction (Nextcloud admins always retain access)
-- UI languages: English and German
+- UI languages: German (Sie-Form), English, French, Spanish, Danish, Dutch, Italian, Polish, Swedish, Norwegian Bokmål, and Brazilian Portuguese (every shipped UI string lives in `l10n`)
 - Accessibility foundations aimed at WCAG 2.1 AA (not a third-party certification)
 
 ## Formats
@@ -38,24 +38,25 @@ The app is **free** under AGPL-3.0-or-later. There is no seat license for this w
 
 1. Open **Library**, add music and audiobook folders, then **Scan now** (or `occ audiocheck:scan`).
 2. In **Settings**, enable **Resume where you left off** if you want that behaviour.
-3. Open **Music** or **Audiobooks** and press Play — the mini-player stays visible while you navigate.
+3. Open **Music** or **Audiobooks** and press Play.
 
 ## Honest limits
 
 - Playback bytes go through a single file-access gate with live permission checks; revoked shares stop playback. The app makes no outbound HTTP calls for playback.
+- After a full browser navigation away from AudioCheck, browsers may require a click to resume audio.
 - Scan depth is capped (32 folder levels). Playlist play/shuffle has a documented track cap (2000).
 - Declared databases: MySQL and PostgreSQL only.
 
 ## Requirements
 
-- Nextcloud 32–34
+- Nextcloud 32–35
 - PHP 8.2–8.5
 - MySQL or PostgreSQL
 	]]></description>
 	<description lang="de"><![CDATA[
 # AudioCheck — Ihre Audiothek in Nextcloud
 
-Ihre Audiodateien liegen bereits in Dateien. AudioCheck indexiert die von Ihnen gewählten Ordner, streamt mit Live-Berechtigungsprüfung und hält einen **dauerhaften Mini-Player**, während Sie den Rest von Nextcloud nutzen.
+Ihre Audiodateien liegen bereits in Dateien. AudioCheck indexiert die von Ihnen gewählten Ordner und streamt sie mit Live-Berechtigungsprüfung.
 
 Die App ist unter AGPL-3.0-or-later **kostenfrei**. Für diese Web-App ist im ausgelieferten Paket keine Sitzlizenz vorgesehen.
 
@@ -69,7 +70,7 @@ Die App ist unter AGPL-3.0-or-later **kostenfrei**. Für diese Web-App ist im au
 - Dateien-Aktionen: In AudioCheck abspielen / Ordner als Album abspielen
 - Facetten: Interpreten, Autoren, Genres, Serien, Ordner, Tags, Favoriten
 - Optionale Zugriffsbeschränkung (Nextcloud-Administratoren behalten den Zugriff)
-- Oberflächensprachen: Deutsch und Englisch
+- Oberflächensprachen: Deutsch (Sie-Form), Englisch, Französisch, Spanisch, Dänisch, Niederländisch, Italienisch, Polnisch, Schwedisch, Norwegisch (Bokmål) und Brasilianisches Portugiesisch (jede ausgelieferte UI-Zeichenkette in `l10n`)
 - Barrierefreiheits-Grundlagen mit Ziel WCAG 2.1 AA (keine Fremdzertifizierung)
 
 ## Formate
@@ -82,24 +83,25 @@ Die App ist unter AGPL-3.0-or-later **kostenfrei**. Für diese Web-App ist im au
 
 1. **Bibliothek** öffnen, Ordner hinzufügen, **Jetzt scannen** (oder `occ audiocheck:scan`).
 2. Unter **Einstellungen** bei Bedarf **Dort fortsetzen, wo Sie aufgehört haben** aktivieren.
-3. **Musik** oder **Hörbücher** öffnen und Wiedergabe starten — der Mini-Player bleibt sichtbar.
+3. **Musik** oder **Hörbücher** öffnen und Wiedergabe starten.
 
 ## Klare Grenzen
 
 - Dateizugriff über ein zentrales Gate mit Live-Rechten; widerrufene Freigaben beenden die Wiedergabe. Keine ausgehenden HTTP-Aufrufe für Playback.
+- Nach einer vollständigen Browser-Navigation weg von AudioCheck verlangen Browser oft einen Klick, um die Wiedergabe fortzusetzen.
 - Scan-Tiefe begrenzt (32 Ordnerebenen). Playlists haben eine dokumentierte Titel-Obergrenze (2000).
 - Deklarierte Datenbanken: nur MySQL und PostgreSQL.
 
 ## Voraussetzungen
 
-- Nextcloud 32–34
+- Nextcloud 32–35
 - PHP 8.2–8.5
 - MySQL oder PostgreSQL
 	]]></description>
 	<description lang="fr"><![CDATA[
 # AudioCheck — votre médiathèque audio dans Nextcloud
 
-Vos fichiers audio sont déjà dans Files. AudioCheck indexe les dossiers que vous choisissez, diffuse en streaming avec des contrôles d’autorisations en temps réel et conserve un **mini-lecteur persistant** pendant que vous explorez le reste de Nextcloud.
+Vos fichiers audio sont déjà dans Files. AudioCheck indexe les dossiers que vous choisissez et les diffuse en streaming avec des contrôles d’autorisations en temps réel.
 
 L’application est **gratuite** sous AGPL-3.0-or-later. Il n’y a pas de licence par siège pour cette application web dans le pack livré.
 
@@ -113,7 +115,7 @@ L’application est **gratuite** sous AGPL-3.0-or-later. Il n’y a pas de licen
 - Actions dans Files : lire dans AudioCheck / lire le dossier comme album
 - Parcourir par artistes, auteurs, genres, séries, dossiers, tags et favoris
 - Restriction d’accès optionnelle (les administrateurs Nextcloud conservent toujours l’accès)
-- Langues de l’interface : anglais et allemand
+- Langues de l’interface : allemand (Sie-Form), anglais, français, espagnol, danois, néerlandais, italien, polonais, suédois, norvégien bokmål et portugais brésilien (chaque chaîne d’interface livrée vit dans `l10n`)
 - Fondements d’accessibilité visant WCAG 2.1 AA (pas de certification par un tiers)
 
 ## Formats
@@ -126,24 +128,25 @@ L’application est **gratuite** sous AGPL-3.0-or-later. Il n’y a pas de licen
 
 1. Ouvrez **Library**, ajoutez des dossiers de musique et de livres audio, puis **Scan now** (ou `occ audiocheck:scan`).
 2. Dans **Settings**, activez **Resume where you left off** si vous souhaitez ce comportement.
-3. Ouvrez **Music** ou **Audiobooks** et appuyez sur Play — le mini-lecteur reste visible pendant que vous naviguez.
+3. Ouvrez **Music** ou **Audiobooks** et appuyez sur Play.
 
 ## Limites honnêtes
 
 - Les octets de lecture passent par une seule passerelle d’accès aux fichiers avec des contrôles d’autorisations en temps réel ; les partages révoqués arrêtent la lecture. L’application ne fait aucun appel HTTP sortant pour la lecture.
+- Après une navigation complète hors d’AudioCheck, les navigateurs peuvent exiger un clic pour reprendre l’audio.
 - La profondeur d’analyse est limitée (32 niveaux de dossiers). La lecture/le mélange des playlists a une limite de pistes documentée (2000).
 - Bases de données déclarées : uniquement MySQL et PostgreSQL.
 
 ## Exigences
 
-- Nextcloud 32–34
+- Nextcloud 32–35
 - PHP 8.2–8.5
 - MySQL ou PostgreSQL
 	]]></description>
 	<description lang="es"><![CDATA[
 # AudioCheck — su biblioteca de audio dentro de Nextcloud
 
-Sus archivos de audio ya están en Files. AudioCheck indexa las carpetas que elija, hace streaming con comprobaciones de permisos en tiempo real y mantiene un **minirreproductor persistente** mientras explora el resto de Nextcloud.
+Sus archivos de audio ya están en Files. AudioCheck indexa las carpetas que elija y hace streaming con comprobaciones de permisos en tiempo real.
 
 La aplicación es **gratuita** con AGPL-3.0-or-later. En el paquete entregado no hay licencia por asiento para esta aplicación web.
 
@@ -157,7 +160,7 @@ La aplicación es **gratuita** con AGPL-3.0-or-later. En el paquete entregado no
 - Acciones en Files: reproducir en AudioCheck / reproducir la carpeta como álbum
 - Navegar por artistas, autores, géneros, series, carpetas, etiquetas y favoritos
 - Restricción de acceso opcional (los administradores de Nextcloud conservan siempre el acceso)
-- Idiomas de la interfaz: inglés y alemán
+- Idiomas de la interfaz: alemán (Sie-Form), inglés, francés, español, danés, neerlandés, italiano, polaco, sueco, noruego bokmål y portugués brasileño (cada cadena de UI enviada está en `l10n`)
 - Fundamentos de accesibilidad orientados a WCAG 2.1 AA (no es una certificación de terceros)
 
 ## Formatos
@@ -170,24 +173,25 @@ La aplicación es **gratuita** con AGPL-3.0-or-later. En el paquete entregado no
 
 1. Abra **Library**, agregue carpetas de música y audiolibros y luego **Scan now** (o `occ audiocheck:scan`).
 2. En **Settings**, active **Resume where you left off** si desea ese comportamiento.
-3. Abra **Music** o **Audiobooks** y pulse Play — el minirreproductor permanece visible mientras navega.
+3. Abra **Music** o **Audiobooks** y pulse Play.
 
 ## Límites claros
 
 - Los bytes de reproducción pasan por una única puerta de acceso a archivos con comprobaciones de permisos en tiempo real; las comparticiones revocadas detienen la reproducción. La aplicación no realiza llamadas HTTP salientes para la reproducción.
+- Tras una navegación completa fuera de AudioCheck, el navegador puede exigir un clic para reanudar el audio.
 - La profundidad de escaneo está limitada (32 niveles de carpetas). La reproducción/mezcla de listas de reproducción tiene un límite de pistas documentado (2000).
 - Bases de datos declaradas: solo MySQL y PostgreSQL.
 
 ## Requisitos
 
-- Nextcloud 32–34
+- Nextcloud 32–35
 - PHP 8.2–8.5
 - MySQL o PostgreSQL
 	]]></description>
 	<description lang="da"><![CDATA[
 # AudioCheck — dit lydbibliotek i Nextcloud
 
-Dine lydfiler ligger allerede i Files. AudioCheck indekserer de mapper, du vælger, streamer med live-permissionkontroller og holder en **vedvarende mini-afspiller** synlig, mens du bruger resten af Nextcloud.
+Dine lydfiler ligger allerede i Files. AudioCheck indekserer de mapper, du vælger, og streamer dem med live-permissionkontroller.
 
 Appen er **gratis** under AGPL-3.0-or-later. Der findes ingen seat-licens til denne webapp i den leverede pakke.
 
@@ -201,7 +205,7 @@ Appen er **gratis** under AGPL-3.0-or-later. Der findes ingen seat-licens til de
 - Handlinger i Files: Afspil i AudioCheck / Afspil mappe som album
 - Gennemse efter kunstnere, forfattere, genrer, serier, mapper, tags og favoritter
 - Valgfri adgangsbegrænsning (Nextcloud-administratorer beholder altid adgang)
-- UI-sprog: engelsk og tysk
+- UI-sprog: tysk (Sie-Form), engelsk, fransk, spansk, dansk, hollandsk, italiensk, polsk, svensk, norsk bokmål og brasiliansk portugisisk (hver leveret UI-streng ligger i `l10n`)
 - Grundlag for tilgængelighed målrettet WCAG 2.1 AA (ikke en tredjepartscertificering)
 
 ## Formater
@@ -214,24 +218,25 @@ Appen er **gratis** under AGPL-3.0-or-later. Der findes ingen seat-licens til de
 
 1. Åbn **Library**, tilføj mapper med musik og lydbøger, og vælg derefter **Scan now** (eller `occ audiocheck:scan`).
 2. I **Settings** skal du aktivere **Resume where you left off**, hvis du vil have den adfærd.
-3. Åbn **Music** eller **Audiobooks** og tryk Play — mini-afspilleren forbliver synlig, mens du navigerer.
+3. Åbn **Music** eller **Audiobooks** og tryk Play.
 
 ## Ærlige begrænsninger
 
 - Afspilningsbytes går gennem én enkelt filadgangsport med live-permissionskontroller; tilbagekaldte delinger stopper afspilning. Appen laver ingen udgående HTTP-kald til afspilning.
+- Efter fuld browsernavigation væk fra AudioCheck kan browsere kræve et klik for at genoptage lyden.
 - Scandybden er begrænset (32 mappeniveauer). Afspilning/blanding af playlists har en dokumenteret grænse (2000 spor).
 - Deklarerede databaser: kun MySQL og PostgreSQL.
 
 ## Krav
 
-- Nextcloud 32–34
+- Nextcloud 32–35
 - PHP 8.2–8.5
 - MySQL eller PostgreSQL
 	]]></description>
 	<description lang="nl"><![CDATA[
 # AudioCheck — uw audiobibliotheek in Nextcloud
 
-Uw audiobestanden staan al in Files. AudioCheck indexeert de door u gekozen mappen, streamt met live-permissiecontroles en houdt een **blijvende mini-speler** actief terwijl u de rest van Nextcloud navigeert.
+Uw audiobestanden staan al in Files. AudioCheck indexeert de door u gekozen mappen en streamt ze met live-permissiecontroles.
 
 De app is **gratis** onder AGPL-3.0-or-later. Er is in het meegeleverde pakket geen sitelicentie voor deze webapp.
 
@@ -245,7 +250,7 @@ De app is **gratis** onder AGPL-3.0-or-later. Er is in het meegeleverde pakket g
 - Acties in Files: Afspelen in AudioCheck / Map afspelen als album
 - Bladeren op artiesten, auteurs, genres, series, mappen, tags en favorieten
 - Optionele toegangsbeperking (Nextcloud-beheerders behouden altijd toegang)
-- Talen van de interface: Engels en Duits
+- Talen van de interface: Duits (Sie-Form), Engels, Frans, Spaans, Deens, Nederlands, Italiaans, Pools, Zweeds, Noors Bokmål en Braziliaans Portugees (elke meegeleverde UI-string staat in `l10n`)
 - Toegankelijkheidsfundamenten gericht op WCAG 2.1 AA (geen certificering door derden)
 
 ## Formaten
@@ -258,24 +263,25 @@ De app is **gratis** onder AGPL-3.0-or-later. Er is in het meegeleverde pakket g
 
 1. Open **Library**, voeg muziek- en audioboekmappen toe en kies daarna **Scan now** (of `occ audiocheck:scan`).
 2. Activeer in **Settings** **Resume where you left off** als u dat gedrag wilt.
-3. Open **Music** of **Audiobooks** en druk op Play — de mini-speler blijft zichtbaar terwijl u navigeert.
+3. Open **Music** of **Audiobooks** en druk op Play.
 
 ## Eerlijke grenzen
 
 - Afspelen bytes gaan via één enkele bestands-toegangspoort met live permissiecontroles; ingetrokken shares stoppen het afspelen. De app doet geen uitgaande HTTP-calls voor afspelen.
+- Na volledige browsenavigatie weg van AudioCheck kunnen browsers een klik vereisen om audio te hervatten.
 - De scan-diepte is beperkt (32 mapniveaus). Afspelen/shuffle van playlists heeft een gedocumenteerde tracklimiet (2000).
 - Gedeclareerde databases: alleen MySQL en PostgreSQL.
 
 ## Vereisten
 
-- Nextcloud 32–34
+- Nextcloud 32–35
 - PHP 8.2–8.5
 - MySQL of PostgreSQL
 	]]></description>
 	<description lang="it"><![CDATA[
 # AudioCheck — la vostra libreria audio dentro Nextcloud
 
-I vostri file audio sono già in Files. AudioCheck indicizza le cartelle che scegliete, esegue lo streaming con controlli dei permessi in tempo reale e mantiene un **mini-player persistente** mentre esplorate il resto di Nextcloud.
+I vostri file audio sono già in Files. AudioCheck indicizza le cartelle che scegliete e le riproduce in streaming con controlli dei permessi in tempo reale.
 
 L’app è **gratuita** con AGPL-3.0-or-later. Nel pacchetto distribuito non è prevista alcuna licenza per posti per questa web app.
 
@@ -289,7 +295,7 @@ L’app è **gratuita** con AGPL-3.0-or-later. Nel pacchetto distribuito non è 
 - Azioni in Files: riproduci in AudioCheck / riproduci la cartella come album
 - Navigazione per artisti, autori, generi, serie, cartelle, tag e preferiti
 - Restrizione di accesso opzionale (gli amministratori Nextcloud mantengono sempre l’accesso)
-- Lingue dell’interfaccia: inglese e tedesco
+- Lingue dell’interfaccia: tedesco (Sie-Form), inglese, francese, spagnolo, danese, olandese, italiano, polacco, svedese, norvegese bokmål e portoghese brasiliano (ogni stringa UI spedita vive in `l10n`)
 - Fondamenti di accessibilità mirati a WCAG 2.1 AA (non è una certificazione di terze parti)
 
 ## Formati
@@ -302,24 +308,25 @@ L’app è **gratuita** con AGPL-3.0-or-later. Nel pacchetto distribuito non è 
 
 1. Aprite **Library**, aggiungete cartelle di musica e audiolibri e poi **Scan now** (oppure `occ audiocheck:scan`).
 2. In **Settings**, abilitate **Resume where you left off** se desiderate questo comportamento.
-3. Aprite **Music** o **Audiobooks** e premete Play — il mini-player resta visibile mentre navigate.
+3. Aprite **Music** o **Audiobooks** e premete Play.
 
 ## Limiti onesti
 
 - I byte di riproduzione passano attraverso un’unica porta di accesso al file con controlli dei permessi in tempo reale; le condivisioni revocate interrompono la riproduzione. L’app non effettua chiamate HTTP in uscita per la riproduzione.
+- Dopo una navigazione completa fuori da AudioCheck, i browser possono richiedere un clic per riprendere l’audio.
 - La profondità di scansione è limitata (32 livelli di cartelle). La riproduzione/mescolamento delle playlist ha un limite di tracce documentato (2000).
 - Database dichiarati: solo MySQL e PostgreSQL.
 
 ## Requisiti
 
-- Nextcloud 32–34
+- Nextcloud 32–35
 - PHP 8.2–8.5
 - MySQL o PostgreSQL
 	]]></description>
 	<description lang="pl"><![CDATA[
 # AudioCheck — Twoja biblioteka audio w Nextcloud
 
-Państwa pliki audio znajdują się już w Files. AudioCheck indeksuje foldery, które Państwo wybiorą, przesyła strumieniowo z bieżącą weryfikacją uprawnień i utrzymuje **trwały mini-odtwarzacz** podczas przeglądania reszty Nextcloud.
+Państwa pliki audio znajdują się już w Files. AudioCheck indeksuje foldery, które Państwo wybiorą, i przesyła je strumieniowo z bieżącą weryfikacją uprawnień.
 
 Prowadzona przez aplikację jest **bezpłatna** na warunkach AGPL-3.0-or-later. W dostarczonym pakiecie nie ma licencji „seat” dla tej web app.
 
@@ -333,7 +340,7 @@ Prowadzona przez aplikację jest **bezpłatna** na warunkach AGPL-3.0-or-later. 
 - Akcje w Files: odtwarzaj w AudioCheck / odtwarzaj folder jako album
 - Przeglądaj według artystów, autorów, gatunków, serii, folderów, tagów i ulubionych
 - Opcjonalne ograniczenie dostępu (administratorzy Nextcloud zawsze zachowują dostęp)
-- Języki interfejsu: angielski i niemiecki
+- Języki interfejsu: niemiecki (Sie-Form), angielski, francuski, hiszpański, duński, niderlandzki, włoski, polski, szwedzki, norweski bokmål i brazylijski portugalski (każdy dostarczony ciąg UI jest w `l10n`)
 - Fundamenty dostępności ukierunkowane na WCAG 2.1 AA (bez certyfikacji strony trzeciej)
 
 ## Format
@@ -346,24 +353,25 @@ Prowadzona przez aplikację jest **bezpłatna** na warunkach AGPL-3.0-or-later. 
 
 1. Otwórz **Library**, dodaj foldery muzyki i audiobooków, a następnie **Scan now** (lub `occ audiocheck:scan`).
 2. W **Settings** włącz **Resume where you left off**, jeśli chcesz takie zachowanie.
-3. Otwórz **Music** lub **Audiobooks** i naciśnij Play — mini-odtwarzacz pozostaje widoczny podczas nawigacji.
+3. Otwórz **Music** lub **Audiobooks** i naciśnij Play.
 
 ## Uczciwe ograniczenia
 
 - Bajty odtwarzania przechodzą przez jedną bramkę dostępu do pliku z bieżącą kontrolą uprawnień; cofnięte udostępnienia zatrzymują odtwarzanie. Aplikacja nie wykonuje wychodzących wywołań HTTP do odtwarzania.
+- Po pełnej nawigacji przeglądarki poza AudioCheck przeglądarki mogą wymagać kliknięcia, by wznowić dźwięk.
 - Głębokość skanowania jest ograniczona (32 poziomy folderów). Odtwarzanie/losowanie playlist ma udokumentowany limit utworów (2000).
 - Deklarowane bazy danych: tylko MySQL i PostgreSQL.
 
 ## Wymagania
 
-- Nextcloud 32–34
+- Nextcloud 32–35
 - PHP 8.2–8.5
 - MySQL lub PostgreSQL
 	]]></description>
 	<description lang="sv"><![CDATA[
 # AudioCheck — ert ljudbibliotek i Nextcloud
 
-Era ljudfiler finns redan i Files. AudioCheck indexerar mapparna ni väljer, streamar med kontroller av behörigheter i realtid och behåller en **ihållande minispelare** medan ni bläddrar i resten av Nextcloud.
+Era ljudfiler finns redan i Files. AudioCheck indexerar mapparna ni väljer och streamar dem med kontroller av behörigheter i realtid.
 
 Appen är **gratis** under AGPL-3.0-or-later. Det finns ingen seat-licens för den här webappen i det levererade paketet.
 
@@ -377,7 +385,7 @@ Appen är **gratis** under AGPL-3.0-or-later. Det finns ingen seat-licens för d
 - Åtgärder i Files: spela i AudioCheck / spela mappen som album
 - Bläddra efter artister, författare, genrer, serier, mappar, taggar och favoriter
 - Valfri åtkomstbegränsning (Nextcloud-administratörer behåller alltid åtkomst)
-- UI-språk: engelska och tyska
+- UI-språk: tyska (Sie-Form), engelska, franska, spanska, danska, nederländska, italienska, polska, svenska, norska bokmål och brasiliansk portugisiska (varje levererad UI-sträng finns i `l10n`)
 - Tillgänglighetsgrunder riktade mot WCAG 2.1 AA (ingen tredjepartscertifiering)
 
 ## Format
@@ -390,24 +398,25 @@ Appen är **gratis** under AGPL-3.0-or-later. Det finns ingen seat-licens för d
 
 1. Öppna **Library**, lägg till mappar för musik och ljudböcker och välj sedan **Scan now** (eller `occ audiocheck:scan`).
 2. I **Settings**, aktivera **Resume where you left off** om ni vill ha det beteendet.
-3. Öppna **Music** eller **Audiobooks** och tryck Play — minispelaren fortsätter att vara synlig när ni navigerar.
+3. Öppna **Music** eller **Audiobooks** och tryck Play.
 
 ## Uppriktiga begränsningar
 
 - Uppspelningsdata går via en enda filåtkomstgrind med behörighetskontroller i realtid; återkallade delningar stoppar uppspelning. Appen gör inga utgående HTTP-anrop för uppspelning.
+- Efter full webbläsarnavigering bort från AudioCheck kan webbläsare kräva ett klick för att återuppta ljudet.
 - Skanningsdjupet är begränsat (32 mappnivåer). Uppspelning/”shuffle” av spellistor har en dokumenterad spårgräns (2000).
 - Deklarerade databaser: endast MySQL och PostgreSQL.
 
 ## Krav
 
-- Nextcloud 32–34
+- Nextcloud 32–35
 - PHP 8.2–8.5
 - MySQL eller PostgreSQL
 	]]></description>
 	<description lang="nb"><![CDATA[
 # AudioCheck — ditt lydbibliotek i Nextcloud
 
-Lydfilene dine ligger allerede i Files. AudioCheck indekserer mappene du velger, streamer med live sjekk av tillatelser og holder en **vedvarende minispiller** synlig mens du navigerer resten av Nextcloud.
+Lydfilene dine ligger allerede i Files. AudioCheck indekserer mappene du velger og streamer dem med live sjekk av tillatelser.
 
 Appen er **gratis** under AGPL-3.0-or-later. Det finnes ingen seat-lisens for denne webappen i pakken som leveres.
 
@@ -421,7 +430,7 @@ Appen er **gratis** under AGPL-3.0-or-later. Det finnes ingen seat-lisens for de
 - Handlinger i Files: spill i AudioCheck / spill mappe som album
 - Bla etter artister, forfattere, sjangre, serier, mapper, tagger og favoritter
 - Valgfri tilgangsbegrensning (Nextcloud-administratorer beholder alltid tilgang)
-- UI-språk: engelsk og tysk
+- UI-språk: tysk (Sie-Form), engelsk, fransk, spansk, dansk, nederlandsk, italiensk, polsk, svensk, norsk bokmål og brasiliansk portugisisk (hver levert UI-streng ligger i `l10n`)
 - Grunnlag for tilgjengelighet rettet mot WCAG 2.1 AA (ikke en tredjepartsertifisering)
 
 ## Formater
@@ -434,21 +443,22 @@ Appen er **gratis** under AGPL-3.0-or-later. Det finnes ingen seat-lisens for de
 
 1. Åpne **Library**, legg til mapper for musikk og lydbøker, og velg deretter **Scan now** (eller `occ audiocheck:scan`).
 2. I **Settings**, aktiver **Resume where you left off** hvis du ønsker den oppførselen.
-3. Åpne **Music** eller **Audiobooks** og trykk Play — minispilleren forblir synlig mens du navigerer.
+3. Åpne **Music** eller **Audiobooks** og trykk Play.
 
 ## Ærlige begrensninger
 
 - Avspillingsbytes går gjennom én enkelt filtilgangsport med live sjekk av tillatelser; tilbakekalte delinger stopper avspilling. Appen gjør ingen utgående HTTP-kall for avspilling.
+- Etter full nettlesernavigering bort fra AudioCheck kan nettlesere kreve et klikk for å gjenoppta lyden.
 - Skannedybden er begrenset (32 mappenivåer). Avspilling/«shuffle» av spillelister har en dokumentert sporgrense (2000).
 - Deklarerte databaser: kun MySQL og PostgreSQL.
 
 ## Krav
 
-- Nextcloud 32–34
+- Nextcloud 32–35
 - PHP 8.2–8.5
 - MySQL eller PostgreSQL
 	]]></description>
-	<version>1.2.20</version>
+	<version>1.3.4</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de">Software by Design GbR</author>
 	<namespace>AudioCheck</namespace>
@@ -458,7 +468,7 @@ Appen er **gratis** under AGPL-3.0-or-later. Det finnes ingen seat-lisens for de
 	<bugs>https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues</bugs>
 	<repository>https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck.git</repository>
 	<dependencies>
-		<nextcloud min-version="32" max-version="34"/>
+		<nextcloud min-version="32" max-version="35"/>
 		<php min-version="8.2" max-version="8.5"/>
 		<database>mysql</database>
 		<database>pgsql</database>

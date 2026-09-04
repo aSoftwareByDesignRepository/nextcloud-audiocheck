@@ -19,6 +19,9 @@ class MetadataService
 {
 	private const CHAPTER_JSON_MAX = 65536;
 
+	/** @var bool */
+	private static $getId3MissingLogged = false;
+
 	public function __construct(
 		private IDBConnection $db,
 		private FileAccessService $fileAccess,
@@ -101,6 +104,14 @@ class MetadataService
 			}
 
 			if (!class_exists(\getID3::class)) {
+				if (!self::$getId3MissingLogged) {
+					self::$getId3MissingLogged = true;
+					$this->logger->error(
+						'AudioCheck: getID3 is not autoloadable. Nextcloud only loads <app>/composer/autoload.php — ensure that bridge exists and vendor/ is installed with composer install --no-dev. Metadata, duration, chapters and embedded covers will stay empty until fixed.',
+						['app' => Application::APP_ID],
+					);
+				}
+				$defaults['meta_partial'] = true;
 				return $defaults;
 			}
 
@@ -439,8 +450,8 @@ class MetadataService
 		try {
 			$qb->executeStatement();
 		} catch (DBException $e) {
-			// Concurrent scans can race on ac_file_meta.file_id; the loser
-			// must return the winner's row instead of leaving meta_id null.
+			// Concurrent scans can race on ac_file_meta.file_id. The loser must
+			// update the winner's row so we never leave empty/partial meta stale.
 			if ($e->getReason() !== DBException::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
 				throw $e;
 			}
@@ -448,7 +459,9 @@ class MetadataService
 			if ($existing === null) {
 				throw $e;
 			}
-			return (int)$existing['id'];
+			$id = (int)$existing['id'];
+			$this->updateMeta($id, $fileId, $etag, $mtime, $size, $mime, $data, $now);
+			return $id;
 		}
 		return (int)$this->db->lastInsertId('ac_file_meta');
 	}

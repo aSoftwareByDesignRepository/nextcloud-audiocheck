@@ -1,4 +1,4 @@
-# Syntax smoke only. PHPUnit needs a Nextcloud bootstrap — run locally:
+# Syntax smoke + Composer packaging gate. PHPUnit needs a Nextcloud bootstrap — run locally:
 #   composer test:docker   or   npm run test:php:docker
 name: CI
 
@@ -25,4 +25,18 @@ jobs:
           coverage: none
           tools: composer:v2
       - run: composer validate --no-check-publish
+      - name: Assert Nextcloud Composer bridge
+        run: |
+          test -f composer/autoload.php
+          grep -q "vendor/autoload.php" composer/autoload.php
+          grep -q 'register(false)' composer/autoload.php
+      - run: composer install --no-dev --no-interaction --optimize-autoloader
+      - name: Assert getID3 loads via composer/autoload.php
+        run: |
+          php -r 'require "composer/autoload.php"; if (!class_exists("getID3")) { fwrite(STDERR, "getID3 missing\n"); exit(1); } echo "getID3 OK\n";'
       - run: find lib tests templates -name '*.php' -print0 | xargs -0 -n1 -P4 php -l
+      - name: Assert store copy does not overclaim without global player
+        run: |
+          test -f js/global-mini-player.js
+          test -f css/global-mini-player.css
+          grep -q 'registerGlobalMiniPlayer' lib/Listener/BeforeTemplateRenderedListener.php

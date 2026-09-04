@@ -20,7 +20,6 @@ class CoverService
 	public function __construct(
 		private IAppData $appData,
 		private FileAccessService $fileAccess,
-		private MetadataService $metadata,
 		private AccessControlService $accessControl,
 		private IDBConnection $db,
 		private LoggerInterface $logger,
@@ -49,34 +48,33 @@ class CoverService
 		return $this->imageResponse($image['data'], $image['mime'], $etag);
 	}
 
-	/** @return array{data:string,mime:string,source:string}|null */
+	/**
+	 * Cover path only — one getID3 analyze for embedded art, then cheap folder
+	 * filenames. Never call MetadataService::extractTags here (that doubles CPU
+	 * and temp IO on every cache miss).
+	 *
+	 * @return array{data:string,mime:string,source:string}|null
+	 */
 	private function extractCover(File $audioFile): ?array
 	{
-		$tags = $this->metadata->extractTags($audioFile);
-		if (($tags['cover_state'] ?? 'none') === 'embedded') {
-			$embedded = $this->extractEmbeddedFromFile($audioFile);
-			if ($embedded !== null) {
-				return ['data' => $embedded['data'], 'mime' => $embedded['mime'], 'source' => 'embedded'];
-			}
+		$embedded = $this->extractEmbeddedFromFile($audioFile);
+		if ($embedded !== null) {
+			return ['data' => $embedded['data'], 'mime' => $embedded['mime'], 'source' => 'embedded'];
 		}
 
-		$folderCover = null;
 		$parent = $audioFile->getParent();
 		if ($parent !== null) {
 			foreach (['cover.jpg', 'folder.jpg', 'front.png', 'cover.png'] as $name) {
-				if ($parent->nodeExists($name)) {
-					$node = $parent->get($name);
-					if ($node instanceof File && $node->isReadable()) {
-						$folderCover = $node;
-						break;
+				if (!$parent->nodeExists($name)) {
+					continue;
+				}
+				$node = $parent->get($name);
+				if ($node instanceof File && $node->isReadable()) {
+					$data = $node->getContent();
+					if ($data !== '' && $this->fileAccess->isAllowedCoverMime($node->getMimeType())) {
+						return ['data' => $data, 'mime' => $node->getMimeType(), 'source' => 'folder'];
 					}
 				}
-			}
-		}
-		if ($folderCover instanceof File) {
-			$data = $folderCover->getContent();
-			if ($data !== '' && $this->fileAccess->isAllowedCoverMime($folderCover->getMimeType())) {
-				return ['data' => $data, 'mime' => $folderCover->getMimeType(), 'source' => 'folder'];
 			}
 		}
 
@@ -90,6 +88,12 @@ class CoverService
 		try {
 			$path = $this->resolveTempPath($file, $tempPath);
 			if ($path === null || !class_exists(\getID3::class)) {
+				if ($path !== null && !class_exists(\getID3::class)) {
+					$this->logger->warning(
+						'AudioCheck: getID3 missing; embedded cover extraction skipped. Check composer/autoload.php bridge.',
+						['app' => Application::APP_ID, 'fileId' => $file->getId()],
+					);
+				}
 				return null;
 			}
 			$getID3 = new \getID3();

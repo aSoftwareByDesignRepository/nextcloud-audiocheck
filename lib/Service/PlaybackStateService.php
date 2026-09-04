@@ -65,6 +65,26 @@ class PlaybackStateService
 		return $items;
 	}
 
+	/**
+	 * Cheap hint for the global mini-player: unfinished in-progress rows exist.
+	 * Does not run per-file ACL (bootstrap only); restore still authorizes on use.
+	 */
+	public function hasUnfinishedProgress(string $userId): bool
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('file_id')
+			->from('ac_play_state')
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->andWhere($qb->expr()->eq('finished', $qb->createNamedParameter(0, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->eq('listened', $qb->createNamedParameter(0, \PDO::PARAM_INT)))
+			->andWhere($qb->expr()->gt('position_ms', $qb->createNamedParameter(0, \PDO::PARAM_INT)))
+			->setMaxResults(1);
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		return $row !== false;
+	}
+
 	public function getProgress(string $userId, ?int $fileId = null): array
 	{
 		if ($fileId !== null) {

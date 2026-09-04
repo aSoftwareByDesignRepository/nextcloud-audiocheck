@@ -1,5 +1,53 @@
 # Changelog
 
+## 1.3.4 - 2026-09-04
+
+### Changed
+- App Store screenshots refreshed against current UI (Library / Music / Playlists / Favorites / Browse / Settings / App settings).
+- Version **1.3.4**.
+
+## 1.3.3 - 2026-09-04
+
+### Changed
+- Store description no longer advertises the global mini-player (feature remains in the app).
+- Version **1.3.3**.
+
+## 1.3.2 - 2026-09-04
+
+### Fixed
+- Store copy: UI language list matches shipped `l10n` (11 locales, not EN+DE only).
+
+### Changed
+- Version **1.3.2**.
+
+## 1.3.1 - 2026-09-04
+
+### Fixed
+- Global mini-player no longer loads full `app.css` on Files/Dashboard (self-contained overlay CSS ~25KB).
+- Player JS stack is lazy-loaded only when server/session playback hints exist.
+- Cover rate limit uses shared DB table `ac_rate_limits` plus exclusive `ILockingProvider` locks (multi-node / multi-worker safe; fail-closed).
+
+### Changed
+- Version **1.3.1**.
+
+## 1.3.0 - 2026-09-04
+
+### Fixed
+- **Composer packaging:** add `composer/autoload.php` bridge so Nextcloud loads `vendor/` (getID3). Metadata, duration, chapters and embedded covers work on App Store installs again.
+- **Release hygiene:** `make release` runs `composer install --no-dev`, refuses archives without the bridge/getID3, and strips phpunit/OCP stubs from the tarball.
+- **Store honesty:** global mini-player now loads on Files/Dashboard/other user pages (access-gated); documented click-to-resume after full navigations.
+
+### Added
+- Persistent mini-player overlay outside AudioCheck (`js/global-mini-player.js`, shared partial, WCAG-focused overlay CSS).
+- Nextcloud **35** compatibility (`max-version` 35).
+- CI gates for the Composer bridge + getID3 autoload.
+- Loud error log when getID3 is missing (no more silent empty metadata).
+- Composer bridge re-registers ClassLoader **appended** (prevents nextcloud/ocp stubs from shadowing server OCP).
+- Global mini-player: no empty loading flash; volume popover stays closed outside AudioCheck.
+
+### Changed
+- Version **1.3.0**; requirements Nextcloud 32–35.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),

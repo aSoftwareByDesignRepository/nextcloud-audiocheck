@@ -22,5 +22,6 @@ final class AudioCheckTableCatalog
 		'ac_scan_state',
 		'ac_queue',
 		'ac_queue_items',
+		'ac_rate_limits',
 	];
 }

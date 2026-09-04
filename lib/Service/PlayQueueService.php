@@ -96,6 +96,26 @@ class PlayQueueService
 	}
 
 	/**
+	 * Cheap existence check for the global mini-player bootstrap (no file ACL work).
+	 */
+	public function hasPersistedItems(string $userId): bool
+	{
+		$queue = $this->findQueue($userId);
+		if ($queue === null) {
+			return false;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')
+			->from('ac_queue_items')
+			->where($qb->expr()->eq('queue_id', $qb->createNamedParameter((int)$queue['id'], \PDO::PARAM_INT)))
+			->setMaxResults(1);
+		$result = $qb->executeQuery();
+		$row = $result->fetch();
+		$result->closeCursor();
+		return $row !== false;
+	}
+
+	/**
 	 * Persist the active queue. Items are only rewritten when the ordering
 	 * actually changes, so frequent pointer/setting updates stay cheap.
 	 *

@@ -3,8 +3,6 @@
  * @var array $_
  * @var \OCP\IL10N $l
  */
-
-use OCA\AudioCheck\Service\IconCatalog;
 ?>
 <?php include __DIR__ . '/common/page-start.php'; ?>
 
@@ -24,61 +22,11 @@ use OCA\AudioCheck\Service\IconCatalog;
 	</main>
 	</div>
 
-	<footer id="ac-mini-player" class="ac-mini-player" role="region" aria-label="<?php p($l->t('Mini player')); ?>"
-		<?php if (($_['viewId'] ?? 'home') === 'now-playing'): ?>hidden aria-hidden="true"<?php endif; ?>>
-		<audio id="ac-audio" preload="metadata" playsinline></audio>
-		<div class="ac-mini-player__inner">
-			<button type="button" class="ac-mini-player__track ac-mini-player__track--idle" id="ac-mini-now"
-				aria-label="<?php p($l->t('Open now playing')); ?>">
-				<img class="ac-mini-player__cover" id="ac-mini-cover" src="" alt="" width="48" height="48" hidden>
-				<span class="ac-mini-player__meta">
-					<span class="ac-mini-player__title" id="ac-mini-title"><?php p($l->t('Nothing playing')); ?></span>
-					<span class="ac-mini-player__artist" id="ac-mini-artist"></span>
-				</span>
-			</button>
-
-			<div class="ac-mini-player__transport" role="group" aria-label="<?php p($l->t('Playback')); ?>">
-				<button type="button" class="ac-btn ac-transport-btn" id="ac-mini-prev" aria-label="<?php p($l->t('Previous')); ?>">
-					<?php print_unescaped(IconCatalog::render('previous')); ?>
-				</button>
-				<button type="button" class="ac-btn ac-transport-btn ac-transport-btn--jump" id="ac-mini-jump-back"
-					aria-label="<?php p($l->t('Jump back 30 seconds')); ?>">
-					<span class="ac-transport-jump" aria-hidden="true">
-						<?php print_unescaped(IconCatalog::render('rotate-ccw')); ?>
-						<span class="ac-transport-jump__secs">30</span>
-					</span>
-				</button>
-				<button type="button" class="ac-btn ac-transport-btn ac-transport-btn--primary" id="ac-mini-play" aria-label="<?php p($l->t('Play')); ?>" aria-pressed="false">
-					<?php print_unescaped(IconCatalog::render('play')); ?>
-				</button>
-				<button type="button" class="ac-btn ac-transport-btn ac-transport-btn--jump" id="ac-mini-jump-forward"
-					aria-label="<?php p($l->t('Jump forward 30 seconds')); ?>">
-					<span class="ac-transport-jump" aria-hidden="true">
-						<?php print_unescaped(IconCatalog::render('rotate-cw')); ?>
-						<span class="ac-transport-jump__secs">30</span>
-					</span>
-				</button>
-				<button type="button" class="ac-btn ac-transport-btn" id="ac-mini-next" aria-label="<?php p($l->t('Next')); ?>">
-					<?php print_unescaped(IconCatalog::render('next')); ?>
-				</button>
-			</div>
-
-			<div class="ac-mini-player__seek" id="ac-mini-seek-wrap">
-				<span class="ac-mini-player__time" id="ac-mini-pos" aria-hidden="true">0:00</span>
-				<label class="ac-sr-only" for="ac-mini-seek"><?php p($l->t('Seek')); ?></label>
-				<input type="range" class="ac-seek" id="ac-mini-seek" min="0" max="1000" value="0" aria-label="<?php p($l->t('Seek')); ?>">
-				<span class="ac-mini-player__time" id="ac-mini-dur" aria-hidden="true">0:00</span>
-			</div>
-
-			<div class="ac-mini-player__side">
-				<div class="ac-mini-player__volume" id="ac-mini-volume" role="group" aria-label="<?php p($l->t('Volume')); ?>"></div>
-				<button type="button" class="ac-btn ac-btn--icon ac-mini-player__open" id="ac-mini-expand" aria-label="<?php p($l->t('Open now playing')); ?>">
-					<span class="ac-sr-only"><?php p($l->t('Open now playing')); ?></span>
-					<?php print_unescaped(IconCatalog::render('chevron-up', 'ac-mini-player__open-icon')); ?>
-				</button>
-			</div>
-		</div>
-	</footer>
+	<?php
+	$acMiniPlayerGlobal = false;
+	$acMiniPlayerHidden = (($_['viewId'] ?? 'home') === 'now-playing');
+	include __DIR__ . '/partials/mini-player.php';
+	?>
 </div>
 
 <?php include __DIR__ . '/common/page-end.php'; ?>

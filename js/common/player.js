@@ -101,12 +101,23 @@
 		} catch (_) { /* unsupported duration/state */ }
 	}
 
+	function isGlobalPlayerMode() {
+		return document.documentElement.dataset.acPlayerMode === 'global'
+			|| !!(window.AudioCheckGlobalPlayer && window.AudioCheckGlobalPlayer.isGlobal);
+	}
+
 	function shortcutsBlocked(e) {
 		if (document.body.classList.contains('ac-modal-open')) return true;
 		const target = e.target;
 		if (!target || !(target instanceof Element)) return false;
 		if (/input|textarea|select/i.test(target.tagName)) return true;
 		if (target.isContentEditable) return true;
+		// On Files/Dashboard/etc. never steal Space/arrows from the host app —
+		// only handle shortcuts when focus is inside the mini-player chrome.
+		if (isGlobalPlayerMode()) {
+			const player = document.getElementById('ac-mini-player');
+			if (!player || !player.contains(target)) return true;
+		}
 		return false;
 	}
 
@@ -116,7 +127,9 @@
 		host.dataset.acReady = '1';
 		host.appendChild(AudioCheckComponents.volumeControl({ idPrefix: 'ac-mini', compact: true }));
 		const popover = host.querySelector('details.ac-volume-popover');
-		if (popover && window.matchMedia('(min-width: 1024px)').matches) {
+		// In-app desktop: keep volume open for discoverability. Global overlay on
+		// Files/Dashboard must stay compact — an open popover covers host UI.
+		if (popover && !isGlobalPlayerMode() && window.matchMedia('(min-width: 1024px)').matches) {
 			popover.setAttribute('open', '');
 		}
 	}
@@ -640,6 +653,12 @@
 	function syncMiniPlayerDock(viewId) {
 		const player = document.getElementById('ac-mini-player');
 		if (!player) return;
+		// Outside AudioCheck, visibility is owned by global-mini-player.js
+		// (show only when a queue/track exists). Do not unhide an idle overlay.
+		if (isGlobalPlayerMode()) {
+			syncPlayerClearance();
+			return;
+		}
 		const view = viewId
 			|| (window.AudioCheckRouter && typeof AudioCheckRouter.getCurrentView === 'function'
 				? AudioCheckRouter.getCurrentView()
@@ -1020,9 +1039,16 @@
 	}
 
 	function openNowPlaying() {
-		if (!window.AudioCheckRouter) return;
-		if (AudioCheckRouter.getCurrentView() === 'now-playing') return;
-		AudioCheckRouter.navigate('now-playing', {}, true);
+		if (window.AudioCheckRouter && typeof AudioCheckRouter.navigate === 'function') {
+			if (AudioCheckRouter.getCurrentView() === 'now-playing') return;
+			AudioCheckRouter.navigate('now-playing', {}, true);
+			return;
+		}
+		const url = (window.AudioCheckGlobalPlayer && window.AudioCheckGlobalPlayer.nowPlayingUrl)
+			|| (typeof OC !== 'undefined' && OC.generateUrl
+				? OC.generateUrl('/apps/audiocheck/now-playing')
+				: '/apps/audiocheck/now-playing');
+		window.location.href = url;
 	}
 
 	function bindPlayerClearance() {
@@ -1525,6 +1551,7 @@
 		toggle, next, prev,
 		restoreSession,
 		restoreLastPlayback,
+		syncPlayerClearance,
 		whenReady() { return bootstrapReady; },
 		isRestoring() { return bootstrapRestoring; },
 		init() {

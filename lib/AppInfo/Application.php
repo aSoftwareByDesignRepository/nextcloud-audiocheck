@@ -82,7 +82,13 @@ class Application extends App implements IBootstrap
 		});
 		$context->registerMiddleware(AppAccessMiddleware::class);
 
-		$context->registerService(RateLimitService::class, fn ($c) => new RateLimitService($c->query(\OCP\IConfig::class)));
+		$context->registerService(RateLimitService::class, function ($c): RateLimitService {
+			return new RateLimitService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(\OCP\Lock\ILockingProvider::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
+			);
+		});
 
 		$context->registerService(FileAccessService::class, function ($c): FileAccessService {
 			return new FileAccessService(
@@ -108,7 +114,6 @@ class Application extends App implements IBootstrap
 			return new CoverService(
 				$c->query(\OCP\Files\IAppData::class),
 				$c->query(FileAccessService::class),
-				$c->query(MetadataService::class),
 				$c->query(AccessControlService::class),
 				$c->query(\OCP\IDBConnection::class),
 				$c->query(\Psr\Log\LoggerInterface::class),
