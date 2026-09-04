@@ -71,6 +71,8 @@ class BeforeTemplateRenderedListener implements IEventListener {
 		// Used to avoid flashing an empty “Loading playback…” bar for users with nothing queued.
 		$payload['hasServerPlayback'] = $this->playQueue->hasPersistedItems($userId)
 			|| $this->playback->hasUnfinishedProgress($userId);
+		// Cache-bust dynamically loaded player stack scripts after app upgrades.
+		$payload['assetVersion'] = $this->appManager->getAppVersion(Application::APP_ID);
 		$this->initialState->provideInitialState('global-mini-player', $payload);
 
 		// Self-contained overlay CSS only — never pull full app.css onto Files/Dashboard.

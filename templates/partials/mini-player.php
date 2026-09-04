@@ -45,7 +45,7 @@ $acRaw = static function (mixed $value): void {
 			aria-label="<?php $acP($l->t('Open now playing')); ?>">
 			<img class="ac-mini-player__cover" id="ac-mini-cover" src="" alt="" width="48" height="48" hidden>
 			<span class="ac-mini-player__meta">
-				<span class="ac-mini-player__title" id="ac-mini-title"><?php $acP($l->t('Nothing playing')); ?></span>
+				<span class="ac-mini-player__title" id="ac-mini-title"><?php $acP($acMiniPlayerGlobal ? $l->t('Loading playback…') : $l->t('Nothing playing')); ?></span>
 				<span class="ac-mini-player__artist" id="ac-mini-artist"></span>
 			</span>
 		</button>

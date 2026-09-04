@@ -2,11 +2,16 @@
 	'use strict';
 
 	/**
-	 * Global mini-player boot for non-AudioCheck pages.
-	 * Loads the full player stack only when server/session hints say playback
-	 * may restore — idle Files users do not pay for 10 extra scripts.
+	 * Global mini-player boot for non-AudioCheck pages (Files, Dashboard, …).
+	 *
+	 * Design rules:
+	 * - Idle users pay for one small boot script + CSS only.
+	 * - Full player stack loads only when server/session hints say restore may succeed.
+	 * - InitialState must use loadState() (NC API); DOM base64 is the hard fallback.
+	 * - Prefs must load BEFORE restore (resumeOnOpen / volume / speed).
 	 */
 	const SESSION_KEY = 'audiocheck_playback_session';
+	const BOOT_FLAG = '__acGlobalMiniPlayerBooted';
 	const PLAYER_SCRIPTS = [
 		'common/constants',
 		'common/messaging',
@@ -23,13 +28,58 @@
 
 	function loadState() {
 		try {
+			if (typeof OCP !== 'undefined' && OCP.InitialState && typeof OCP.InitialState.loadState === 'function') {
+				return OCP.InitialState.loadState('audiocheck', 'global-mini-player');
+			}
+			// Older NC builds exposed OC.initialState.loadState (same signature).
+			if (typeof OC !== 'undefined' && OC.initialState && typeof OC.initialState.loadState === 'function') {
+				return OC.initialState.loadState('audiocheck', 'global-mini-player');
+			}
+			// Mis-documented alias — keep as last API attempt before DOM.
 			if (typeof OCP !== 'undefined' && OCP.InitialState && typeof OCP.InitialState.load === 'function') {
 				return OCP.InitialState.load('audiocheck', 'global-mini-player');
 			}
 		} catch (e) {
-			// Missing state = nothing to mount.
+			// Missing key throws in @nextcloud/initial-state — fall through to DOM.
 		}
-		return null;
+		return loadStateFromDom();
+	}
+
+	/**
+	 * Decode the hidden input Nextcloud embeds for provideInitialState().
+	 * Uses UTF-8-safe base64 decode so translated markup never corrupts JSON.parse.
+	 */
+	function loadStateFromDom() {
+		try {
+			const el = document.getElementById('initial-state-audiocheck-global-mini-player');
+			if (!el || !el.value) return null;
+			const json = decodeBase64Utf8(el.value);
+			if (!json) return null;
+			return JSON.parse(json);
+		} catch (e) {
+			return null;
+		}
+	}
+
+	function decodeBase64Utf8(b64) {
+		if (typeof atob !== 'function') return null;
+		const bin = atob(b64);
+		if (typeof TextDecoder === 'function') {
+			const bytes = new Uint8Array(bin.length);
+			for (let i = 0; i < bin.length; i++) {
+				bytes[i] = bin.charCodeAt(i);
+			}
+			return new TextDecoder('utf-8').decode(bytes);
+		}
+		// Legacy path: escape/decodeURIComponent recovers UTF-8 from binary string.
+		try {
+			return decodeURIComponent(Array.prototype.map.call(bin, (c) => {
+				const h = c.charCodeAt(0).toString(16);
+				return '%' + (h.length < 2 ? '0' : '') + h;
+			}).join(''));
+		} catch (e) {
+			return bin;
+		}
 	}
 
 	function hasSessionHint() {
@@ -43,14 +93,35 @@
 		}
 	}
 
-	function scriptSrc(name) {
-		if (typeof OC !== 'undefined' && typeof OC.filePath === 'function') {
-			return OC.filePath('audiocheck', 'js', name + '.js');
+	function bootScriptVersion(state) {
+		if (state && state.assetVersion) return String(state.assetVersion);
+		const boot = document.querySelector('script[src*="global-mini-player"]');
+		if (boot && boot.src) {
+			try {
+				const u = new URL(boot.src, window.location.origin);
+				const v = u.searchParams.get('v');
+				if (v) return v;
+			} catch (e) {
+				const m = String(boot.src).match(/[?&]v=([^&]+)/);
+				if (m) return decodeURIComponent(m[1]);
+			}
 		}
-		return '/apps/audiocheck/js/' + name + '.js';
+		return '';
 	}
 
-	function loadScript(name) {
+	function scriptSrc(name, version) {
+		let base;
+		if (typeof OC !== 'undefined' && typeof OC.filePath === 'function') {
+			base = OC.filePath('audiocheck', 'js', name + '.js');
+		} else {
+			base = '/apps/audiocheck/js/' + name + '.js';
+		}
+		if (!version) return base;
+		const join = base.indexOf('?') >= 0 ? '&' : '?';
+		return base + join + 'v=' + encodeURIComponent(version);
+	}
+
+	function loadScript(name, version) {
 		return new Promise((resolve, reject) => {
 			const existing = document.querySelector('script[data-ac-global-dep="' + name + '"]');
 			if (existing) {
@@ -63,7 +134,7 @@
 				return;
 			}
 			const s = document.createElement('script');
-			s.src = scriptSrc(name);
+			s.src = scriptSrc(name, version);
 			s.async = false;
 			s.dataset.acGlobalDep = name;
 			s.addEventListener('load', () => {
@@ -75,16 +146,17 @@
 		});
 	}
 
-	function loadPlayerStack() {
+	function loadPlayerStack(version) {
 		let chain = Promise.resolve();
 		PLAYER_SCRIPTS.forEach((name) => {
-			chain = chain.then(() => loadScript(name));
+			chain = chain.then(() => loadScript(name, version));
 		});
 		return chain;
 	}
 
 	function mountMarkup(markup) {
-		if (!markup || document.getElementById('ac-mini-player')) {
+		if (!markup) return document.getElementById('ac-mini-player');
+		if (document.getElementById('ac-mini-player')) {
 			return document.getElementById('ac-mini-player');
 		}
 		const host = document.createElement('div');
@@ -104,21 +176,37 @@
 			: null;
 		const restoring = window.AudioCheckPlayer && typeof AudioCheckPlayer.isRestoring === 'function'
 			? AudioCheckPlayer.isRestoring()
-			: false;
+			: !!document.documentElement.dataset.acGlobalPending;
 		const expectRestore = !!(state && state.hasServerPlayback) || hasSessionHint();
-		const show = !!(track || (restoring && expectRestore));
-		player.hidden = !show;
-		player.setAttribute('aria-hidden', show ? 'false' : 'true');
+		// Show while bootstrap / pending restore runs, or once a track is loaded.
+		const visible = !!(track || (expectRestore && restoring));
+		player.hidden = !visible;
+		player.setAttribute('aria-hidden', visible ? 'false' : 'true');
 		if ('inert' in HTMLElement.prototype) {
-			player.inert = !show;
+			player.inert = !visible;
 		}
-		document.body.classList.toggle('ac-global-mini-player-visible', show);
+		document.body.classList.toggle('ac-global-mini-player-visible', visible);
 		if (window.AudioCheckPlayer && typeof AudioCheckPlayer.syncPlayerClearance === 'function') {
 			AudioCheckPlayer.syncPlayerClearance();
-		} else if (show) {
+		} else if (visible) {
 			document.documentElement.style.setProperty('--ac-player-clearance', player.offsetHeight + 'px');
 		} else {
 			document.documentElement.style.setProperty('--ac-player-clearance', '0px');
+		}
+	}
+
+	function fetchPrefs() {
+		if (window.AudioCheckApi && typeof AudioCheckApi.get === 'function') {
+			return AudioCheckApi.get('/apps/audiocheck/api/prefs').catch(() => ({}));
+		}
+		return Promise.resolve({});
+	}
+
+	function applyPrefs(prefs) {
+		window.AudioCheckUserPrefs = prefs || {};
+		if (prefs && typeof prefs.defaultVolume === 'number' && window.AudioCheckPlayer
+			&& typeof AudioCheckPlayer.setVolumePercent === 'function') {
+			AudioCheckPlayer.setVolumePercent(prefs.defaultVolume, { persist: false });
 		}
 	}
 
@@ -135,6 +223,8 @@
 
 		if (!window.AudioCheckPlayer) {
 			console.error('[audiocheck] global mini-player: AudioCheckPlayer missing');
+			delete document.documentElement.dataset.acGlobalPending;
+			syncVisibility(state);
 			return;
 		}
 
@@ -142,34 +232,37 @@
 			AudioCheckPlayer.init();
 		}
 
-		const restorePromise = typeof AudioCheckPlayer.restoreLastPlayback === 'function'
-			? AudioCheckPlayer.restoreLastPlayback()
-			: Promise.resolve(false);
+		// Prefs BEFORE restore — resumeOnOpen / defaultSpeed must be authoritative.
+		fetchPrefs().then((prefs) => {
+			applyPrefs(prefs);
+			const restorePromise = typeof AudioCheckPlayer.restoreLastPlayback === 'function'
+				? AudioCheckPlayer.restoreLastPlayback()
+				: Promise.resolve(false);
 
-		function applyPrefs(prefs) {
-			window.AudioCheckUserPrefs = prefs || {};
-			if (prefs && typeof prefs.defaultVolume === 'number' && typeof AudioCheckPlayer.setVolumePercent === 'function') {
-				AudioCheckPlayer.setVolumePercent(prefs.defaultVolume, { persist: false });
-			}
-			restorePromise.then((restored) => {
-				if (!restored && prefs && typeof prefs.defaultSpeed === 'number' && typeof AudioCheckPlayer.setSpeed === 'function') {
+			return restorePromise.then((restored) => {
+				if (!restored && prefs && typeof prefs.defaultSpeed === 'number'
+					&& typeof AudioCheckPlayer.setSpeed === 'function') {
 					AudioCheckPlayer.setSpeed(prefs.defaultSpeed);
 				}
-				syncVisibility(state);
-			}).catch(() => syncVisibility(state));
-		}
+				return restored;
+			});
+		}).catch(() => false).finally(() => {
+			delete document.documentElement.dataset.acGlobalPending;
+			syncVisibility(state);
+		});
 
-		if (window.AudioCheckApi && typeof AudioCheckApi.get === 'function') {
-			AudioCheckApi.get('/apps/audiocheck/api/prefs').then(applyPrefs).catch(() => applyPrefs({}));
-		} else {
-			applyPrefs({});
+		// Keep overlay visibility in lockstep with queue/track changes.
+		if (typeof AudioCheckPlayer.subscribe === 'function') {
+			AudioCheckPlayer.subscribe(() => syncVisibility(state));
 		}
-
 		document.addEventListener('visibilitychange', () => syncVisibility(state));
 		window.addEventListener('focus', () => syncVisibility(state));
 	}
 
 	function boot() {
+		if (window[BOOT_FLAG]) return;
+		window[BOOT_FLAG] = true;
+
 		const state = loadState();
 		if (!state || !state.markup) return;
 
@@ -179,9 +272,28 @@
 			return;
 		}
 
-		loadPlayerStack()
+		document.body.classList.add('ac-global-mini-player-host');
+		document.documentElement.dataset.acPlayerMode = 'global';
+		document.documentElement.dataset.acGlobalPending = '1';
+		// Set before player.js auto-inits so volume popover / shortcuts stay global-scoped.
+		window.AudioCheckGlobalPlayer = {
+			nowPlayingUrl: state.nowPlayingUrl || '',
+			isGlobal: true,
+			hasServerPlayback: !!state.hasServerPlayback,
+		};
+		// Mount chrome immediately so the bar is visible while the stack loads
+		// (avoids a multi-second blank gap on slow links).
+		mountMarkup(state.markup);
+		syncVisibility(state);
+
+		const version = bootScriptVersion(state);
+		loadPlayerStack(version)
 			.then(() => startPlayer(state))
-			.catch((err) => console.error('[audiocheck] global mini-player stack failed', err));
+			.catch((err) => {
+				console.error('[audiocheck] global mini-player stack failed', err);
+				delete document.documentElement.dataset.acGlobalPending;
+				syncVisibility(state);
+			});
 	}
 
 	if (document.readyState === 'loading') {

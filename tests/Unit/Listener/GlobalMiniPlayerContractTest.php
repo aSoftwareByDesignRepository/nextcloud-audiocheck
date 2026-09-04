@@ -32,6 +32,7 @@ final class GlobalMiniPlayerContractTest extends TestCase
 		self::assertStringContainsString('hasServerPlayback', $src);
 		self::assertStringContainsString('hasPersistedItems', $src);
 		self::assertStringContainsString('hasUnfinishedProgress', $src);
+		self::assertStringContainsString('assetVersion', $src);
 		// Must not return early for every non-AudioCheck page anymore.
 		self::assertStringNotContainsString(
 			"if (\$response->getApp() !== Application::APP_ID) {\n\t\t\treturn;\n\t\t}",
@@ -46,11 +47,13 @@ final class GlobalMiniPlayerContractTest extends TestCase
 		self::assertFileExists($this->root . '/templates/partials/mini-player.php');
 		self::assertFileExists($this->root . '/lib/Service/MiniPlayerMarkupService.php');
 		$js = (string)file_get_contents($this->root . '/js/global-mini-player.js');
-		self::assertStringContainsString('hasSessionHint', $js);
-		self::assertStringContainsString('hasServerPlayback', $js);
-		self::assertStringContainsString('expectRestore', $js);
-		self::assertStringContainsString('loadPlayerStack', $js);
-		self::assertStringContainsString('PLAYER_SCRIPTS', $js);
+		self::assertStringContainsString('loadStateFromDom', $js);
+		self::assertStringContainsString("loadState('audiocheck', 'global-mini-player')", $js);
+		self::assertStringContainsString('initial-state-audiocheck-global-mini-player', $js);
+		self::assertStringContainsString('decodeBase64Utf8', $js);
+		self::assertStringContainsString('assetVersion', $js);
+		self::assertStringContainsString('__acGlobalMiniPlayerBooted', $js);
+		self::assertStringContainsString('fetchPrefs', $js);
 	}
 
 	public function testPlayerSupportsGlobalOpenAndScopedShortcuts(): void
@@ -67,7 +70,7 @@ final class GlobalMiniPlayerContractTest extends TestCase
 	{
 		$xml = (string)file_get_contents($this->root . '/appinfo/info.xml');
 		self::assertStringContainsString('max-version="35"', $xml);
-		self::assertStringContainsString('<version>1.3.4</version>', $xml);
+		self::assertStringContainsString('<version>1.3.5</version>', $xml);
 		// Store copy must not advertise the global mini-player.
 		self::assertStringNotContainsString('mini-player', $xml);
 		self::assertStringNotContainsString('Mini-Player', $xml);
@@ -81,6 +84,9 @@ final class GlobalMiniPlayerContractTest extends TestCase
 		self::assertStringContainsString('summary:focus-visible', $css);
 		self::assertStringContainsString('ac-mini-player--global .ac-mini-player__open', $css);
 		self::assertStringContainsString('display: inline-flex !important', $css);
+		self::assertStringContainsString('ac-mini-player--needs-gesture', $css);
+		self::assertStringContainsString('--ac-radius-md', $css);
+		self::assertStringContainsString('--ac-touch: 44px', $css);
 	}
 
 	public function testCoverPathDoesNotDoubleAnalyzeViaExtractTags(): void

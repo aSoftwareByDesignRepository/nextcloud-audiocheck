@@ -13,6 +13,7 @@ body.ac-global-mini-player-host {
 	--ac-fs-sm: 0.875rem;
 	--ac-touch: 44px;
 	--ac-radius-sm: 6px;
+	--ac-radius-md: 10px;
 	--ac-player-h: 72px;
 	--ac-bg-card: var(--color-main-background);
 	--ac-bg-soft: color-mix(in srgb, var(--color-main-background) 96%, var(--color-main-text) 4%);
@@ -21,7 +22,10 @@ body.ac-global-mini-player-host {
 	--ac-muted: var(--color-text-maxcontrast, color-mix(in srgb, var(--color-main-text) 62%, transparent));
 	--ac-muted-strong: var(--color-text-maxcontrast, color-mix(in srgb, var(--color-main-text) 72%, transparent));
 	--ac-text: var(--color-main-text);
+	--ac-shadow-sm: 0 1px 3px color-mix(in srgb, var(--color-main-text) 10%, transparent);
 	--ac-shadow-md: 0 4px 16px color-mix(in srgb, var(--color-main-text) 12%, transparent);
+	--ac-shadow-raised: 0 8px 24px color-mix(in srgb, var(--color-main-text) 16%, transparent);
+	--ac-tint-success: color-mix(in srgb, var(--color-success, #2d7a3e) 14%, var(--ac-bg-card));
 	--ac-danger-border: color-mix(in srgb, var(--color-error, #c00) 44%, var(--ac-border));
 	--ac-danger-bg: color-mix(in srgb, var(--color-error, #c00) 12%, var(--ac-bg-card));
 	--ac-danger-ink: var(--color-error, #c00);
@@ -954,4 +958,26 @@ body.ac-global-mini-player-host.ac-global-mini-player-visible {
 }
 .ac-mini-player.ac-mini-player--global .ac-mini-player__artist {
 	color: var(--color-text-maxcontrast, var(--ac-muted));
+}
+
+/* After a full navigation, browsers block autoplay — make Play unmistakable. */
+.ac-mini-player.ac-mini-player--needs-gesture #ac-mini-play {
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-element) 55%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.ac-mini-player.ac-mini-player--needs-gesture #ac-mini-play {
+		animation: ac-mini-play-nudge 1.6s ease-in-out 2;
+	}
+}
+
+@keyframes ac-mini-play-nudge {
+	0%, 100% { transform: scale(1); }
+	50% { transform: scale(1.06); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ac-mini-player.ac-mini-player--needs-gesture #ac-mini-play {
+		animation: none;
+	}
 }

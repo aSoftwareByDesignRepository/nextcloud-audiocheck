@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.3.5 - 2026-09-04
+
+### Fixed
+- Global mini-player on Files/Dashboard: use `OCP.InitialState.loadState` (NC32+) with UTF-8-safe DOM fallback — `.load` was never a function, so the overlay never mounted.
+- Restore now waits for user prefs first (`resumeOnOpen` / volume / speed) so server preference races cannot autoplay against the user’s choice.
+- Dynamically loaded player scripts are cache-busted with the app `assetVersion`.
+- Boot is idempotent; global mode is set before the player stack loads so shortcuts/volume stay scoped to the overlay.
+- After browser autoplay blocks resume, Play is visually highlighted (`ac-mini-player--needs-gesture`) and announced politely.
+
+### Changed
+- Version **1.3.5**.
+- Global overlay shows “Loading playback…” immediately while the player stack loads (no blank multi-second gap).
+
 ## 1.3.4 - 2026-09-04
 
 ### Changed

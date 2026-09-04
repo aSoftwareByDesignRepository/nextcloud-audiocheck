@@ -1107,6 +1107,7 @@
 		});
 		a.addEventListener('play', () => {
 			passiveLoad = false;
+			clearNeedsGesture();
 			// Some browsers re-assert defaultPlaybackRate on play transitions;
 			// keep the session speed authoritative.
 			applyPlaybackRate(a);
@@ -1265,6 +1266,10 @@
 						if (name === 'AbortError') return;
 						if (name === 'NotAllowedError') {
 							if (index === i) {
+								const shell = document.getElementById('ac-mini-player');
+								if (shell) {
+									shell.classList.add('ac-mini-player--needs-gesture');
+								}
 								updateMini(queue[i], { announce: false });
 								notify();
 								announce(t('audiocheck', 'Ready to resume — press play to continue.'));
@@ -1317,12 +1322,18 @@
 		});
 	}
 
+	function clearNeedsGesture() {
+		const shell = document.getElementById('ac-mini-player');
+		if (shell) shell.classList.remove('ac-mini-player--needs-gesture');
+	}
+
 	function toggle() {
 		const a = audio();
 		if (!a) return;
 		const track = activeTrack();
 		if (a.paused) {
 			passiveLoad = false;
+			clearNeedsGesture();
 			if (a.error && index >= 0 && queue[index]) {
 				// The passive restore load failed (e.g. transient network
 				// error); retry from the saved position now that the user
@@ -1571,9 +1582,16 @@
 			updateMiniSeek();
 		},
 	};
-	if (document.readyState === 'loading') {
-		document.addEventListener('DOMContentLoaded', () => window.AudioCheckPlayer.init());
-	} else {
-		window.AudioCheckPlayer.init();
+	// Global boot mounts markup then loads this file; it calls init() itself after
+	// prefs. Skip the eager auto-init so volume/shortcuts see acPlayerMode=global.
+	const deferGlobalInit = document.documentElement.dataset.acPlayerMode === 'global'
+		|| document.documentElement.dataset.acGlobalPending === '1'
+		|| !!(window.AudioCheckGlobalPlayer && window.AudioCheckGlobalPlayer.isGlobal);
+	if (!deferGlobalInit) {
+		if (document.readyState === 'loading') {
+			document.addEventListener('DOMContentLoaded', () => window.AudioCheckPlayer.init());
+		} else {
+			window.AudioCheckPlayer.init();
+		}
 	}
 })();
