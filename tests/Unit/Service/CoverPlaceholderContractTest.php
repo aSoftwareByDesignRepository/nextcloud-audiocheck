@@ -25,4 +25,12 @@ final class CoverPlaceholderContractTest extends TestCase
 		);
 		$this->assertStringNotContainsString("@media (prefers-color-scheme", $src);
 	}
+
+	public function testFolderCoverFilenamesMatchFileAccessAllowlist(): void
+	{
+		$src = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/Service/CoverService.php');
+		foreach (['cover.jpg', 'folder.jpg', 'front.png', 'cover.png', 'folder.png'] as $name) {
+			$this->assertStringContainsString("'$name'", $src, "CoverService must probe $name");
+		}
+	}
 }

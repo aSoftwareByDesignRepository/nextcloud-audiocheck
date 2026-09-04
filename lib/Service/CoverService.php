@@ -64,7 +64,7 @@ class CoverService
 
 		$parent = $audioFile->getParent();
 		if ($parent !== null) {
-			foreach (['cover.jpg', 'folder.jpg', 'front.png', 'cover.png'] as $name) {
+			foreach (['cover.jpg', 'folder.jpg', 'front.png', 'cover.png', 'folder.png'] as $name) {
 				if (!$parent->nodeExists($name)) {
 					continue;
 				}
