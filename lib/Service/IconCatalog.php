@@ -38,6 +38,7 @@ final class IconCatalog
 		'admin-settings' => '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
 		'menu' => '<path d="M3 6h18M3 12h18M3 18h18"/>',
 		'chevron-up' => '<path d="m6 15 6-6 6 6"/>',
+		'close' => '<path d="M18 6 6 18M6 6l12 12"/>',
 		'info' => '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
 		'alert-circle' => '<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>',
 		'edit' => '<path d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/>',

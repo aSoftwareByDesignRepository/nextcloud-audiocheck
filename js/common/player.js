@@ -151,6 +151,10 @@
 	let shuffledOrder = [];
 	const SESSION_KEY = 'audiocheck_playback_session';
 	const SESSION_VERSION = 1;
+	/** Session latch: Close on the global overlay must not remount from unfinished progress. */
+	const GLOBAL_DISMISS_KEY = 'audiocheck_global_player_dismissed';
+	/** Invalidate in-flight restoreLastPlayback when the user dismisses mid-bootstrap. */
+	let restoreEpoch = 0;
 	let sessionPersistTimer = null;
 
 	// Durable, cross-device queue persistence. sessionStorage above stays as the
@@ -343,9 +347,52 @@
 		clearServerQueue();
 	}
 
+	function isGlobalPlayerDismissed() {
+		try {
+			return sessionStorage.getItem(GLOBAL_DISMISS_KEY) === '1';
+		} catch (_) {
+			return false;
+		}
+	}
+
+	function setGlobalPlayerDismissed(on) {
+		try {
+			if (on) sessionStorage.setItem(GLOBAL_DISMISS_KEY, '1');
+			else sessionStorage.removeItem(GLOBAL_DISMISS_KEY);
+		} catch (_) { /* private mode / quota */ }
+	}
+
+	/**
+	 * Force-hide the dock (global overlay or in-app) and clear body pad so
+	 * Files/Photos bottom chrome is clickable again immediately.
+	 */
+	function hideMiniPlayerChrome() {
+		const player = document.getElementById('ac-mini-player');
+		if (!player) {
+			document.documentElement.style.setProperty('--ac-player-clearance', '0px');
+			document.body.classList.remove('ac-global-mini-player-visible');
+			return;
+		}
+		const active = document.activeElement;
+		if (active && player.contains(active) && typeof active.blur === 'function') {
+			active.blur();
+		}
+		player.hidden = true;
+		player.setAttribute('aria-hidden', 'true');
+		if ('inert' in HTMLElement.prototype) {
+			player.inert = true;
+		}
+		document.body.classList.remove('ac-global-mini-player-visible');
+		syncPlayerClearance();
+	}
+
 	function restoreFromServerProgress() {
 		const prefs = window.AudioCheckUserPrefs || {};
 		if (prefs.resumeOnOpen === false) {
+			return Promise.resolve(false);
+		}
+		// Global Close must not resurrect the covering bar from "continue" progress.
+		if (isGlobalPlayerMode() && isGlobalPlayerDismissed()) {
 			return Promise.resolve(false);
 		}
 		return AudioCheckApi.get('/apps/audiocheck/api/progress').then((data) => {
@@ -364,7 +411,7 @@
 				if (typeof item.playbackSpeed === 'number' && item.playbackSpeed > 0) {
 					speed = normalizeSpeed(item.playbackSpeed);
 				}
-				window.AudioCheckPlayer.playQueue([track], 0, positionMs, false);
+				window.AudioCheckPlayer.playQueue([track], 0, positionMs, false, { fromRestore: true });
 				persistSession();
 				return true;
 			});
@@ -399,7 +446,7 @@
 				shuffle = !!snap.shuffle;
 				if (snap.repeatMode) repeatMode = snap.repeatMode;
 				const positionMs = resume ? Math.max(0, snap.positionMs || 0) : 0;
-				window.AudioCheckPlayer.playQueue(tracks, idx, positionMs, autoplay);
+				window.AudioCheckPlayer.playQueue(tracks, idx, positionMs, autoplay, { fromRestore: true });
 				flushQueuePersistence(false);
 				announceRestored(tracks.length);
 				resolve(true);
@@ -430,7 +477,7 @@
 			if (q.repeatMode) repeatMode = q.repeatMode;
 			const resume = prefs.resumeOnOpen !== false;
 			const positionMs = resume ? Math.max(0, q.positionMs || 0) : 0;
-			window.AudioCheckPlayer.playQueue(tracks, idx, positionMs, false);
+			window.AudioCheckPlayer.playQueue(tracks, idx, positionMs, false, { fromRestore: true });
 			// Server already matches what we just loaded — avoid an echo write.
 			lastServerSig = queueServerSignature(buildServerQueuePayload());
 			flushQueuePersistence(false);
@@ -459,14 +506,34 @@
 	}
 
 	function restoreLastPlayback() {
+		const epoch = ++restoreEpoch;
+		// Global Close: do not remount from session / server / continue progress.
+		if (isGlobalPlayerMode() && isGlobalPlayerDismissed()) {
+			return Promise.resolve(false).finally(() => {
+				if (epoch !== restoreEpoch) return;
+				finishBootstrapRestore();
+				updateMini(null);
+				hideMiniPlayerChrome();
+				notify();
+			});
+		}
 		return restoreSession().then((restored) => {
+			if (epoch !== restoreEpoch || (isGlobalPlayerMode() && isGlobalPlayerDismissed())) return false;
 			if (restored) return true;
 			return restoreServerQueue();
 		}).then((restored) => {
+			if (epoch !== restoreEpoch || (isGlobalPlayerMode() && isGlobalPlayerDismissed())) return false;
 			if (restored) return true;
 			return restoreFromServerProgress();
 		}).finally(() => {
+			if (epoch !== restoreEpoch) return;
 			finishBootstrapRestore();
+			if (isGlobalPlayerMode() && isGlobalPlayerDismissed()) {
+				updateMini(null);
+				hideMiniPlayerChrome();
+				notify();
+				return;
+			}
 			const track = activeTrack();
 			updateMini(track, { announce: false });
 			updateMiniSeek();
@@ -616,6 +683,7 @@
 		const playBtn = document.getElementById('ac-mini-play');
 		const jumpBack = document.getElementById('ac-mini-jump-back');
 		const jumpFwd = document.getElementById('ac-mini-jump-forward');
+		const closeBtn = document.getElementById('ac-mini-close');
 		const track = activeTrack();
 		const a = audio();
 		const hasTrack = !!track && index >= 0;
@@ -628,6 +696,39 @@
 		if (nextBtn) nextBtn.disabled = !canGoNext();
 		if (jumpBack) jumpBack.disabled = jumpBlocked;
 		if (jumpFwd) jumpFwd.disabled = jumpBlocked;
+		if (closeBtn) {
+			closeBtn.disabled = !hasTrack;
+			closeBtn.hidden = !hasTrack;
+			closeBtn.setAttribute('aria-hidden', hasTrack ? 'false' : 'true');
+		}
+	}
+
+	/**
+	 * Bachus idle/active chrome: when nothing is queued, collapse the dock to one
+	 * calm line so Files/Photos-adjacent chrome is not a wall of dead controls.
+	 */
+	function syncMiniPlayerMode(hasTrack) {
+		const player = document.getElementById('ac-mini-player');
+		if (!player) return;
+		const active = !!hasTrack;
+		player.classList.toggle('ac-mini-player--idle', !active);
+		player.classList.toggle('ac-mini-player--active', active);
+		player.setAttribute('data-ac-mini-state', active ? 'active' : 'idle');
+		const seek = document.getElementById('ac-mini-seek-wrap');
+		const transport = player.querySelector('.ac-mini-player__transport');
+		const side = player.querySelector('.ac-mini-player__side');
+		if (seek) {
+			seek.hidden = !active;
+			seek.setAttribute('aria-hidden', active ? 'false' : 'true');
+		}
+		if (transport) {
+			transport.hidden = !active;
+			transport.setAttribute('aria-hidden', active ? 'false' : 'true');
+		}
+		if (side) {
+			side.hidden = !active;
+			side.setAttribute('aria-hidden', active ? 'false' : 'true');
+		}
 	}
 
 	/**
@@ -710,6 +811,7 @@
 				now.disabled = true;
 				now.classList.add('ac-mini-player__track--idle');
 			}
+			syncMiniPlayerMode(false);
 			updateMiniSeek();
 			updateTransport();
 			return;
@@ -743,6 +845,7 @@
 				AudioCheckIcons.mount(playBtn, playing ? 'pause' : 'play');
 			}
 		}
+		syncMiniPlayerMode(true);
 		updateTransport();
 		syncPlayerClearance();
 		if (!options.announce) return;
@@ -1080,6 +1183,13 @@
 			expand.dataset.acBound = '1';
 			expand.addEventListener('click', openNowPlaying);
 		}
+		const closeBtn = document.getElementById('ac-mini-close');
+		if (closeBtn && !closeBtn.dataset.acBound) {
+			closeBtn.dataset.acBound = '1';
+			closeBtn.addEventListener('click', () => {
+				window.AudioCheckPlayer.dismissMiniPlayer();
+			});
+		}
 	}
 
 	function bindAudio() {
@@ -1369,6 +1479,13 @@
 		playQueue(tracks, startIndex, positionMs, autoplay, playbackOptions) {
 			bindAudio();
 			const opts = playbackOptions || {};
+			// Restore must never clear a global Close latch (bar would remount on Files).
+			// Explicit user play/queue actions re-enable the overlay for this session.
+			if (!opts.fromRestore) {
+				setGlobalPlayerDismissed(false);
+			} else if (isGlobalPlayerMode() && isGlobalPlayerDismissed()) {
+				return;
+			}
 			if (opts.playbackPolicy) {
 				queuePlaybackPolicy = opts.playbackPolicy;
 			} else if (tracks.length > 1 && opts.playbackMode) {
@@ -1425,7 +1542,10 @@
 			if (truncated) {
 				AudioCheckMessaging.toast(t('audiocheck', 'Queue is full — some tracks were not added.'), 'warning');
 			}
-			if (index < 0 && queue.length) loadTrack(0);
+			if (index < 0 && queue.length) {
+				setGlobalPlayerDismissed(false);
+				loadTrack(0);
+			}
 			return true;
 		},
 		enqueueAll(tracks) {
@@ -1441,7 +1561,10 @@
 			if (truncated) {
 				AudioCheckMessaging.toast(t('audiocheck', 'Queue is full — some tracks were not added.'), 'warning');
 			}
-			if (shouldStart && queue.length) loadTrack(0);
+			if (shouldStart && queue.length) {
+				setGlobalPlayerDismissed(false);
+				loadTrack(0);
+			}
 			return toAdd.length;
 		},
 		playNext(trackOrTracks) {
@@ -1496,6 +1619,32 @@
 			clearSession();
 			notify();
 		},
+		/**
+		 * Stop playback, clear the active queue/session, and hide the bottom bar
+		 * on Files/Photos (global overlay). Inside AudioCheck the dock stays as
+		 * “Nothing playing” — matching Clear queue on Now playing.
+		 * On Files/Photos the Close latch blocks remount from unfinished progress
+		 * until the user explicitly starts playback again.
+		 */
+		dismissMiniPlayer() {
+			restoreEpoch += 1;
+			finishBootstrapRestore();
+			const global = isGlobalPlayerMode();
+			if (global) {
+				setGlobalPlayerDismissed(true);
+			}
+			this.clearQueue();
+			if (global) {
+				hideMiniPlayerChrome();
+			} else {
+				syncMiniPlayerDock();
+			}
+			announce(t('audiocheck', 'Player closed'));
+			if (window.AudioCheckMessaging && typeof AudioCheckMessaging.toast === 'function') {
+				AudioCheckMessaging.toast(t('audiocheck', 'Player closed'), 'info');
+			}
+		},
+		isGlobalPlayerDismissed,
 		getQueue() { return queue.slice(); },
 		getCurrentIndex() { return index; },
 		getCurrentTrack() { return activeTrack(); },

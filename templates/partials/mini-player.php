@@ -11,7 +11,7 @@ use OCA\AudioCheck\Service\IconCatalog;
 
 $acMiniPlayerGlobal = !empty($acMiniPlayerGlobal);
 $acMiniPlayerHidden = !empty($acMiniPlayerHidden);
-$classes = 'ac-mini-player';
+$classes = 'ac-mini-player ac-mini-player--idle';
 if ($acMiniPlayerGlobal) {
 	$classes .= ' ac-mini-player--global';
 }
@@ -38,6 +38,7 @@ $acRaw = static function (mixed $value): void {
 };
 ?>
 <footer id="ac-mini-player" class="<?php $acP($classes); ?>" role="region" aria-label="<?php $acP($l->t('Mini player')); ?>"
+	data-ac-mini-state="idle"
 	<?php if ($acMiniPlayerHidden): ?>hidden aria-hidden="true"<?php endif; ?>>
 	<audio id="ac-audio" preload="metadata" playsinline></audio>
 	<div class="ac-mini-player__inner">
@@ -50,7 +51,7 @@ $acRaw = static function (mixed $value): void {
 			</span>
 		</button>
 
-		<div class="ac-mini-player__transport" role="group" aria-label="<?php $acP($l->t('Playback')); ?>">
+		<div class="ac-mini-player__transport" role="group" aria-label="<?php $acP($l->t('Playback')); ?>" hidden aria-hidden="true">
 			<button type="button" class="ac-btn ac-transport-btn" id="ac-mini-prev" aria-label="<?php $acP($l->t('Previous')); ?>">
 				<?php $acRaw(IconCatalog::render('previous')); ?>
 			</button>
@@ -76,17 +77,23 @@ $acRaw = static function (mixed $value): void {
 			</button>
 		</div>
 
-		<div class="ac-mini-player__seek" id="ac-mini-seek-wrap">
+		<div class="ac-mini-player__seek" id="ac-mini-seek-wrap" hidden aria-hidden="true">
 			<span class="ac-mini-player__time" id="ac-mini-pos" aria-hidden="true">0:00</span>
 			<label class="ac-sr-only" for="ac-mini-seek"><?php $acP($l->t('Seek')); ?></label>
 			<input type="range" class="ac-seek" id="ac-mini-seek" min="0" max="1000" value="0" aria-label="<?php $acP($l->t('Seek')); ?>">
 			<span class="ac-mini-player__time" id="ac-mini-dur" aria-hidden="true">0:00</span>
 		</div>
 
-		<div class="ac-mini-player__side">
+		<div class="ac-mini-player__side" hidden aria-hidden="true">
 			<div class="ac-mini-player__volume" id="ac-mini-volume" role="group" aria-label="<?php $acP($l->t('Volume')); ?>"></div>
 			<button type="button" class="ac-btn ac-btn--icon ac-mini-player__open" id="ac-mini-expand" aria-label="<?php $acP($l->t('Open now playing')); ?>">
 				<?php $acRaw(IconCatalog::render('chevron-up', 'ac-mini-player__open-icon')); ?>
+			</button>
+			<button type="button" class="ac-btn ac-btn--icon ac-mini-player__close" id="ac-mini-close"
+				aria-label="<?php $acP($l->t('Close player')); ?>"
+				title="<?php $acP($l->t('Close player')); ?>"
+				hidden aria-hidden="true" disabled>
+				<?php $acRaw(IconCatalog::render('close', 'ac-mini-player__close-icon')); ?>
 			</button>
 		</div>
 	</div>

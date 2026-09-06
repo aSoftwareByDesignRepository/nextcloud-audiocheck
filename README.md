@@ -14,7 +14,7 @@ Audiobooks and music from your Nextcloud Files — with resume, queues, chapters
 
 **Your audio library inside Nextcloud.**
 
-AudioCheck indexes folders you choose in Files, streams with live permission checks, and keeps a persistent mini-player while you navigate — including on Files and other Nextcloud apps when you have something in your queue. Music and audiobooks use separate library roots.
+AudioCheck indexes folders you choose in Files, streams with live permission checks, and keeps a persistent mini-player while you navigate inside AudioCheck. An optional setting (**Show player on other pages**, off by default) can also show a small player on Files and other Nextcloud apps while something is playing. Music and audiobooks use separate library roots.
 
 The app is **free** under AGPL-3.0-or-later. No seat license is required for this web app.
 
@@ -59,7 +59,7 @@ All file byte, metadata and cover access goes through a single file-access gate 
 
 **Ihre Audiothek in Nextcloud.**
 
-AudioCheck indexiert gewählte Ordner in Dateien, streamt mit Live-Berechtigungsprüfung und hält einen dauerhaften Mini-Player — auch in Dateien und anderen Nextcloud-Apps, wenn etwas in der Warteschlange liegt. Musik und Hörbücher haben getrennte Bibliothekswurzeln.
+AudioCheck indexiert gewählte Ordner in Dateien, streamt mit Live-Berechtigungsprüfung und hält einen dauerhaften Mini-Player in AudioCheck. Optional (**Player auf anderen Seiten anzeigen**, standardmäßig aus) kann ein kleiner Player auch in Dateien und anderen Nextcloud-Apps erscheinen, solange etwas spielt. Musik und Hörbücher haben getrennte Bibliothekswurzeln.
 
 Die App ist unter AGPL-3.0-or-later **kostenfrei**. Für diese Web-App ist keine Sitzlizenz nötig.
 

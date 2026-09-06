@@ -296,7 +296,7 @@ test.describe('AudioCheck seek jump (±30s)', () => {
 		expect(delta).toBe(30);
 	});
 
-	test('mini player is hidden on Now Playing and shows ±30 on other views', async ({ page }) => {
+	test('mini player is hidden on Now Playing; phone hides ±30, tablet keeps them', async ({ page }) => {
 		await page.setViewportSize({ width: 390, height: 844 });
 		await page.goto(`${BASE}/apps/audiocheck/now-playing`, { waitUntil: 'domcontentloaded' });
 		// SSR must hide before JS hydrates — no flash of mini under full player.
@@ -322,13 +322,28 @@ test.describe('AudioCheck seek jump (±30s)', () => {
 		await page.goto(`${BASE}/apps/audiocheck/`, { waitUntil: 'domcontentloaded' });
 		await waitForShell(page);
 		await expect(page.locator('#ac-mini-player')).toBeVisible();
+
+		const loaded = await loadPlayableTrack(page);
+		test.skip(!loaded, 'No playable tracks in library — seed audio before seeking e2e');
+		await page.waitForFunction(() => {
+			const mini = document.getElementById('ac-mini-player');
+			return mini && mini.getAttribute('data-ac-mini-state') === 'active';
+		}, null, { timeout: 15_000 });
+
+		// Phone Bachus layout: ±30 lives on Now Playing only — mini keeps prev/play/next.
+		await expect(page.locator('#ac-mini-jump-back')).toBeHidden();
+		await expect(page.locator('#ac-mini-jump-forward')).toBeHidden();
+		await expect(page.locator('#ac-mini-play')).toBeVisible();
+		await expect(page.locator('#ac-mini-close')).toBeVisible();
+
+		await page.setViewportSize({ width: 900, height: 800 });
+		await page.waitForTimeout(200);
 		const back = page.locator('#ac-mini-jump-back');
 		const fwd = page.locator('#ac-mini-jump-forward');
 		await expect(back).toBeVisible();
 		await expect(fwd).toBeVisible();
 		await expect(back).toHaveAttribute('aria-label', /(Jump back 30 seconds|30 Sekunden zurück)/i);
 		await expect(fwd).toHaveAttribute('aria-label', /(Jump forward 30 seconds|30 Sekunden vor)/i);
-
 		const sizes = await page.evaluate(() => {
 			const b = document.getElementById('ac-mini-jump-back');
 			const f = document.getElementById('ac-mini-jump-forward');
@@ -366,6 +381,7 @@ test.describe('AudioCheck seek jump (±30s)', () => {
 	});
 
 	test('mini player ±30 jumps on an active track outside Now Playing', async ({ page }) => {
+		await page.setViewportSize({ width: 900, height: 800 });
 		await page.goto(`${BASE}/apps/audiocheck/`, { waitUntil: 'domcontentloaded' });
 		await waitForShell(page);
 		const loaded = await loadPlayableTrack(page);
@@ -374,7 +390,8 @@ test.describe('AudioCheck seek jump (±30s)', () => {
 		await page.waitForFunction(() => {
 			const a = document.getElementById('ac-audio');
 			const back = document.getElementById('ac-mini-jump-back');
-			return !!(a && back && !back.disabled && Number.isFinite(a.currentTime));
+			return !!(a && back && !back.disabled && Number.isFinite(a.currentTime)
+				&& window.getComputedStyle(back).display !== 'none');
 		}, null, { timeout: 25_000 });
 
 		await page.evaluate(() => {
@@ -396,25 +413,37 @@ test.describe('AudioCheck seek jump (±30s)', () => {
 		}, before, { timeout: 10_000 });
 	});
 
-	test('mini player stays usable at 320px width with five transport controls', async ({ page }) => {
+	test('mini player stays usable at 320px with three core controls', async ({ page }) => {
 		await page.setViewportSize({ width: 320, height: 640 });
 		await page.goto(`${BASE}/apps/audiocheck/`, { waitUntil: 'domcontentloaded' });
 		await waitForShell(page);
+		const loaded = await loadPlayableTrack(page);
+		test.skip(!loaded, 'No playable tracks in library — seed audio before seeking e2e');
+		await page.waitForFunction(() => {
+			const mini = document.getElementById('ac-mini-player');
+			const play = document.getElementById('ac-mini-play');
+			return mini && mini.getAttribute('data-ac-mini-state') === 'active' && play && !play.closest('[hidden]');
+		}, null, { timeout: 15_000 });
+
 		const overflow = await page.evaluate(() => {
 			const row = document.querySelector('#ac-mini-player .ac-mini-player__transport');
-			if (!row) return { ok: false };
-			const ids = ['ac-mini-prev', 'ac-mini-jump-back', 'ac-mini-play', 'ac-mini-jump-forward', 'ac-mini-next'];
+			if (!row || row.hidden) return { ok: false, reason: 'transport-hidden' };
+			const ids = ['ac-mini-prev', 'ac-mini-play', 'ac-mini-next'];
 			const boxes = ids.map((id) => {
 				const el = document.getElementById(id);
 				const r = el.getBoundingClientRect();
 				return { id, left: r.left, right: r.right, width: r.width, height: r.height };
 			});
+			const jumpBack = document.getElementById('ac-mini-jump-back');
+			const jumpCs = jumpBack ? window.getComputedStyle(jumpBack) : null;
 			const rowBox = row.getBoundingClientRect();
 			const clipped = boxes.some((b) => b.left < rowBox.left - 1 || b.right > rowBox.right + 1);
 			const tooSmall = boxes.some((b) => b.height < 44 || b.width < 40);
-			return { ok: true, clipped, tooSmall, boxes, rowWidth: rowBox.width };
+			const jumpsHidden = !jumpCs || jumpCs.display === 'none';
+			return { ok: true, clipped, tooSmall, jumpsHidden, boxes, rowWidth: rowBox.width };
 		});
 		expect(overflow.ok).toBe(true);
+		expect(overflow.jumpsHidden).toBe(true);
 		expect(overflow.clipped).toBe(false);
 		expect(overflow.tooSmall).toBe(false);
 	});

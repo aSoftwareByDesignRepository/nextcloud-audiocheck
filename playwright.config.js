@@ -8,7 +8,7 @@ function resolveStorageState() {
 		return fs.existsSync(resolved) ? resolved : undefined;
 	}
 	const autoPath = path.join(__dirname, '.auth', 'storage-state.json');
-	if ((process.env.E2E_USER && (process.env.E2E_PASSWORD || process.env.E2E_PASS)) && fs.existsSync(autoPath)) {
+	if (fs.existsSync(autoPath)) {
 		return autoPath;
 	}
 	return undefined;

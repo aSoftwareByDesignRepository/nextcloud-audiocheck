@@ -52,4 +52,14 @@ class RateLimitServiceContractTest extends TestCase
 		self::assertStringContainsString('ILockingProvider::class', $src);
 		self::assertStringContainsString('RateLimitService::class', $src);
 	}
+
+	public function testStreamAndCoverControllersBothEnforceRateLimits(): void
+	{
+		$cover = (string)file_get_contents($this->root . '/lib/Controller/CoverController.php');
+		$stream = (string)file_get_contents($this->root . '/lib/Controller/StreamController.php');
+		self::assertMatchesRegularExpression("/assertAllowed\s*\(\s*\\\$userId\s*,\s*'cover'/m", $cover);
+		self::assertMatchesRegularExpression("/assertAllowed\s*\(\s*\\\$userId\s*,\s*'stream'/m", $stream);
+		self::assertStringContainsString('STATUS_TOO_MANY_REQUESTS', $cover);
+		self::assertStringContainsString('STATUS_TOO_MANY_REQUESTS', $stream);
+	}
 }

@@ -137,7 +137,7 @@ async function prepareContent(page) {
 	}
 	for (let i = 0; i < 10; i++) {
 		try {
-			await api(page, 'GET', '/apps/audiocheck/api/scan/ajax-cron');
+			await api(page, 'POST', '/apps/audiocheck/api/scan/ajax-cron', {});
 		} catch {
 			/* ignore */
 		}

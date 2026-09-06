@@ -126,7 +126,10 @@
 		scanNeedsAjaxCronTick,
 		runAjaxScanTick(scan) {
 			if (!scanNeedsAjaxCronTick(scan)) return Promise.resolve(null);
-			return request('/apps/audiocheck/api/scan/ajax-cron').then((r) => r.scan || null).catch(() => null);
+			// POST + CSRF — must not be a cross-site drive-by GET.
+			return request('/apps/audiocheck/api/scan/ajax-cron', { method: 'POST', body: {} })
+				.then((r) => r.scan || null)
+				.catch(() => null);
 		},
 		fetchScanStatus(scanHint) {
 			const load = () => this.get('/apps/audiocheck/api/scan').then((r) => r.scan);

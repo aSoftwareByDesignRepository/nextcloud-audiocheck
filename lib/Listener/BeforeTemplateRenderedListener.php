@@ -9,6 +9,7 @@ use OCA\AudioCheck\Service\AccessControlService;
 use OCA\AudioCheck\Service\MiniPlayerMarkupService;
 use OCA\AudioCheck\Service\PlaybackStateService;
 use OCA\AudioCheck\Service\PlayQueueService;
+use OCA\AudioCheck\Service\UserPrefsService;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Http\Events\BeforeTemplateRenderedEvent;
 use OCP\AppFramework\Http\TemplateResponse;
@@ -26,6 +27,7 @@ class BeforeTemplateRenderedListener implements IEventListener {
 		private IAppManager $appManager,
 		private IUserSession $userSession,
 		private AccessControlService $accessControl,
+		private UserPrefsService $userPrefs,
 		private MiniPlayerMarkupService $miniPlayerMarkup,
 		private PlayQueueService $playQueue,
 		private PlaybackStateService $playback,
@@ -65,12 +67,18 @@ class BeforeTemplateRenderedListener implements IEventListener {
 	}
 
 	private function registerGlobalMiniPlayer(string $userId): void {
+		// Hard gate: users who opt out must not pay for scripts/CSS or a covering bar.
+		if (!$this->userPrefs->wantsGlobalMiniPlayer($userId)) {
+			return;
+		}
+
 		$nowPlayingUrl = $this->urlGenerator->linkToRouteAbsolute('audiocheck.page.nowPlaying');
 		$payload = $this->miniPlayerMarkup->buildGlobalPayload($nowPlayingUrl);
 		// Hints only — never skip loading the player (sessionStorage can still restore).
 		// Used to avoid flashing an empty “Loading playback…” bar for users with nothing queued.
 		$payload['hasServerPlayback'] = $this->playQueue->hasPersistedItems($userId)
 			|| $this->playback->hasUnfinishedProgress($userId);
+		$payload['showGlobalMiniPlayer'] = true;
 		// Cache-bust dynamically loaded player stack scripts after app upgrades.
 		$payload['assetVersion'] = $this->appManager->getAppVersion(Application::APP_ID);
 		$this->initialState->provideInitialState('global-mini-player', $payload);

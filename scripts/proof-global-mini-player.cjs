@@ -74,6 +74,25 @@ function fail(msg, extra) {
 	await page.goto(`${BASE}/apps/audiocheck/library`, { waitUntil: 'domcontentloaded', timeout: 90000 });
 	await page.waitForSelector('#ac-view-root, #ac-main-content, #app-content', { timeout: 60000 });
 
+	// Default is off — prove Files does not get the overlay until the user opts in.
+	await api(page, 'PUT', '/apps/audiocheck/api/prefs', { showGlobalMiniPlayer: false });
+	await page.goto(`${BASE}/apps/files/`, { waitUntil: 'domcontentloaded', timeout: 90000 });
+	await page.waitForTimeout(1500);
+	const defaultOff = await page.evaluate(() => ({
+		hasScript: !!document.querySelector('script[src*="global-mini-player"]'),
+		hasPlayer: !!document.getElementById('ac-mini-player'),
+		hasInput: !!document.getElementById('initial-state-audiocheck-global-mini-player'),
+	}));
+	console.log('default-off:', defaultOff);
+	if (defaultOff.hasScript || defaultOff.hasPlayer || defaultOff.hasInput) {
+		fail('global mini-player must stay off by default', defaultOff);
+	}
+
+	// Opt in, then exercise mount + Close.
+	await page.goto(`${BASE}/apps/audiocheck/library`, { waitUntil: 'domcontentloaded', timeout: 90000 });
+	await page.waitForSelector('#ac-view-root, #ac-main-content, #app-content', { timeout: 60000 });
+	await api(page, 'PUT', '/apps/audiocheck/api/prefs', { showGlobalMiniPlayer: true });
+
 	// Ensure there is something playable.
 	let fileId = null;
 	try {
@@ -180,7 +199,49 @@ function fail(msg, extra) {
 	if (onFiles.volumeOpen) fail('volume popover must stay closed on global overlay', onFiles);
 	if (!onFiles.depHasVersion) fail('player dep script missing cache-bust ?v=', onFiles);
 
-	console.log('PASS: global mini-player visible on Files after leaving AudioCheck');
+	// Close must hide the bar and leave Files chrome unobstructed.
+	await page.locator('#ac-mini-close').click();
+	await page.waitForTimeout(500);
+	const afterClose = await page.evaluate(() => {
+		const player = document.getElementById('ac-mini-player');
+		return {
+			playerHidden: player ? player.hidden : null,
+			bodyVisibleClass: document.body.classList.contains('ac-global-mini-player-visible'),
+			dismissed: sessionStorage.getItem('audiocheck_global_player_dismissed'),
+			session: sessionStorage.getItem('audiocheck_playback_session'),
+			clearance: document.documentElement.style.getPropertyValue('--ac-player-clearance'),
+			track: window.AudioCheckPlayer && AudioCheckPlayer.getCurrentTrack && AudioCheckPlayer.getCurrentTrack(),
+		};
+	});
+	console.log('after-close:', afterClose);
+	if (!afterClose.playerHidden) fail('Close did not hide #ac-mini-player', afterClose);
+	if (afterClose.bodyVisibleClass) fail('body still has ac-global-mini-player-visible', afterClose);
+	if (afterClose.dismissed !== '1') fail('dismiss latch missing', afterClose);
+	if (afterClose.session) fail('session should be cleared on Close', afterClose);
+	if (afterClose.track) fail('track still active after Close', afterClose);
+	if (afterClose.clearance && afterClose.clearance !== '0px') {
+		fail('player clearance not cleared', afterClose);
+	}
+
+	// Remount must not happen after navigation while latch is set.
+	await page.goto(`${BASE}/apps/files/`, { waitUntil: 'domcontentloaded', timeout: 90000 });
+	await page.waitForTimeout(2000);
+	const remount = await page.evaluate(() => {
+		const player = document.getElementById('ac-mini-player');
+		return {
+			playerExists: !!player,
+			playerHidden: player ? player.hidden : true,
+			bodyVisibleClass: document.body.classList.contains('ac-global-mini-player-visible'),
+			dismissed: sessionStorage.getItem('audiocheck_global_player_dismissed'),
+		};
+	});
+	console.log('after-remount-check:', remount);
+	if (remount.bodyVisibleClass) fail('global mini-player remounted after Close', remount);
+	if (remount.playerExists && remount.playerHidden === false) {
+		fail('player visible again after Close + navigate', remount);
+	}
+
+	console.log('PASS: global mini-player visible on Files, Close hides it, no remount');
 	await browser.close();
 })().catch((e) => {
 	console.error(e);

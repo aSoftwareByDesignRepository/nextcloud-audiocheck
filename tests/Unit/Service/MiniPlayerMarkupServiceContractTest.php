@@ -34,6 +34,7 @@ final class MiniPlayerMarkupServiceContractTest extends TestCase
 		self::assertArrayHasKey('nowPlayingUrl', $payload);
 		self::assertStringContainsString('id="ac-mini-player"', $payload['markup']);
 		self::assertStringContainsString('ac-mini-player--global', $payload['markup']);
+		self::assertStringContainsString('id="ac-mini-close"', $payload['markup']);
 		self::assertStringContainsString('hidden', $payload['markup']);
 		self::assertStringNotContainsString('<!DOCTYPE', $payload['markup']);
 		self::assertStringNotContainsString('Internal Server Error', $payload['markup']);

@@ -9,8 +9,10 @@
 	 * - Full player stack loads only when server/session hints say restore may succeed.
 	 * - InitialState must use loadState() (NC API); DOM base64 is the hard fallback.
 	 * - Prefs must load BEFORE restore (resumeOnOpen / volume / speed).
+	 * - Close / opt-out preference must keep the bar gone (no remount from progress).
 	 */
 	const SESSION_KEY = 'audiocheck_playback_session';
+	const GLOBAL_DISMISS_KEY = 'audiocheck_global_player_dismissed';
 	const BOOT_FLAG = '__acGlobalMiniPlayerBooted';
 	const PLAYER_SCRIPTS = [
 		'common/constants',
@@ -88,6 +90,14 @@
 			if (!raw) return false;
 			const snap = JSON.parse(raw);
 			return !!(snap && Array.isArray(snap.queue) && snap.queue.length);
+		} catch (e) {
+			return false;
+		}
+	}
+
+	function isGloballyDismissed() {
+		try {
+			return sessionStorage.getItem(GLOBAL_DISMISS_KEY) === '1';
 		} catch (e) {
 			return false;
 		}
@@ -171,6 +181,16 @@
 	function syncVisibility(state) {
 		const player = document.getElementById('ac-mini-player');
 		if (!player || !player.classList.contains('ac-mini-player--global')) return;
+		if (isGloballyDismissed()) {
+			player.hidden = true;
+			player.setAttribute('aria-hidden', 'true');
+			if ('inert' in HTMLElement.prototype) {
+				player.inert = true;
+			}
+			document.body.classList.remove('ac-global-mini-player-visible');
+			document.documentElement.style.setProperty('--ac-player-clearance', '0px');
+			return;
+		}
 		const track = window.AudioCheckPlayer && typeof AudioCheckPlayer.getCurrentTrack === 'function'
 			? AudioCheckPlayer.getCurrentTrack()
 			: null;
@@ -197,7 +217,9 @@
 
 	function fetchPrefs() {
 		if (window.AudioCheckApi && typeof AudioCheckApi.get === 'function') {
-			return AudioCheckApi.get('/apps/audiocheck/api/prefs').catch(() => ({}));
+			return AudioCheckApi.get('/apps/audiocheck/api/prefs')
+				.then((r) => (r && r.prefs) ? r.prefs : {})
+				.catch(() => ({}));
 		}
 		return Promise.resolve({});
 	}
@@ -211,6 +233,12 @@
 	}
 
 	function startPlayer(state) {
+		if (isGloballyDismissed()) {
+			delete document.documentElement.dataset.acGlobalPending;
+			syncVisibility(state);
+			return;
+		}
+
 		document.body.classList.add('ac-global-mini-player-host');
 		document.documentElement.dataset.acPlayerMode = 'global';
 		window.AudioCheckGlobalPlayer = {
@@ -234,12 +262,39 @@
 
 		// Prefs BEFORE restore — resumeOnOpen / defaultSpeed must be authoritative.
 		fetchPrefs().then((prefs) => {
+			if (isGloballyDismissed()) return false;
 			applyPrefs(prefs);
+			// Explicit runtime opt-out (prefs changed in another tab). Do not treat
+			// a failed/empty prefs fetch as off — the server already gated injection.
+			if (prefs && prefs.showGlobalMiniPlayer === false) {
+				if (window.AudioCheckPlayer && typeof AudioCheckPlayer.clearQueue === 'function') {
+					AudioCheckPlayer.clearQueue();
+				}
+				try {
+					sessionStorage.setItem(GLOBAL_DISMISS_KEY, '1');
+				} catch (e) { /* ignore */ }
+				const player = document.getElementById('ac-mini-player');
+				if (player) {
+					const active = document.activeElement;
+					if (active && player.contains(active) && typeof active.blur === 'function') {
+						active.blur();
+					}
+					player.hidden = true;
+					player.setAttribute('aria-hidden', 'true');
+					if ('inert' in HTMLElement.prototype) {
+						player.inert = true;
+					}
+				}
+				document.body.classList.remove('ac-global-mini-player-visible');
+				document.documentElement.style.setProperty('--ac-player-clearance', '0px');
+				return false;
+			}
 			const restorePromise = typeof AudioCheckPlayer.restoreLastPlayback === 'function'
 				? AudioCheckPlayer.restoreLastPlayback()
 				: Promise.resolve(false);
 
 			return restorePromise.then((restored) => {
+				if (isGloballyDismissed()) return false;
 				if (!restored && prefs && typeof prefs.defaultSpeed === 'number'
 					&& typeof AudioCheckPlayer.setSpeed === 'function') {
 					AudioCheckPlayer.setSpeed(prefs.defaultSpeed);
@@ -265,6 +320,10 @@
 
 		const state = loadState();
 		if (!state || !state.markup) return;
+		// Opt-in only. Missing/false must not mount (default is off; stale InitialState safe).
+		if (state.showGlobalMiniPlayer !== true) return;
+		// User closed the bar this browser session — do not remount from continue progress.
+		if (isGloballyDismissed()) return;
 
 		const needsPlayer = !!state.hasServerPlayback || hasSessionHint();
 		if (!needsPlayer) {
@@ -288,7 +347,14 @@
 
 		const version = bootScriptVersion(state);
 		loadPlayerStack(version)
-			.then(() => startPlayer(state))
+			.then(() => {
+				if (isGloballyDismissed()) {
+					delete document.documentElement.dataset.acGlobalPending;
+					syncVisibility(state);
+					return;
+				}
+				startPlayer(state);
+			})
 			.catch((err) => {
 				console.error('[audiocheck] global mini-player stack failed', err);
 				delete document.documentElement.dataset.acGlobalPending;

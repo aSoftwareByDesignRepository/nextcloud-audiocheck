@@ -24,11 +24,11 @@ final class ApiCsrfGateTest extends TestCase
 		'getPlaylist',
 		'listLibraries',
 		'scanStatus',
-		'scanAjaxCronTick',
 		'getPrefs',
 		'searchUsers',
 		'searchGroups',
 		'getAppPolicy',
+		'getLibrarySyncState',
 	];
 
 	private const MUTATION_METHODS = [
@@ -49,10 +49,12 @@ final class ApiCsrfGateTest extends TestCase
 		'updateLibrary',
 		'removeLibrary',
 		'triggerScan',
+		'scanAjaxCronTick',
 		'savePrefs',
 		'setFavorite',
 		'setListened',
 		'setListenedBulk',
+		'queryListenedMap',
 		'setCollectionListened',
 		'setFolderPathListened',
 		'setFolderListened',

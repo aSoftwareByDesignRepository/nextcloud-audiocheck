@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.3.7 - 2026-09-06
+
+### Fixed
+- Authenticated stream opens are rate-limited (300/60s per user via shared `ac_rate_limits` + exclusive lock); over-quota returns **429** `rate_limit_exceeded` instead of opening another file handle.
+- AJAX cron scan tick is **POST + CSRF** only — drive-by GET/`<img>` can no longer wake the scanner; `ApiCsrfGateTest` treats it as a mutation.
+
+### Changed
+- Version **1.3.7**.
+
+## 1.3.6 - 2026-09-06
+
+### Fixed
+- Global mini-player can be closed: **Close player** stops playback, clears the active queue/session, hides the bar, and restores clickable Files/Photos bottom chrome.
+- Closing the bar no longer remounts it from unfinished “continue listening” progress for the rest of the browser session (explicit play re-enables it).
+- Global prefs fetch now unwraps `{ prefs }` so `resumeOnOpen` / volume actually apply on Files.
+- `[hidden]` on the mini-player is enforced with `display: none !important` so author CSS cannot leave an invisible hit-target overlay.
+- Mini-player Bachus pass: idle dock collapses to one calm line; phone layout drops ±30 jumps (kept on Now Playing); Play/Close get unmistakable 44px+ targets; theme/forced-colors safe.
+- Prefs boolean coercion: string values like `"false"` / `"no"` / `"off"` no longer enable opt-in flags (PHP truthiness trap).
+
+### Added
+- Settings toggle **Show player on other pages** (**default off**, opt-in) — when on, AudioCheck may show the global mini-player on Files/Photos/other apps; when off, nothing is injected.
+- Close control on the mini-player (44px touch target, labelled, WCAG-focused).
+- E2E gauntlet `tests/e2e/mini-player-ux.spec.js` (idle/active/Close/settings/axe/themes/viewports).
+
+### Changed
+- Version **1.3.6**.
+
 ## 1.3.5 - 2026-09-04
 
 ### Fixed
@@ -265,7 +292,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **AJAX cron scan ticks** — when Nextcloud uses AJAX/webcron instead of system cron, queued library scans advance via `/api/scan/ajax-cron` while you stay in AudioCheck (library polling and app-wide heartbeat). “Scan now” still runs an initial in-process batch; remaining batches no longer stall until a full server cron run.
+- **AJAX cron scan ticks** — when Nextcloud uses AJAX/webcron instead of system cron, queued library scans advance via **POST** `/api/scan/ajax-cron` (CSRF-protected) while you stay in AudioCheck (library polling and app-wide heartbeat). “Scan now” still runs an initial in-process batch; remaining batches no longer stall until a full server cron run.
 - **Stale scan lock recovery** — abandoned `running` scan rows older than 10 minutes are treated as resumable so large libraries cannot deadlock after a crash.
 
 ### Changed

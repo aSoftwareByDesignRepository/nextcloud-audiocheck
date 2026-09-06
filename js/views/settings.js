@@ -81,9 +81,27 @@
 				text: t('audiocheck', 'When enabled, opening a track continues from your saved position.'),
 			}));
 
+			const globalMiniRow = C.el('div', { className: 'ac-form-row ac-form-row--checkbox' });
+			const globalMini = C.el('input', {
+				id: 'ac-show-global-mini',
+				type: 'checkbox',
+				attrs: { 'aria-describedby': 'ac-global-mini-hint ac-prefs-autosave' },
+			});
+			globalMiniRow.appendChild(globalMini);
+			globalMiniRow.appendChild(C.el('label', {
+				attrs: { for: 'ac-show-global-mini' },
+				text: t('audiocheck', 'Show player on other pages'),
+			}));
+			globalMiniRow.appendChild(C.el('p', {
+				id: 'ac-global-mini-hint',
+				className: 'ac-field__hint',
+				text: t('audiocheck', 'Off by default. When on, a small player stays at the bottom of Files, Photos, and other apps while something is playing. You can still press Close player on the bar to hide it for this session.'),
+			}));
+
 			playbackFs.appendChild(speedRow);
 			playbackFs.appendChild(volumeRow);
 			playbackFs.appendChild(resumeRow);
+			playbackFs.appendChild(globalMiniRow);
 
 			const listenedFs = C.el('fieldset', { className: 'ac-fieldset' });
 			listenedFs.appendChild(C.el('legend', { className: 'ac-fieldset__legend', text: t('audiocheck', 'Mark as listened') }));
@@ -152,6 +170,7 @@
 					defaultSpeed: parseInt(speed.value, 10),
 					defaultVolume: parseInt(volumeSlider.value, 10),
 					resumeOnOpen: resume.checked,
+					showGlobalMiniPlayer: globalMini.checked,
 					scanSubfolders: subfolders.checked,
 					listenedThresholdPercent: parseInt(
 						(listenedRadios.find((r) => r.checked) || listenedRadios[4]).value,
@@ -173,6 +192,11 @@
 							return;
 						}
 						window.AudioCheckUserPrefs = r.prefs || {};
+						if (payload.showGlobalMiniPlayer) {
+							try {
+								sessionStorage.removeItem('audiocheck_global_player_dismissed');
+							} catch (_) { /* ignore */ }
+						}
 						if (!AudioCheckPlayer.getCurrentTrack()) {
 							AudioCheckPlayer.setSpeed(payload.defaultSpeed);
 						}
@@ -208,6 +232,7 @@
 			});
 			speed.addEventListener('change', scheduleSave);
 			resume.addEventListener('change', scheduleSave);
+			globalMini.addEventListener('change', scheduleSave);
 			subfolders.addEventListener('change', scheduleSave);
 			listenedRadios.forEach((radio) => radio.addEventListener('change', scheduleSave));
 
@@ -220,6 +245,8 @@
 			AudioCheckApi.get('/apps/audiocheck/api/prefs').then((r) => {
 				speed.value = String(typeof r.prefs.defaultSpeed === 'number' ? r.prefs.defaultSpeed : 100);
 				resume.checked = r.prefs.resumeOnOpen !== false;
+				// Opt-in only — missing/undefined must stay unchecked (default off).
+				globalMini.checked = r.prefs.showGlobalMiniPlayer === true;
 				subfolders.checked = r.prefs.scanSubfolders !== false;
 				const vol = typeof r.prefs.defaultVolume === 'number' ? r.prefs.defaultVolume : AudioCheckPlayer.getVolumePercent();
 				volumeSlider.value = String(vol);
@@ -257,7 +284,7 @@
 			}));
 			const refList = C.el('dl', { className: 'ac-controls-ref__list' });
 			[
-				[t('audiocheck', 'Mini player (bottom bar)'), t('audiocheck', 'Play, pause, previous, next, seek, volume, and open Now playing.')],
+				[t('audiocheck', 'Mini player (bottom bar)'), t('audiocheck', 'Play, pause, previous, next, seek, volume, open Now playing, and Close player to hide the bar.')],
 				[t('audiocheck', 'Now playing'), t('audiocheck', 'Full player with cover, seek bar, jump back/forward 30 seconds, shuffle, repeat, speed, volume, queue, and chapters.')],
 				[t('audiocheck', 'This page'), t('audiocheck', 'Default speed, volume, and resume preferences.')],
 			].forEach(([where, what]) => {

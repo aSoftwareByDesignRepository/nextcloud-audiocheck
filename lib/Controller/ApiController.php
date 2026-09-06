@@ -384,7 +384,6 @@ class ApiController extends Controller
 	}
 
 	#[NoAdminRequired]
-	#[NoCSRFRequired]
 	public function scanAjaxCronTick(): JSONResponse
 	{
 		return $this->safe(function (string $userId): array {

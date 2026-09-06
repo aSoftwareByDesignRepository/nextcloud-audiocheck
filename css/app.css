@@ -1768,6 +1768,88 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	width: 1.25rem;
 	height: 1.25rem;
 }
+.ac-mini-player__close {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: var(--ac-touch);
+	min-width: var(--ac-touch);
+	padding: 0;
+	touch-action: manipulation;
+	border: 2px solid var(--ac-border-strong);
+	border-radius: var(--ac-radius-sm);
+	background: var(--ac-bg-card);
+	box-shadow: none;
+	flex-shrink: 0;
+	color: var(--color-main-text);
+}
+.ac-mini-player__close:not(:disabled):hover,
+.ac-mini-player__close:not(:disabled):focus-visible {
+	background: var(--ac-bg-soft);
+	border-color: var(--color-main-text);
+}
+.ac-mini-player__close-icon {
+	display: block;
+	width: 1.25rem;
+	height: 1.25rem;
+}
+#ac-mini-player[hidden],
+.ac-mini-player[hidden],
+.ac-mini-player__transport[hidden],
+.ac-mini-player__seek[hidden],
+.ac-mini-player__side[hidden],
+.ac-mini-player__close[hidden] {
+	display: none !important;
+}
+.ac-mini-player--idle .ac-mini-player__inner {
+	grid-template-columns: minmax(0, 1fr);
+	grid-template-rows: auto;
+	padding-block: var(--ac-space-3);
+}
+.ac-mini-player--idle .ac-mini-player__track {
+	grid-column: 1;
+	grid-row: 1;
+}
+.ac-mini-player--active button.ac-btn.ac-transport-btn--primary {
+	min-width: 3.25rem;
+	min-height: 3.25rem;
+	border-radius: 999px;
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary-element) 35%, transparent);
+}
+@media (max-width: 639px) {
+	.ac-mini-player .ac-transport-btn--jump {
+		display: none !important;
+	}
+	.ac-mini-player__volume {
+		display: none;
+	}
+	.ac-mini-player--active .ac-mini-player__inner {
+		grid-template-columns: minmax(0, 1fr) auto;
+		grid-template-rows: auto auto;
+		gap: var(--ac-space-2);
+	}
+	.ac-mini-player--active .ac-mini-player__track {
+		grid-column: 1;
+		grid-row: 1;
+	}
+	.ac-mini-player--active .ac-mini-player__side {
+		grid-column: 2;
+		grid-row: 1;
+	}
+	.ac-mini-player--active .ac-mini-player__transport {
+		grid-column: 1 / -1;
+		grid-row: 2;
+		justify-content: center;
+		gap: var(--ac-space-3);
+	}
+	.ac-mini-player--active .ac-mini-player__seek {
+		grid-column: 1 / -1;
+		grid-row: 3;
+	}
+	.ac-mini-player--active .ac-mini-player__open {
+		display: none;
+	}
+}
 .ac-seek {
 	flex: 1 1 auto;
 	min-width: 3rem;
