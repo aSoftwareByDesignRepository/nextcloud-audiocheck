@@ -8,6 +8,15 @@
 	<name>AudioCheck</name>
 	<summary>Play audiobooks and music from your Nextcloud Files — resume, queues, chapters, playlists</summary>
 	<summary lang="de">Hörbücher und Musik aus Ihren Nextcloud-Dateien — Fortsetzen, Warteschlange, Kapitel, Playlists</summary>
+	<summary lang="fr">Livres audio et musique depuis vos fichiers Nextcloud — reprise, files, chapitres, playlists</summary>
+	<summary lang="es">Audiolibros y música desde sus archivos Nextcloud — reanudación, colas, capítulos, listas</summary>
+	<summary lang="da">Lydbøger og musik fra dine Nextcloud-filer — genoptag, køer, kapitler, playlister</summary>
+	<summary lang="nl">Luisterboeken en muziek uit uw Nextcloud-bestanden — hervatten, wachtrijen, hoofdstukken, playlists</summary>
+	<summary lang="it">Audiolibri e musica dai file Nextcloud — ripresa, code, capitoli, playlist</summary>
+	<summary lang="pl">Audiobooki i muzyka z plików Nextcloud — wznawianie, kolejki, rozdziały, playlisty</summary>
+	<summary lang="sv">Ljudböcker och musik från dina Nextcloud-filer — återuppta, köer, kapitel, spellistor</summary>
+	<summary lang="nb">Lydbøker og musikk fra Nextcloud-filene — gjenoppta, køer, kapitler, spillelister</summary>
+	<summary lang="pt">Audiolivros e música dos seus ficheiros Nextcloud — retomar, filas, capítulos, playlists</summary>
 	<description><![CDATA[
 # AudioCheck — your audio library inside Nextcloud
 
@@ -126,9 +135,9 @@ L’application est **gratuite** sous AGPL-3.0-or-later. Il n’y a pas de licen
 
 ## Démarrer
 
-1. Ouvrez **Library**, ajoutez des dossiers de musique et de livres audio, puis **Scan now** (ou `occ audiocheck:scan`).
-2. Dans **Settings**, activez **Resume where you left off** si vous souhaitez ce comportement.
-3. Ouvrez **Music** ou **Audiobooks** et appuyez sur Play.
+1. Ouvrez **Bibliothèque**, ajoutez des dossiers de musique et de livres audio, puis **Scanner maintenant** (ou `occ audiocheck:scan`).
+2. Dans **Paramètres**, activez **Reprenez où vous avez quitté** si vous souhaitez ce comportement.
+3. Ouvrez **Musique** ou **Livres audio** et appuyez sur **Jouer**.
 
 ## Limites honnêtes
 
@@ -171,9 +180,9 @@ La aplicación es **gratuita** con AGPL-3.0-or-later. En el paquete entregado no
 
 ## Empezar
 
-1. Abra **Library**, agregue carpetas de música y audiolibros y luego **Scan now** (o `occ audiocheck:scan`).
-2. En **Settings**, active **Resume where you left off** si desea ese comportamiento.
-3. Abra **Music** o **Audiobooks** y pulse Play.
+1. Abra **Biblioteca**, agregue carpetas de música y audiolibros y luego **Scan ahora** (o `occ audiocheck:scan`).
+2. En **Ajustes**, active **Retire donde se fue** si desea ese comportamiento.
+3. Abra **Música** o **Audiolibros** y pulse **Jugar**.
 
 ## Límites claros
 
@@ -216,9 +225,9 @@ Appen er **gratis** under AGPL-3.0-or-later. Der findes ingen seat-licens til de
 
 ## Kom i gang
 
-1. Åbn **Library**, tilføj mapper med musik og lydbøger, og vælg derefter **Scan now** (eller `occ audiocheck:scan`).
-2. I **Settings** skal du aktivere **Resume where you left off**, hvis du vil have den adfærd.
-3. Åbn **Music** eller **Audiobooks** og tryk Play.
+1. Åbn **Bibliotek**, tilføj mapper med musik og lydbøger, og vælg derefter **Scan nu** (eller `occ audiocheck:scan`).
+2. I **Indstillinger** skal du aktivere **Genoptag hvor der blev afsluttet**, hvis du vil have den adfærd.
+3. Åbn **Musik** eller **Audiobøger** og tryk **Spil**.
 
 ## Ærlige begrænsninger
 
@@ -261,9 +270,9 @@ De app is **gratis** onder AGPL-3.0-or-later. Er is in het meegeleverde pakket g
 
 ## Starten
 
-1. Open **Library**, voeg muziek- en audioboekmappen toe en kies daarna **Scan now** (of `occ audiocheck:scan`).
-2. Activeer in **Settings** **Resume where you left off** als u dat gedrag wilt.
-3. Open **Music** of **Audiobooks** en druk op Play.
+1. Open **Bibliotheek**, voeg muziek- en audioboekmappen toe en kies daarna **Scan nu** (of `occ audiocheck:scan`).
+2. Activeer in **Instellingen** **Hervat waar u gebleven was** als u dat gedrag wilt.
+3. Open **Muziek** of **Audioboeken** en druk op **Afspelen**.
 
 ## Eerlijke grenzen
 
@@ -306,9 +315,9 @@ L’app è **gratuita** con AGPL-3.0-or-later. Nel pacchetto distribuito non è 
 
 ## Come iniziare
 
-1. Aprite **Library**, aggiungete cartelle di musica e audiolibri e poi **Scan now** (oppure `occ audiocheck:scan`).
-2. In **Settings**, abilitate **Resume where you left off** se desiderate questo comportamento.
-3. Aprite **Music** o **Audiobooks** e premete Play.
+1. Aprite **Biblioteca**, aggiungete cartelle di musica e audiolibri e poi **Scansione ora** (oppure `occ audiocheck:scan`).
+2. In **Impostazioni**, abilitate **Riprendi dove hai lasciato** se desiderate questo comportamento.
+3. Aprite **Musica** o **Audiolibri** e premete **Gioca**.
 
 ## Limiti onesti
 
@@ -351,9 +360,9 @@ Prowadzona przez aplikację jest **bezpłatna** na warunkach AGPL-3.0-or-later. 
 
 ## Rozpocznij
 
-1. Otwórz **Library**, dodaj foldery muzyki i audiobooków, a następnie **Scan now** (lub `occ audiocheck:scan`).
-2. W **Settings** włącz **Resume where you left off**, jeśli chcesz takie zachowanie.
-3. Otwórz **Music** lub **Audiobooks** i naciśnij Play.
+1. Otwórz **Biblioteka**, dodaj foldery muzyki i audiobooków, a następnie **Przeskanuj teraz** (lub `occ audiocheck:scan`).
+2. W **Ustawienia** włącz **Wznawiaj gdzie skończyłeś**, jeśli chcesz takie zachowanie.
+3. Otwórz **Muzyka** lub **Audiobooki** i naciśnij **Zagraj**.
 
 ## Uczciwe ograniczenia
 
@@ -396,9 +405,9 @@ Appen är **gratis** under AGPL-3.0-or-later. Det finns ingen seat-licens för d
 
 ## Kom igång
 
-1. Öppna **Library**, lägg till mappar för musik och ljudböcker och välj sedan **Scan now** (eller `occ audiocheck:scan`).
-2. I **Settings**, aktivera **Resume where you left off** om ni vill ha det beteendet.
-3. Öppna **Music** eller **Audiobooks** och tryck Play.
+1. Öppna **Bibliotek**, lägg till mappar för musik och ljudböcker och välj sedan **Scan nu** (eller `occ audiocheck:scan`).
+2. I **Inställningar**, aktivera **Återuppta där uppspelningen avslutades** om ni vill ha det beteendet.
+3. Öppna **Musik** eller **Ljudböcker** och tryck **Spela**.
 
 ## Uppriktiga begränsningar
 
@@ -441,9 +450,9 @@ Appen er **gratis** under AGPL-3.0-or-later. Det finnes ingen seat-lisens for de
 
 ## Kom i gang
 
-1. Åpne **Library**, legg til mapper for musikk og lydbøker, og velg deretter **Scan now** (eller `occ audiocheck:scan`).
-2. I **Settings**, aktiver **Resume where you left off** hvis du ønsker den oppførselen.
-3. Åpne **Music** eller **Audiobooks** og trykk Play.
+1. Åpne **Bibliotek**, legg til mapper for musikk og lydbøker, og velg deretter **Skann nå** (eller `occ audiocheck:scan`).
+2. I **Innstillinger**, aktiver **Gjenoppta der avspillingen stoppet** hvis du ønsker den oppførselen.
+3. Åpne **Musikk** eller **Lydbøker** og trykk **Spill**.
 
 ## Ærlige begrensninger
 
@@ -457,6 +466,51 @@ Appen er **gratis** under AGPL-3.0-or-later. Det finnes ingen seat-lisens for de
 - Nextcloud 32–35
 - PHP 8.2–8.5
 - MySQL eller PostgreSQL
+	]]></description>
+	<description lang="pt"><![CDATA[
+# AudioCheck — a sua biblioteca de áudio no Nextcloud
+
+Os seus ficheiros de áudio já estão em Ficheiros. O AudioCheck indexa as pastas que escolher e transmite-as com verificação de permissões em tempo real.
+
+A aplicação é **gratuita** sob AGPL-3.0-or-later. Não há licença por posto para esta aplicação web no pacote fornecido.
+
+## O que obtém
+
+- Raízes separadas para música e audiolivros; coleções, álbuns e navegação por pastas
+- Audiolivros multi-ficheiro como uma única fila; retomada guardada no servidor por conta
+- Fila de reprodução duradoura; retomada opcional ao abrir; Continuar a ouvir no Início e no widget do painel
+- Playlists; favoritos sincronizados com as estrelas de Ficheiros
+- Saltos de capítulo em M4B (e metadados de capítulos etiquetados); velocidade 0,5×–4,0×
+- Ações em Ficheiros: Reproduzir no AudioCheck / Reproduzir pasta como álbum
+- Navegar por artistas, autores, géneros, séries, pastas, etiquetas e favoritos
+- Restrição de acesso opcional (os administradores Nextcloud mantêm sempre o acesso)
+- Idiomas da interface: alemão (forma Sie), inglês, francês, espanhol, dinamarquês, neerlandês, italiano, polaco, sueco, norueguês bokmål e português brasileiro (cada cadeia de UI enviada vive em `l10n`)
+- Fundamentos de acessibilidade com objetivo WCAG 2.1 AA (não é uma certificação de terceiros)
+
+## Formatos
+
+**Indexado e transmitido no servidor:** MP3, MP4/M4A/M4B (incluindo podcasts etiquetados como video/mp4), OGG, Opus, FLAC, WAV, AAC e outros tipos comuns `audio/*`.
+
+**Reprodução no navegador** depende do navegador: MP3, M4A, M4B, AAC, OGG, Opus e WAV costumam funcionar; FLAC e alguns outros podem precisar de outro navegador.
+
+## Começar
+
+1. Abra **Biblioteca**, adicione pastas de música e audiolivros e depois **Analisar agora** (ou `occ audiocheck:scan`).
+2. Em **Definições**, ative **Retomar onde parou** se quiser esse comportamento.
+3. Abra **Música** ou **Audiolivros** e prima Reproduzir.
+
+## Limites claros
+
+- Os bytes de reprodução passam por um único portão de acesso a ficheiros com verificação de permissões em tempo real; partilhas revogadas param a reprodução. A aplicação não faz chamadas HTTP de saída para reprodução.
+- Após navegação completa para fora do AudioCheck, os navegadores podem exigir um clique para retomar o áudio.
+- A profundidade de análise é limitada (32 níveis de pastas). A reprodução/mistura de playlists tem um limite documentado de faixas (2000).
+- Bases de dados declaradas: apenas MySQL e PostgreSQL.
+
+## Requisitos
+
+- Nextcloud 32–35
+- PHP 8.2–8.5
+- MySQL ou PostgreSQL
 	]]></description>
 	<version>1.3.7</version>
 	<licence>AGPL-3.0-or-later</licence>
@@ -473,13 +527,14 @@ Appen er **gratis** under AGPL-3.0-or-later. Det finnes ingen seat-lisens for de
 		<database>mysql</database>
 		<database>pgsql</database>
 	</dependencies>
-	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-01.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-01.png</screenshot>
-	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-02.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-02.png</screenshot>
-	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-03.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-03.png</screenshot>
-	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-04.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-04.png</screenshot>
-	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-05.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-05.png</screenshot>
-	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-06.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-06.png</screenshot>
-	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-07.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-07.png</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-01-home.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-01-home.png</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-02-music.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-02-music.png</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-03-audiobooks.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-03-audiobooks.png</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-04-playlists.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-04-playlists.png</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-05-favorites.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-05-favorites.png</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-06-browse.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-06-browse.png</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-07-now-playing.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-07-now-playing.png</screenshot>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-08-settings.png">https://raw.githubusercontent.com/aSoftwareByDesignRepository/nextcloud-audiocheck/main/screenshots/audiocheck-screenshot-08-settings.png</screenshot>
 	<settings>
 		<admin>OCA\AudioCheck\Settings\AdminSettings</admin>
 	</settings>

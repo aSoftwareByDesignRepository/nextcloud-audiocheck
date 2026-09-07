@@ -1,0 +1,50 @@
+{
+  "captured_at": "2026-09-07T23:41:28.879Z",
+  "viewport": {
+    "width": 1920,
+    "height": 1040
+  },
+  "locale": "de",
+  "shots": [
+    {
+      "file": "audiocheck-screenshot-01-home.png",
+      "path": "/apps/audiocheck/",
+      "action": "home"
+    },
+    {
+      "file": "audiocheck-screenshot-02-music.png",
+      "path": "/apps/audiocheck/music",
+      "action": "list"
+    },
+    {
+      "file": "audiocheck-screenshot-03-audiobooks.png",
+      "path": "/apps/audiocheck/audiobooks",
+      "action": "list"
+    },
+    {
+      "file": "audiocheck-screenshot-04-playlists.png",
+      "path": "/apps/audiocheck/playlists",
+      "action": "list"
+    },
+    {
+      "file": "audiocheck-screenshot-05-favorites.png",
+      "path": "/apps/audiocheck/playlists/favorites",
+      "action": "list"
+    },
+    {
+      "file": "audiocheck-screenshot-06-browse.png",
+      "path": "/apps/audiocheck/browse",
+      "action": "browse"
+    },
+    {
+      "file": "audiocheck-screenshot-07-now-playing.png",
+      "path": "/apps/audiocheck/now-playing",
+      "action": "now"
+    },
+    {
+      "file": "audiocheck-screenshot-08-settings.png",
+      "path": "/apps/audiocheck/settings",
+      "action": "settings"
+    }
+  ]
+}
