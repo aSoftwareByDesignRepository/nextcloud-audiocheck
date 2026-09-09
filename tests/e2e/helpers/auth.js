@@ -32,4 +32,18 @@ function credsFromEnv(role) {
 	return { username: u, password: p };
 }
 
-module.exports = { login, credsFromEnv };
+/**
+ * Prefer explicit E2E_USER when set so stale NC_ADMIN_* on shared farms
+ * cannot hijack gauntlet login.
+ */
+function resolveE2eCreds(preferredRole = 'ADMIN') {
+	if (process.env.E2E_USER && (process.env.E2E_PASSWORD || process.env.E2E_PASS)) {
+		return {
+			username: process.env.E2E_USER,
+			password: process.env.E2E_PASSWORD || process.env.E2E_PASS,
+		};
+	}
+	return credsFromEnv(preferredRole);
+}
+
+module.exports = { login, credsFromEnv, resolveE2eCreds };

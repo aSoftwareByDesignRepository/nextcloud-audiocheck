@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 const AxeBuilder = require('@axe-core/playwright').default;
 const fs = require('fs');
 const path = require('path');
-const { login, credsFromEnv } = require('./helpers/auth.js');
+const { login, credsFromEnv, resolveE2eCreds } = require('./helpers/auth.js');
 
 const BASE = (process.env.E2E_BASE || process.env.BASE_URL || process.env.NC_BASE_URL || 'http://localhost:8081').replace(/\/$/, '');
 
@@ -17,7 +17,7 @@ function hasAnyCreds() {
 
 async function ensureAuthed(page) {
 	if (process.env.NC_ADMIN_USER || process.env.E2E_USER) {
-		await login(page, credsFromEnv('ADMIN'));
+		await login(page, resolveE2eCreds('ADMIN'));
 	}
 }
 

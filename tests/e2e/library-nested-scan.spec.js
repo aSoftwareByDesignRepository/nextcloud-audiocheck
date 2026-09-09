@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 const AxeBuilder = require('@axe-core/playwright').default;
 const fs = require('fs');
 const path = require('path');
-const { login, credsFromEnv } = require('./helpers/auth.js');
+const { login, credsFromEnv, resolveE2eCreds } = require('./helpers/auth.js');
 
 /**
  * Library page UX for nested audiobook scanning — tip lives in How it works;
@@ -25,7 +25,7 @@ test.describe('Library nested scan UX', () => {
 
 	test.beforeEach(async ({ page }) => {
 		if (process.env.NC_ADMIN_USER || process.env.E2E_USER) {
-			await login(page, credsFromEnv('ADMIN'));
+			await login(page, resolveE2eCreds('ADMIN'));
 		}
 	});
 

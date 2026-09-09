@@ -230,7 +230,7 @@
 			.catch((e) => AudioCheckMessaging.toast(e.message, 'error'));
 	}
 
-	function mountPlaylistSummaryActions(summary, pl, reload) {
+	function mountPlaylistSummaryActions(summary, pl, reload, details) {
 		const actions = C.el('div', { className: 'ac-playlist-group__actions' });
 		actions.appendChild(summaryActionBtn(
 			t('audiocheck', 'Add tracks'),
@@ -263,7 +263,12 @@
 				});
 			},
 		));
-		summary.appendChild(actions);
+		// Sibling of <summary>, not a descendant — avoids nested-interactive (axe/WCAG).
+		if (details && summary.parentNode === details) {
+			details.insertBefore(actions, summary.nextSibling);
+		} else {
+			summary.appendChild(actions);
+		}
 	}
 
 	function renderFavoritesGroup(host, count, startOpen, reloadPage) {
@@ -338,7 +343,7 @@
 			host,
 			startOpen,
 			groupClassName: 'ac-playlist-group' + (pl.isPinned ? ' ac-playlist-group--pinned' : ''),
-			mountSummaryExtra: (summary) => mountPlaylistSummaryActions(summary, pl, reloadPage),
+			mountSummaryExtra: (summary, details) => mountPlaylistSummaryActions(summary, pl, reloadPage, details),
 			defaultSort: 'title',
 			inlineSort: true,
 			inlinePlayActions: true,

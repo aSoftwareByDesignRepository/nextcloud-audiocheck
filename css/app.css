@@ -4061,6 +4061,12 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	gap: var(--ac-space-1);
 	margin-left: auto;
 }
+/* Actions sit as <details> sibling of <summary> (a11y); keep toolbar spacing. */
+.ac-playlist-group > .ac-playlist-group__actions {
+	padding: 0 var(--ac-space-3) var(--ac-space-2);
+	justify-content: flex-start;
+	margin-left: 0;
+}
 .ac-facet-group__summary .ac-playlist-group__actions + .ac-facet-group__play {
 	margin-left: var(--ac-space-2);
 }

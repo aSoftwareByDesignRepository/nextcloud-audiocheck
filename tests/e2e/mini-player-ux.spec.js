@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 const AxeBuilder = require('@axe-core/playwright').default;
 const fs = require('fs');
 const path = require('path');
-const { login, credsFromEnv } = require('./helpers/auth.js');
+const { login, credsFromEnv, resolveE2eCreds } = require('./helpers/auth.js');
 
 /**
  * Bachus mini-player gauntlet: idle simplicity, active chrome, Close, themes,
@@ -22,7 +22,7 @@ function hasAnyCreds() {
 
 async function ensureAuthed(page) {
 	if (process.env.NC_ADMIN_USER || process.env.E2E_USER) {
-		await login(page, credsFromEnv('ADMIN'));
+		await login(page, resolveE2eCreds('ADMIN'));
 	}
 }
 

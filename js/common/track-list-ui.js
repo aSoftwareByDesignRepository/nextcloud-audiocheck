@@ -146,7 +146,7 @@
 	 * @param {(track: object) => object} [opts.displayMeta]
 	 * @param {(track: object) => object} [opts.rowOptionsForTrack]
 	 * @param {(bodyWrap: HTMLElement, reload: () => void) => void} [opts.mountBodyExtra]
-	 * @param {(summary: HTMLElement) => void} [opts.mountSummaryExtra]
+	 * @param {(summary: HTMLElement, details: HTMLElement) => void} [opts.mountSummaryExtra]
 	 */
 	function renderExpandableTrackGroup(opts) {
 		const C = opts.C;
@@ -164,9 +164,6 @@
 			className: 'ac-media-folder-group__count',
 			text: AudioCheckTime.tracksLabel(opts.count || 0),
 		}));
-		if (opts.mountSummaryExtra) {
-			opts.mountSummaryExtra(summary);
-		}
 		if (!inlinePlayActions) {
 			summary.appendChild(createPlayAllButton(C, opts.label, async () => {
 				const tracks = (await opts.playAllTracks(facetSort)).filter((tr) => tr && !tr.unavailable);
@@ -183,6 +180,11 @@
 			}));
 		}
 		details.appendChild(summary);
+		// Mount extras after <summary> is attached so callers can place siblings
+		// (buttons must NOT nest inside <summary> — axe nested-interactive / WCAG 4.1.2).
+		if (opts.mountSummaryExtra) {
+			opts.mountSummaryExtra(summary, details);
+		}
 
 		const bodyWrap = C.el('div', { className: 'ac-media-folder-group__body' });
 		const controlsWrap = C.el('div', { className: 'ac-facet-group__controls' });

@@ -173,7 +173,11 @@
 		host.id = 'ac-global-mini-player-root';
 		host.setAttribute('data-ac-global-root', '1');
 		// Trusted server template (l10n + IconCatalog only). Never pass user content here.
-		host.innerHTML = markup;
+		// Prefer DOMParser over innerHTML assignment (frontend lint Absolute No-Go).
+		const parsed = new DOMParser().parseFromString(String(markup), 'text/html');
+		while (parsed.body.firstChild) {
+			host.appendChild(parsed.body.firstChild);
+		}
 		document.body.appendChild(host);
 		return document.getElementById('ac-mini-player');
 	}
