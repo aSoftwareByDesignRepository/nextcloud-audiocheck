@@ -15,6 +15,7 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\Attribute\PublicPage;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 
@@ -30,6 +31,12 @@ class CoverController extends Controller
 		parent::__construct($appName, $request);
 	}
 
+	/**
+	 * PublicPage: guest must reach this action so denial is uniform media 404
+	 * (INV-AUTH-1). Without it, AppFramework returns 401 and leaks auth state
+	 * vs foreign-file 404. Auth is still enforced via AccessControlService.
+	 */
+	#[PublicPage]
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	public function get(int $fileId)

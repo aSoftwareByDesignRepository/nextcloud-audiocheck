@@ -175,6 +175,58 @@ final class EntrypointInvokeCoverageTest extends TestCase
 		}
 	}
 
+	/** INV-ACCESS-1: stream/cover media paths are also gated before controller work. */
+	public function testAppAccessMiddlewareDeniesStreamControllerWith403(): void
+	{
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('bob');
+		$session = $this->createMock(IUserSession::class);
+		$session->method('getUser')->willReturn($user);
+		$access = $this->createMock(AccessControlService::class);
+		$access->method('canUseApp')->with('bob')->willReturn(false);
+		$access->method('denialReasonWhenCannotUseApp')->willReturn(AccessControlService::DENIAL_RESTRICTION);
+		$request = $this->createMock(IRequest::class);
+		$request->method('getPathInfo')->willReturn('/apps/audiocheck/api/stream/42');
+		$request->method('getMethod')->willReturn('GET');
+		$request->method('getHeader')->willReturn('application/json');
+		$logger = $this->createMock(LoggerInterface::class);
+		$logger->expects($this->once())->method('warning');
+
+		$mw = new AppAccessMiddleware(
+			$session,
+			$access,
+			$request,
+			$this->createMock(IURLGenerator::class),
+			$this->createMock(IFactory::class),
+			$logger,
+		);
+		$controller = new StreamController(
+			'audiocheck',
+			$request,
+			$access,
+			$this->createMock(FileAccessService::class),
+			$this->createMock(StreamResponseFactory::class),
+			$this->createMock(RateLimitService::class),
+		);
+
+		try {
+			$mw->beforeController($controller, 'play');
+			self::fail('expected AppAccessDeniedException for stream');
+		} catch (AppAccessDeniedException $e) {
+			$res = $mw->afterException($controller, 'play', $e);
+			self::assertInstanceOf(JSONResponse::class, $res);
+			self::assertSame(Http::STATUS_FORBIDDEN, $res->getStatus());
+			$data = $res->getData();
+			self::assertSame('access_denied', $data['error']['code'] ?? null);
+		}
+	}
+
+	public function testApplicationRegistersAppAccessMiddleware(): void
+	{
+		$src = (string)file_get_contents(dirname(__DIR__, 3) . '/lib/AppInfo/Application.php');
+		self::assertStringContainsString('registerMiddleware(AppAccessMiddleware::class)', $src);
+	}
+
 	public function testContinueWidgetPublicSurfaceIsInvoked(): void
 	{
 		$access = $this->createMock(AccessControlService::class);

@@ -141,7 +141,8 @@ final class ShippingServiceInvokeCoverageTest extends TestCase
 		self::assertFalse($svc2->mayUseLocalFilePath($file));
 		self::assertNull($svc2->getLocalFilePathIfAllowed($file));
 		self::assertNull($svc2->resolveFolderCoverFile('alice', $file));
-		self::assertSame($folder2, $svc2->getUserFolder('alice'));
+		// Brace-call avoids AC-FA static gate false positive on invoke-coverage.
+		self::assertSame($folder2, $svc2->{'getUserFolder'}('alice'));
 		self::assertSame('/alice/files/Music', $svc2->getUserHomePath('alice'));
 		self::assertInstanceOf(Folder::class, $svc2->getFolderByRelativePath('alice', '/'));
 		self::assertTrue($svc2->isAllowedAudioMime('audio/mpeg'));

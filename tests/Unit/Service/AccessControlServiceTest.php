@@ -57,4 +57,30 @@ final class AccessControlServiceTest extends TestCase
 		);
 		$this->assertFalse($svc->canUseApp('bob'));
 	}
+
+	public function testRequireAppAdminThrowsForNonAdmin(): void
+	{
+		$config = $this->createMock(IConfig::class);
+		$config->method('getAppValue')->willReturnCallback(function (string $app, string $key, string $default) {
+			return match ($key) {
+				AccessControlService::KEY_APP_ADMINS => '[]',
+				default => $default,
+			};
+		});
+		$groups = $this->createMock(IGroupManager::class);
+		$groups->method('isAdmin')->willReturn(false);
+		$user = $this->createMock(\OCP\IUser::class);
+		$user->method('getUID')->willReturn('bob');
+		$session = $this->createMock(IUserSession::class);
+		$session->method('getUser')->willReturn($user);
+		$svc = new AccessControlService(
+			$config,
+			$groups,
+			$session,
+			$this->createMock(IUserManager::class),
+			$this->createMock(LoggerInterface::class),
+		);
+		$this->expectException(\OCA\AudioCheck\Exception\AccessDeniedException::class);
+		$svc->requireAppAdmin();
+	}
 }

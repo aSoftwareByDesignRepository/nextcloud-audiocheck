@@ -26,7 +26,8 @@ function hasAnyCreds() {
 async function openLibrary(page) {
 	await page.goto(BASE + '/apps/audiocheck/library', { waitUntil: 'domcontentloaded' });
 	await expect(page.locator('#app-content.ac-app, #content.app-audiocheck').first()).toBeVisible({ timeout: 30000 });
-	await expect(page.getByRole('heading', { name: /your folders|deine ordner/i }).first()).toBeVisible({ timeout: 30000 });
+	// DE formal is "Ihre Ordner" (not "Deine"); prefer stable id over locale-fragile name.
+	await expect(page.locator('#ac-library-folders-heading').first()).toBeVisible({ timeout: 30000 });
 }
 
 test.describe('Library folders UX simplification', () => {
