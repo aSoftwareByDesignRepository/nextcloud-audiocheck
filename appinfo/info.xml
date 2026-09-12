@@ -56,6 +56,10 @@ The app is **free** under AGPL-3.0-or-later. There is no seat license for this w
 - Scan depth is capped (32 folder levels). Playlist play/shuffle has a documented track cap (2000).
 - Declared databases: MySQL and PostgreSQL only.
 
+## Feedback welcome
+
+We improve this app with real-world use. Bug reports, rough edges, and ideas help — open a GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) or write to info@software-by-design.de. Your feedback directly shapes what we build next.
+
 ## Requirements
 
 - Nextcloud 32–35
@@ -100,6 +104,10 @@ Die App ist unter AGPL-3.0-or-later **kostenfrei**. Für diese Web-App ist im au
 - Nach einer vollständigen Browser-Navigation weg von AudioCheck verlangen Browser oft einen Klick, um die Wiedergabe fortzusetzen.
 - Scan-Tiefe begrenzt (32 Ordnerebenen). Playlists haben eine dokumentierte Titel-Obergrenze (2000).
 - Deklarierte Datenbanken: nur MySQL und PostgreSQL.
+
+## Feedback willkommen
+
+Wir verbessern diese App mit Rückmeldungen aus der Praxis. Fehlerberichte, Stolpersteine und Ideen helfen — öffnen Sie ein GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) oder schreiben Sie an info@software-by-design.de. Ihr Feedback prägt direkt, was wir als Nächstes bauen.
 
 ## Voraussetzungen
 
@@ -146,6 +154,10 @@ L’application est **gratuite** sous AGPL-3.0-or-later. Il n’y a pas de licen
 - La profondeur d’analyse est limitée (32 niveaux de dossiers). La lecture/le mélange des playlists a une limite de pistes documentée (2000).
 - Bases de données déclarées : uniquement MySQL et PostgreSQL.
 
+## Retours bienvenus
+
+Nous améliorons cette app grâce à votre usage réel. Bugs, frottements et idées aident — ouvrez une GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) ou écrivez à info@software-by-design.de. Vos retours façonnent directement la suite.
+
 ## Exigences
 
 - Nextcloud 32–35
@@ -190,6 +202,10 @@ La aplicación es **gratuita** con AGPL-3.0-or-later. En el paquete entregado no
 - Tras una navegación completa fuera de AudioCheck, el navegador puede exigir un clic para reanudar el audio.
 - La profundidad de escaneo está limitada (32 niveles de carpetas). La reproducción/mezcla de listas de reproducción tiene un límite de pistas documentado (2000).
 - Bases de datos declaradas: solo MySQL y PostgreSQL.
+
+## Comentarios bienvenidos
+
+Mejoramos esta app con el uso real. Informes de errores, fricciones e ideas ayudan — abra un GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) o escriba a info@software-by-design.de. Su feedback da forma directa a lo que construimos después.
 
 ## Requisitos
 
@@ -236,6 +252,10 @@ Appen er **gratis** under AGPL-3.0-or-later. Der findes ingen seat-licens til de
 - Scandybden er begrænset (32 mappeniveauer). Afspilning/blanding af playlists har en dokumenteret grænse (2000 spor).
 - Deklarerede databaser: kun MySQL og PostgreSQL.
 
+## Feedback er velkommen
+
+Vi forbedrer denne app med brug i praksis. Fejlrapporter, friktioner og idéer hjælper — åbn et GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) eller skriv til info@software-by-design.de. Jeres feedback former direkte det, vi bygger næste gang.
+
 ## Krav
 
 - Nextcloud 32–35
@@ -280,6 +300,10 @@ De app is **gratis** onder AGPL-3.0-or-later. Er is in het meegeleverde pakket g
 - Na volledige browsenavigatie weg van AudioCheck kunnen browsers een klik vereisen om audio te hervatten.
 - De scan-diepte is beperkt (32 mapniveaus). Afspelen/shuffle van playlists heeft een gedocumenteerde tracklimiet (2000).
 - Gedeclareerde databases: alleen MySQL en PostgreSQL.
+
+## Feedback welkom
+
+We verbeteren deze app met gebruik in de praktijk. Bugmeldingen, struikelblokken en ideeën helpen — open een GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) of mail naar info@software-by-design.de. Uw feedback bepaalt mede wat we als volgende bouwen.
 
 ## Vereisten
 
@@ -326,6 +350,10 @@ L’app è **gratuita** con AGPL-3.0-or-later. Nel pacchetto distribuito non è 
 - La profondità di scansione è limitata (32 livelli di cartelle). La riproduzione/mescolamento delle playlist ha un limite di tracce documentato (2000).
 - Database dichiarati: solo MySQL e PostgreSQL.
 
+## Feedback benvenuto
+
+Miglioriamo questa app con l’uso reale. Segnalazioni di bug, punti deboli e idee aiutano — aprite una GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) o scrivete a info@software-by-design.de. Il vostro feedback guida direttamente ciò che costruiamo dopo.
+
 ## Requisiti
 
 - Nextcloud 32–35
@@ -370,6 +398,10 @@ Prowadzona przez aplikację jest **bezpłatna** na warunkach AGPL-3.0-or-later. 
 - Po pełnej nawigacji przeglądarki poza AudioCheck przeglądarki mogą wymagać kliknięcia, by wznowić dźwięk.
 - Głębokość skanowania jest ograniczona (32 poziomy folderów). Odtwarzanie/losowanie playlist ma udokumentowany limit utworów (2000).
 - Deklarowane bazy danych: tylko MySQL i PostgreSQL.
+
+## Feedback mile widziany
+
+Ulepszamy tę aplikację dzięki realnemu użyciu. Zgłoszenia błędów, tarcia i pomysły pomagają — otwórz GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) lub napisz na info@software-by-design.de. Wasza opinia bezpośrednio kształtuje to, co budujemy dalej.
 
 ## Wymagania
 
@@ -416,6 +448,10 @@ Appen är **gratis** under AGPL-3.0-or-later. Det finns ingen seat-licens för d
 - Skanningsdjupet är begränsat (32 mappnivåer). Uppspelning/”shuffle” av spellistor har en dokumenterad spårgräns (2000).
 - Deklarerade databaser: endast MySQL och PostgreSQL.
 
+## Feedback välkomnas
+
+Vi förbättrar den här appen med verklig användning. Felrapporter, friktioner och idéer hjälper — öppna en GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) eller skriv till info@software-by-design.de. Er feedback formar direkt det vi bygger härnäst.
+
 ## Krav
 
 - Nextcloud 32–35
@@ -461,6 +497,10 @@ Appen er **gratis** under AGPL-3.0-or-later. Det finnes ingen seat-lisens for de
 - Skannedybden er begrenset (32 mappenivåer). Avspilling/«shuffle» av spillelister har en dokumentert sporgrense (2000).
 - Deklarerte databaser: kun MySQL og PostgreSQL.
 
+## Feedback er velkommen
+
+Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer hjelper — åpne en GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) eller skriv til info@software-by-design.de. Tilbakemeldingen deres former direkte det vi bygger videre.
+
 ## Krav
 
 - Nextcloud 32–35
@@ -505,6 +545,10 @@ A aplicação é **gratuita** sob AGPL-3.0-or-later. Não há licença por posto
 - Após navegação completa para fora do AudioCheck, os navegadores podem exigir um clique para retomar o áudio.
 - A profundidade de análise é limitada (32 níveis de pastas). A reprodução/mistura de playlists tem um limite documentado de faixas (2000).
 - Bases de dados declaradas: apenas MySQL e PostgreSQL.
+
+## Feedback bem-vindo
+
+Melhoramos este app com o uso real. Relatórios de bugs, atritos e ideias ajudam — abra um GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) ou escreva para info@software-by-design.de. O seu feedback molda diretamente o que construímos a seguir.
 
 ## Requisitos
 

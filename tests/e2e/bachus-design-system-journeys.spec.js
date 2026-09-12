@@ -157,15 +157,58 @@ test.describe('Bachus design-system journeys', () => {
 		}
 	});
 
-	test('native dialog is used for confirms', async ({ page }) => {
+	test('native dialog confirm and cancel paths both execute', async ({ page }) => {
 		await gotoApp(page, '/apps/audiocheck/now-playing');
-		const clearBtn = page.locator('.ac-now-queue__clear');
-		if (await clearBtn.count()) {
-			await clearBtn.click();
-			await expect(page.locator('dialog.ac-native-dialog[open]')).toBeVisible({ timeout: 10000 });
-			await page.locator('dialog.ac-native-dialog .ac-modal__close, dialog.ac-native-dialog button', { hasText: /Cancel|Abbrechen/i }).first().click();
-			await expect(page.locator('dialog.ac-native-dialog[open]')).toHaveCount(0);
-		}
+		await page.evaluate(() => {
+			window.__acConfirmHit = false;
+			AudioCheckComponents.confirmDialog({
+				title: 'Atlas confirm',
+				message: 'Press confirm or cancel',
+				confirmLabel: 'Clear queue',
+				cancelLabel: 'Cancel',
+				danger: true,
+				onConfirm: () => { window.__acConfirmHit = true; },
+			});
+		});
+		await expect(page.locator('dialog.ac-native-dialog[open]')).toBeVisible({ timeout: 10000 });
+		await page.locator('dialog.ac-native-dialog .ac-modal__close, dialog.ac-native-dialog button', { hasText: /Cancel|Abbrechen/i }).first().click();
+		await expect(page.locator('dialog.ac-native-dialog[open]')).toHaveCount(0);
+		expect(await page.evaluate(() => window.__acConfirmHit)).toBe(false);
+
+		await page.evaluate(() => {
+			window.__acConfirmHit = false;
+			AudioCheckComponents.confirmDialog({
+				title: 'Atlas confirm',
+				message: 'Press confirm or cancel',
+				confirmLabel: 'Clear queue',
+				cancelLabel: 'Cancel',
+				danger: true,
+				onConfirm: () => { window.__acConfirmHit = true; },
+			});
+		});
+		await expect(page.locator('dialog.ac-native-dialog[open]')).toBeVisible({ timeout: 10000 });
+		await page.locator('dialog.ac-native-dialog button', { hasText: /Clear queue|Warteschlange leeren|Confirm|Bestätigen/i }).first().click();
+		await expect(page.locator('dialog.ac-native-dialog[open]')).toHaveCount(0);
+		expect(await page.evaluate(() => window.__acConfirmHit)).toBe(true);
+	});
+
+	test('folder picker intro Cancel dismisses without Files picker', async ({ page }) => {
+		await gotoApp(page, '/apps/audiocheck/library');
+		await page.evaluate(() => {
+			if (window.AudioCheckFolderPicker && typeof AudioCheckFolderPicker.resetIntroPreference === 'function') {
+				AudioCheckFolderPicker.resetIntroPreference();
+			}
+		});
+		const addBtn = page.getByRole('button', {
+			name: /add a folder|ordner hinzufügen|add music folder|musikordner hinzufügen|add folder \(auto-detect\)|automatisch/i,
+		}).first();
+		await expect(addBtn).toBeVisible({ timeout: 30000 });
+		await addBtn.click();
+		const dlg = page.locator('dialog.ac-native-dialog[open]');
+		await expect(dlg).toBeVisible({ timeout: 10000 });
+		await expect(dlg).toContainText(/folder|Ordner/i);
+		await page.locator('dialog.ac-native-dialog .ac-modal__close, dialog.ac-native-dialog button', { hasText: /Cancel|Abbrechen/i }).first().click();
+		await expect(page.locator('dialog.ac-native-dialog[open]')).toHaveCount(0);
 	});
 
 	test('music and browse recover with Try again chrome contract', async ({ page }) => {
