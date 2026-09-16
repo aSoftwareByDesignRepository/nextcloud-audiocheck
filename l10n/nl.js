@@ -691,5 +691,6 @@ OC.L10N.register(
 	"Show player on other pages" : "Speler op andere pagina's tonen",
 	"Off by default. When on, a small player stays at the bottom of Files, Photos, and other apps while something is playing. You can still press Close player on the bar to hide it for this session." : "Standaard uit. Als dit aan staat, blijft een kleine speler onderaan Bestanden, Foto's en andere apps tijdens het afspelen. Speler sluiten verbergt de balk voor deze sessie.",
 	"Play, pause, previous, next, seek, volume, open Now playing, and Close player to hide the bar." : "Afspelen, pauzeren, vorige, volgende, zoeken, volume, Nu afspelen openen en Speler sluiten om de balk te verbergen."
-	}
+	},
+	"nplurals=2; plural=(n != 1);"
 );

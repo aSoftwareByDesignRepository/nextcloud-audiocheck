@@ -691,5 +691,6 @@ OC.L10N.register(
 	"Show player on other pages" : "Vis avspiller på andre sider",
 	"Off by default. When on, a small player stays at the bottom of Files, Photos, and other apps while something is playing. You can still press Close player on the bar to hide it for this session." : "Av som standard. Når det er på, blir en liten avspiller nederst i Filer, Bilder og andre apper mens noe spilles. Lukk avspiller skjuler linjen for denne økten.",
 	"Play, pause, previous, next, seek, volume, open Now playing, and Close player to hide the bar." : "Spill av, pause, forrige, neste, søk, volum, åpne Spiller nå, og Lukk avspiller for å skjule linjen."
-	}
+	},
+	"nplurals=2; plural=(n != 1);"
 );

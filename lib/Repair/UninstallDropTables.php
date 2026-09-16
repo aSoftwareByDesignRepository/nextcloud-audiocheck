@@ -52,6 +52,7 @@ final class UninstallDropTables implements IRepairStep
 		'ac_playlists',
 		'ac_queue',
 		'ac_queue_items',
+		'ac_rate_limits',
 		'ac_scan_state',
 		'ac_tracks',
 	];

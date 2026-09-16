@@ -691,5 +691,6 @@ OC.L10N.register(
 	"Show player on other pages" : "Mostrar o player em outras páginas",
 	"Off by default. When on, a small player stays at the bottom of Files, Photos, and other apps while something is playing. You can still press Close player on the bar to hide it for this session." : "Desativado por padrão. Quando ativado, um player pequeno fica na parte inferior de Arquivos, Fotos e outros apps durante a reprodução. Fechar o player oculta a barra nesta sessão.",
 	"Play, pause, previous, next, seek, volume, open Now playing, and Close player to hide the bar." : "Reproduzir, pausar, anterior, próximo, buscar, volume, abrir Tocando agora e Fechar o player para ocultar a barra."
-	}
+	},
+	"nplurals=2; plural=(n != 1);"
 );

@@ -691,5 +691,6 @@ OC.L10N.register(
 	"Show player on other pages" : "Pokazuj odtwarzacz na innych stronach",
 	"Off by default. When on, a small player stays at the bottom of Files, Photos, and other apps while something is playing. You can still press Close player on the bar to hide it for this session." : "Domyślnie wyłączone. Po włączeniu mały odtwarzacz zostaje na dole w Plikach, Zdjęciach i innych aplikacjach podczas odtwarzania. Zamknij odtwarzacz ukrywa pasek w tej sesji.",
 	"Play, pause, previous, next, seek, volume, open Now playing, and Close player to hide the bar." : "Odtwarzaj, pauza, poprzedni, następny, przewijanie, głośność, otwórz Teraz odtwarzane i Zamknij odtwarzacz, aby ukryć pasek."
-	}
+	},
+	"nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);"
 );
