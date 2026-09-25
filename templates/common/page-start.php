@@ -57,7 +57,7 @@ $locale = (string)($_['locale'] ?? $l->getLocaleCode());
 		<span class="ac-nav-toggle__label"><?php p($l->t('Menu')); ?></span>
 	</button>
 	<div id="app-content-wrapper" class="ac-shell">
-		<header class="ac-page-header" aria-labelledby="ac-page-title">
+		<div class="ac-page-header" role="group" aria-labelledby="ac-page-title">
 			<nav class="ac-breadcrumb" aria-label="<?php p($l->t('Breadcrumb')); ?>">
 				<ol>
 					<li class="ac-breadcrumb__item">
@@ -84,5 +84,5 @@ $locale = (string)($_['locale'] ?? $l->getLocaleCode());
 				<span class="ac-scope-strip__value" id="ac-scope-detail"><?php p($l->t('Your audio library in Nextcloud')); ?></span>
 			</div>
 			<div id="ac-global-search" class="ac-global-search" hidden aria-hidden="true"></div>
-		</header>
+		</div>
 		<main id="ac-main-content" class="ac-main ac-main-content" role="main" tabindex="-1" data-ac-view="<?php p($pageId); ?>">

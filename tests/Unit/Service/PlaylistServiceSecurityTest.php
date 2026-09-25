@@ -29,6 +29,18 @@ final class PlaylistServiceSecurityTest extends TestCase
 		$this->assertStringContainsString('listItemIdsForPlaylist', $source);
 	}
 
+	/**
+	 * Count + membership alone admits duplicates ([a,a,b,b] on a 4-item
+	 * playlist) which silently corrupt sort_order — the guard must also
+	 * enforce uniqueness (exact permutation).
+	 */
+	public function testReorderRejectsDuplicateItemIds(): void
+	{
+		$source = file_get_contents(dirname(__DIR__, 3) . '/lib/Service/PlaylistService.php');
+		$this->assertIsString($source);
+		$this->assertStringContainsString('array_unique', $source);
+	}
+
 	public function testReorderAndDeleteUseTransactions(): void
 	{
 		$source = file_get_contents(dirname(__DIR__, 3) . '/lib/Service/PlaylistService.php');

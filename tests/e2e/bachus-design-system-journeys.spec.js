@@ -128,6 +128,35 @@ test.describe('Bachus design-system journeys', () => {
 	});
 
 	test('now-playing advanced options stay behind disclosure', async ({ page }) => {
+		// The advanced-options section only renders once a track is loaded
+		// (paintNow appends it when AudioCheckPlayer.getCurrentTrack() is set;
+		// the empty state paints a continue/recovery surface instead). Seed a
+		// session snapshot so the bootstrap restores a queue deterministically —
+		// no media file or library scan needed. The stream URL 404s harmlessly:
+		// passive restores skip the error cascade (see player.js error listener).
+		await page.addInitScript(() => {
+			try {
+				sessionStorage.removeItem('audiocheck_global_player_dismissed');
+				sessionStorage.setItem('audiocheck_playback_session', JSON.stringify({
+					v: 1,
+					savedAt: Date.now(),
+					index: 0,
+					positionMs: 0,
+					playing: false,
+					speed: 1,
+					shuffle: false,
+					repeatMode: 'off',
+					queue: [{
+						fileId: 424242,
+						title: 'E2E fixture track',
+						fileName: 'e2e-fixture.mp3',
+						artist: 'Atlas Farm',
+						album: 'Journeys',
+						unavailable: false,
+					}],
+				}));
+			} catch (_) { /* sessionStorage unavailable — test will fail visibly */ }
+		});
 		await gotoApp(page, '/apps/audiocheck/now-playing');
 		await expect(page.locator('.ac-now-advanced > .ac-disclosure__summary, .ac-now-advanced > summary')).toBeVisible({ timeout: 30000 });
 		await expect(page.locator('#ac-shuffle-row')).toBeHidden();

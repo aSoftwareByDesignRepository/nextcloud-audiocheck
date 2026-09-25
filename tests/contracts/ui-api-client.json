@@ -1,6 +1,115 @@
 {
-  "schemaVersion": 1,
-  "appId": "audiocheck",
-  "companionDir": "mobile/audiocheck",
-  "contracts": []
+	"schemaVersion": 1,
+	"appId": "audiocheck",
+	"companionDir": "mobile/audiocheck",
+	"contracts": [
+		{
+			"id": "playlist-create-name",
+			"param": "name",
+			"description": "Creating a playlist requires a non-empty name (server trims and rejects empty input). Both clients collect the name in their create-playlist surfaces.",
+			"errorCodes": [
+				"Name and collection key are required."
+			],
+			"server": [
+				{
+					"file": "lib/Controller/ApiController.php",
+					"needles": [
+						"Name and collection key are required."
+					]
+				}
+			],
+			"web": [
+				{
+					"file": "js/common/playlist-actions.js",
+					"needles": [
+						"ac-add-create-playlist-name"
+					]
+				}
+			],
+			"mobile": [
+				{
+					"file": "src/ui/CreatePlaylistButton.tsx",
+					"needles": [
+						"trimmed"
+					]
+				},
+				{
+					"file": "src/api/client.ts",
+					"needles": [
+						"createPlaylist",
+						"name.trim()"
+					]
+				}
+			]
+		},
+		{
+			"id": "library-add-folder",
+			"param": "rootFileId|folderPath",
+			"description": "Adding a library requires a folder (rootFileId or folderPath; server rejects when neither is given). Library management is a web-only surface — the companion has no add-library UI by design.",
+			"errorCodes": [
+				"A valid folder is required."
+			],
+			"server": [
+				{
+					"file": "lib/Controller/ApiController.php",
+					"needles": [
+						"A valid folder is required."
+					]
+				}
+			],
+			"web": [
+				{
+					"file": "js/views/library.js",
+					"needles": [
+						"addLibraryFolder",
+						"pick.fileId",
+						"pick.pickedPath"
+					]
+				}
+			],
+			"mobile": []
+		},
+		{
+			"id": "playlist-reorder-permutation",
+			"param": "itemIds",
+			"description": "Reordering playlist items requires itemIds to be an exact permutation of the playlist's current items — the server rejects duplicates, missing, or foreign ids (422 'Invalid item order.'). Both clients send the complete reordered id list.",
+			"errorCodes": [
+				"Invalid item order."
+			],
+			"server": [
+				{
+					"file": "lib/Service/PlaylistService.php",
+					"needles": [
+						"array_unique",
+						"Invalid item order."
+					]
+				}
+			],
+			"web": [
+				{
+					"file": "js/views/playlists.js",
+					"needles": [
+						"reorderPlaylistItems",
+						"itemIds"
+					]
+				}
+			],
+			"mobile": [
+				{
+					"file": "src/screens/PlaylistsScreen.tsx",
+					"needles": [
+						"swapPlaylistItemIds",
+						"reorderPlaylistItems.mutate"
+					]
+				},
+				{
+					"file": "src/api/client.ts",
+					"needles": [
+						"reorderPlaylistItems",
+						"itemIds"
+					]
+				}
+			]
+		}
+	]
 }

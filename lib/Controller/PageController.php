@@ -214,6 +214,7 @@ class PageController extends Controller
 			'common/playback-start',
 			'common/library-page-ui',
 			'common/sleep-timer',
+			'common/focus-preservation',
 			'common/page-chrome',
 			'common/seek-jump',
 			'common/router',

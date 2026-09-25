@@ -34,6 +34,7 @@ final class AzcShellParityContractTest extends TestCase {
 			'/templates/common/navigation.php',
 			'/templates/common/page-end.php',
 			'/js/common/page-chrome.js',
+			'/js/common/focus-preservation.js',
 			'/js/common/messaging.js',
 			'/js/common/mobile-nav.js',
 		] as $rel) {

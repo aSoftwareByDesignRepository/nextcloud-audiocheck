@@ -37,7 +37,7 @@ $acRaw = static function (mixed $value): void {
 	print (string)$value;
 };
 ?>
-<footer id="ac-mini-player" class="<?php $acP($classes); ?>" role="region" aria-label="<?php $acP($l->t('Mini player')); ?>"
+<div id="ac-mini-player" class="<?php $acP($classes); ?>" role="region" aria-label="<?php $acP($l->t('Mini player')); ?>"
 	data-ac-mini-state="idle"
 	<?php if ($acMiniPlayerHidden): ?>hidden aria-hidden="true"<?php endif; ?>>
 	<audio id="ac-audio" preload="metadata" playsinline></audio>
@@ -97,4 +97,4 @@ $acRaw = static function (mixed $value): void {
 			</button>
 		</div>
 	</div>
-</footer>
+</div>

@@ -173,7 +173,10 @@ class PlaylistService
 		$this->assertPlaylistOwned($userId, $playlistId);
 		$existingIds = $this->listItemIdsForPlaylist($playlistId);
 		$requested = array_values(array_filter(array_map('intval', $itemIds), static fn (int $id): bool => $id > 0));
-		if (count($requested) !== count($existingIds)) {
+		// Must be an exact permutation: count+membership alone admits
+		// duplicates like [a,a,b,b] which would silently corrupt sort_order.
+		if (count($requested) !== count($existingIds)
+			|| count($requested) !== count(array_unique($requested))) {
 			throw new ValidationException('Invalid item order.');
 		}
 		$existingSet = array_flip($existingIds);

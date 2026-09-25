@@ -255,6 +255,7 @@
 					title: t('audiocheck', 'Delete playlist?'),
 					message: t('audiocheck', 'This cannot be undone.'),
 					confirmLabel: t('audiocheck', 'Delete playlist'),
+					danger: true,
 					onConfirm: async () => {
 						await AudioCheckApi.del('/apps/audiocheck/api/playlists/{id}', null, { params: { id: pl.id } });
 						AudioCheckMessaging.toast(t('audiocheck', 'Playlist deleted.'));
@@ -623,6 +624,7 @@
 								title: t('audiocheck', 'Delete playlist?'),
 								message: t('audiocheck', 'This cannot be undone.'),
 								confirmLabel: t('audiocheck', 'Delete playlist'),
+								danger: true,
 								onConfirm: async () => {
 									await AudioCheckApi.del('/apps/audiocheck/api/playlists/{id}', null, { params: { id: playlistId } });
 									AudioCheckMessaging.toast(t('audiocheck', 'Playlist deleted.'));

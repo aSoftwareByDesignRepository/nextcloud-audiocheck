@@ -18,6 +18,7 @@
 		if (el) el.textContent = text == null ? '' : String(text);
 	}
 
+
 	function mountHeaderIcon(iconName) {
 		const host = document.getElementById('ac-page-header-icon');
 		if (!host || !window.AudioCheckIcons) return;
@@ -82,15 +83,37 @@
 		updateScopeStripVisibility(viewId);
 	}
 
+	// Focus rescue across container rebuilds lives in the shared canonical
+	// module — apps/_shared/focus-preservation/focus-preservation.js, synced
+	// verbatim to js/common/focus-preservation.js (drift-checked). Do not fork.
+	const { install: installFocusPreservation, isFocusable, FOCUSABLE } = window.CheckFocusPreservation;
+
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', () => installFocusPreservation({ prefix: 'ac' }), { once: true });
+	} else {
+		installFocusPreservation({ prefix: 'ac' });
+	}
+
+	function refocusRebuiltActions(host) {
+		const toggle = host.querySelector('summary.ac-actions-overflow__toggle');
+		if (toggle && isFocusable(toggle)) { toggle.focus(); return; }
+		const cands = host.querySelectorAll(FOCUSABLE);
+		for (const c of cands) {
+			if (isFocusable(c)) { c.focus(); return; }
+		}
+	}
+
 	function setActions(nodes) {
 		const host = document.getElementById('ac-page-actions');
 		if (!host) return;
+		const refocus = host.contains(document.activeElement);
 		host.textContent = '';
 		const list = Array.isArray(nodes) ? nodes : (nodes ? [nodes] : []);
 		list.forEach((node) => {
 			if (node) host.appendChild(node);
 		});
 		host.hidden = list.length === 0;
+		if (refocus && list.length) refocusRebuiltActions(host);
 	}
 
 	/**
@@ -101,6 +124,10 @@
 	function setActionsGrouped(primary, secondary) {
 		const host = document.getElementById('ac-page-actions');
 		if (!host) return;
+		// A re-render replaces every node — if focus lived inside the actions
+		// cluster, restore it onto the rebuilt equivalent instead of dropping
+		// the keyboard user to <body>.
+		const refocus = host.contains(document.activeElement);
 		host.textContent = '';
 		const prim = (primary || []).filter(Boolean);
 		const sec = (secondary || []).filter(Boolean);
@@ -111,6 +138,7 @@
 		if (!sec.length) {
 			prim.forEach((node) => host.appendChild(node));
 			host.hidden = false;
+			if (refocus) refocusRebuiltActions(host);
 			return;
 		}
 		const cluster = document.createElement('div');
@@ -137,7 +165,18 @@
 		sec.forEach((node) => {
 			menu.appendChild(node);
 			node.addEventListener('click', () => {
-				closeOverflow();
+				details.open = false;
+				const modal = window.AudioCheckComponents && typeof AudioCheckComponents.getOpenModal === 'function'
+					? AudioCheckComponents.getOpenModal()
+					: null;
+				if (modal && typeof modal.setRestoreFocus === 'function') {
+					// The clicked menu item is now hidden inside the closed <details>;
+					// retarget focus-restore to the overflow summary — resolved lazily
+					// because a successful action re-renders and replaces the node.
+					modal.setRestoreFocus(() => host.querySelector('summary.ac-actions-overflow__toggle') || summary);
+				} else {
+					summary.focus();
+				}
 			});
 		});
 		details.appendChild(menu);
@@ -166,6 +205,7 @@
 		cluster.appendChild(details);
 		host.appendChild(cluster);
 		host.hidden = false;
+		if (refocus) refocusRebuiltActions(host);
 	}
 
 	function clearActions() {

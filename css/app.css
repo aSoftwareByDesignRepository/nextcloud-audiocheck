@@ -266,6 +266,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	background: color-mix(in srgb, var(--color-success, var(--color-primary-element)) 14%, var(--ac-bg-card));
 	color: var(--color-success-text, var(--ac-text));
 }
+.ac-toasts .ac-toast__close,
 .ac-toast__close {
 	min-width: var(--ac-touch);
 	min-height: var(--ac-touch);
@@ -1540,6 +1541,28 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 .ac-btn--icon { padding: 0; width: var(--ac-touch); }
 .ac-btn--text { border: none; background: transparent; min-width: auto; }
 
+/* Danger buttons — MUST live after the base .ac-btn block: the same rules in
+ * common/shell-chrome.css (via @import) lose the equal-specificity tie to
+ * `button.ac-btn` above, which left danger buttons white (regression guard). */
+#app-content.ac-app button.ac-btn--danger,
+dialog.ac-native-dialog button.ac-btn--danger,
+.ac-mini-player button.ac-btn--danger {
+	background-color: var(--ac-danger-fill);
+	border-color: transparent;
+	color: var(--ac-danger-on-fill);
+	font-weight: 700;
+}
+#app-content.ac-app button.ac-btn--danger:not(:disabled):hover,
+#app-content.ac-app button.ac-btn--danger:not(:disabled):focus-visible,
+dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):hover,
+dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
+.ac-mini-player button.ac-btn--danger:not(:disabled):hover,
+.ac-mini-player button.ac-btn--danger:not(:disabled):focus-visible {
+	background-color: var(--ac-danger-fill-hover);
+	border-color: transparent;
+	color: var(--ac-danger-on-fill);
+}
+
 /* Empty states: canonical rules in common/page-patterns.css (no card chrome). */
 .ac-empty__app-logo {
 	display: block;
@@ -2240,6 +2263,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 		white-space: normal;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
+		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}
@@ -2247,6 +2271,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 		white-space: normal;
 		display: -webkit-box;
 		-webkit-line-clamp: 1;
+		line-clamp: 1;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}
@@ -3482,7 +3507,10 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	overflow: hidden;
 }
 
-.ac-playback-option {
+/* Beat NC core `button:not(.button-vue)` (0-1-1) which clamps min-height to
+ * --default-clickable-area (34px) — same cascade fix as the ac-btn rules above. */
+#app-content.ac-app button.ac-playback-option,
+.ac-modal button.ac-playback-option {
 	display: flex;
 	align-items: center;
 	gap: var(--ac-space-3);
@@ -4127,6 +4155,7 @@ dialog.ac-native-dialog.ac-modal__dialog,
 	white-space: nowrap;
 	min-width: 0;
 }
+dialog.ac-native-dialog .ac-modal__close,
 .ac-modal__close {
 	border: 1px solid transparent;
 	background: transparent;
@@ -4297,6 +4326,7 @@ body.ac-modal-open { overflow: hidden; }
 		white-space: normal;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
+		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}
@@ -4305,6 +4335,7 @@ body.ac-modal-open { overflow: hidden; }
 		white-space: normal;
 		display: -webkit-box;
 		-webkit-line-clamp: 1;
+		line-clamp: 1;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}
@@ -4364,12 +4395,14 @@ body.ac-modal-open { overflow: hidden; }
 			white-space: nowrap;
 			display: block;
 			-webkit-line-clamp: unset;
+			line-clamp: unset;
 		}
 		.ac-now-queue .ac-track-list__artist,
 		.ac-track-list--compact .ac-track-list__artist {
 			white-space: nowrap;
 			display: block;
 			-webkit-line-clamp: unset;
+			line-clamp: unset;
 		}
 		.ac-compat-note__text {
 			position: static;
@@ -4875,7 +4908,10 @@ body.ac-modal-open { overflow: hidden; }
 	gap: var(--ac-space-2);
 }
 
-.ac-filter-chip {
+/* Same NC `button:not(.button-vue)` cascade defeat — 44px contract requires
+ * ID-scoped specificity (1-1-1), matching the ac-btn fix pattern. */
+#app-content.ac-app button.ac-filter-chip,
+.ac-modal button.ac-filter-chip {
 	display: inline-flex;
 	align-items: center;
 	min-height: var(--ac-touch);

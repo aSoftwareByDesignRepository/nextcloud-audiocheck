@@ -44,8 +44,19 @@
 		}
 		announce(text, kind === 'error' ? 'error' : (kind === 'warning' ? 'warning' : 'success'));
 		const container = ensureToastContainer();
+		const ttl = kind === 'error' ? 7000 : 4500;
+		const key = kind + ':' + text;
+		const existing = Array.from(container.children).find((node) => node.dataset && node.dataset.toastKey === key);
+		if (existing) {
+			window.clearTimeout(Number(existing.dataset.toastTimer || 0));
+			existing.dataset.toastTimer = String(window.setTimeout(() => {
+				if (existing.parentNode) existing.parentNode.removeChild(existing);
+			}, ttl));
+			return;
+		}
 		const toast = document.createElement('div');
 		toast.className = 'ac-toast ac-toast--' + kind;
+		toast.dataset.toastKey = kind + ':' + text;
 		toast.setAttribute('role', kind === 'error' ? 'alert' : 'status');
 		const label = document.createElement('span');
 		label.textContent = text;
@@ -58,9 +69,9 @@
 		toast.appendChild(label);
 		toast.appendChild(close);
 		container.appendChild(toast);
-		window.setTimeout(() => {
+		toast.dataset.toastTimer = String(window.setTimeout(() => {
 			if (toast.parentNode) toast.parentNode.removeChild(toast);
-		}, kind === 'error' ? 7000 : 4500);
+		}, ttl));
 	}
 
 	window.AudioCheckMessaging = {

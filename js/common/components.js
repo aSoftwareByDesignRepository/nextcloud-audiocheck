@@ -707,7 +707,7 @@
 		}, options || {});
 
 		if (openModalInstance) openModalInstance.close(false);
-		const previousFocus = document.activeElement;
+		let previousFocus = document.activeElement;
 		const labelId = 'ac-modal-title-' + Math.random().toString(36).slice(2);
 		let dialog;
 		let closed = false;
@@ -726,12 +726,30 @@
 					dialog.remove();
 				}
 				openModalInstance = null;
-				document.removeEventListener('keydown', onKey);
+				document.removeEventListener('keydown', onKey, true);
 				if (typeof opts.onClose === 'function') {
 					try { opts.onClose(); } catch (_) { /* ignore */ }
 				}
 				if (typeof opts.onCancel === 'function' && !ok) opts.onCancel();
-				if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus();
+				const restoreTarget = typeof previousFocus === 'function' ? previousFocus() : previousFocus;
+				let target = (restoreTarget && restoreTarget.isConnected) ? restoreTarget : null;
+				if (!target) {
+					// The invoking element was destroyed by a success-path re-render —
+					// land on the first action control, else the view heading, never BODY.
+					target = document.querySelector('#ac-page-actions summary.ac-actions-overflow__toggle')
+						|| document.querySelector('#ac-page-actions button, #ac-page-actions [href], #ac-page-actions input, #ac-page-actions select, #ac-page-actions [tabindex]:not([tabindex="-1"])')
+						|| document.getElementById('ac-page-title')
+						|| document.querySelector('#ac-main-content h1, #ac-main-content h2');
+				}
+				if (target && typeof target.focus === 'function') {
+					if (!/^(BUTTON|A|INPUT|SELECT|TEXTAREA|SUMMARY)$/.test(target.tagName) && !target.hasAttribute('tabindex')) {
+						target.setAttribute('tabindex', '-1');
+					}
+					target.focus();
+				}
+			},
+			setRestoreFocus(el) {
+				if (el) previousFocus = el;
 			},
 		};
 		openModalInstance = instance;
@@ -791,7 +809,19 @@
 			attrs: { 'aria-labelledby': labelId },
 		}, dialogChildren);
 
+		/* Capture phase: host apps (e.g. core notifications) preventDefault Escape
+		 * on non-input targets during bubbling, which suppresses the dialog's
+		 * native `cancel` dispatch — handle Escape explicitly and early. */
 		function onKey(e) {
+			if (e.key === 'Escape') {
+				if (e.defaultPrevented) return;
+				// An open suggestion list inside the dialog consumes Esc itself.
+				if (dialog.querySelector('.ac-entity-picker__suggest:not([hidden])')) return;
+				e.preventDefault();
+				e.stopPropagation();
+				instance.close(false);
+				return;
+			}
 			if (e.key !== 'Tab') return;
 			const list = focusables(dialog);
 			if (!list.length) return;
@@ -809,9 +839,16 @@
 			if (e.target === dialog) instance.close(false);
 		});
 
-		document.body.appendChild(dialog);
+		/* Mount inside #app-content.ac-app so the id-scoped design-system rules
+		 * (#app-content.ac-app button.ac-btn, .ac-input, …) actually apply —
+		 * Nextcloud's `button:not(.button-vue)` / `input:not(…)` selectors would
+		 * otherwise out-specify the bare `.ac-*` classes and strip primary/danger
+		 * fills, sizing, and cursor in every dialog. Top-layer showModal()
+		 * rendering is unaffected by the DOM mount point. */
+		const mountHost = (typeof document.getElementById === 'function' && document.getElementById('app-content')) || document.body;
+		mountHost.appendChild(dialog);
 		document.body.classList.add('ac-modal-open');
-		document.addEventListener('keydown', onKey);
+		document.addEventListener('keydown', onKey, true);
 		try {
 			if (typeof dialog.showModal === 'function') {
 				dialog.showModal();
@@ -821,9 +858,14 @@
 		} catch (_) {
 			dialog.setAttribute('open', 'open');
 		}
+		/* Initial focus: explicit [autofocus] first, then the first editable
+		 * field, then any focusable — the header's close button precedes the
+		 * body in DOM order and must not steal initial focus. */
 		const preferred = dialog.querySelector('[autofocus]:not([disabled])');
-		const firstInput = preferred || dialog.querySelector('input, button, select, textarea');
-		if (firstInput) firstInput.focus();
+		const firstField = dialog.querySelector('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+		const firstFocusable = firstField || dialog.querySelector('button:not([disabled])');
+		const target = preferred || firstFocusable;
+		if (target) target.focus();
 		return instance;
 	}
 
@@ -856,5 +898,6 @@
 	}
 
 	window.AudioCheckComponents.openModal = openModal;
+	window.AudioCheckComponents.getOpenModal = () => openModalInstance;
 	window.AudioCheckComponents.confirmDialog = confirmDialog;
 })();

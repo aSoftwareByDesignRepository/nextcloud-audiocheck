@@ -583,9 +583,11 @@
 					className: 'ac-library-empty__actions',
 					attrs: { role: 'group', 'aria-label': t('audiocheck', 'Add a folder') },
 				});
-				const musicBtn = makeAddButton('ac-btn--primary ac-library-empty__btn', t('audiocheck', 'Add music folder'), 'music');
-				const bookBtn = makeAddButton('ac-btn--primary ac-library-empty__btn', t('audiocheck', 'Add audiobook folder'), 'audiobook');
-				const autoBtn = makeAddButton('ac-library-empty__btn', t('audiocheck', 'Add folder (auto-detect)'), 'auto');
+				/* One primary CTA per recovery surface (DS): auto-detect covers both
+				 * library kinds; the type-specific paths stay secondary. */
+				const musicBtn = makeAddButton('ac-library-empty__btn', t('audiocheck', 'Add music folder'), 'music');
+				const bookBtn = makeAddButton('ac-library-empty__btn', t('audiocheck', 'Add audiobook folder'), 'audiobook');
+				const autoBtn = makeAddButton('ac-btn--primary ac-library-empty__btn', t('audiocheck', 'Add folder (auto-detect)'), 'auto');
 				actions.appendChild(musicBtn);
 				actions.appendChild(bookBtn);
 				actions.appendChild(autoBtn);

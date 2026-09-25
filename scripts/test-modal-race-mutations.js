@@ -23,6 +23,8 @@ function loadComponents(sourceOverride) {
 			appendChild(node) { this._child = node; },
 		},
 		activeElement: null,
+		querySelector() { return null; },
+		getElementById() { return null; },
 		createElement(tag) {
 			const el = {
 				tagName: String(tag).toUpperCase(),
@@ -99,6 +101,8 @@ function loadComponentsInstrumented(sourceText) {
 			appendChild(node) { this._child = node; return node; },
 		},
 		activeElement: null,
+		querySelector() { return null; },
+		getElementById() { return null; },
 		createElement(tag) {
 			const el = {
 				tagName: String(tag).toUpperCase(),
