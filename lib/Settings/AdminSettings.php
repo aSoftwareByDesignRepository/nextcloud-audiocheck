@@ -21,7 +21,7 @@ class AdminSettings implements ISettings
 	public function getForm(): TemplateResponse
 	{
 		return new TemplateResponse(Application::APP_ID, 'admin-settings', [
-			'appSettingsUrl' => $this->urlGenerator->linkToRoute('audiocheck.page.appSettings'),
+			'appSettingsUrl' => $this->urlGenerator->linkToRoute('audiocheck.page.appSettingsIndex'),
 		], '');
 	}
 
