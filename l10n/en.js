@@ -712,7 +712,10 @@ OC.L10N.register(
 	"Playlist tracks" : "Playlist tracks",
 	"Add tracks with the button above." : "Add tracks with the button above.",
 	"Your preferences" : "Your preferences",
-	"Defaults used when you open AudioCheck and start new playback." : "Defaults used when you open AudioCheck and start new playback."
-	},
-	"nplurals=2; plural=(n != 1);"
+	"Defaults used when you open AudioCheck and start new playback." : "Defaults used when you open AudioCheck and start new playback.",
+	"Breadcrumb" : "Breadcrumb",
+	"Music and audiobooks from your files" : "Music and audiobooks from your files",
+	"Playback context" : "Playback context",
+	"Status" : "Status"
+	}
 );
