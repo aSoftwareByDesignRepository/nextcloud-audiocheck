@@ -1,10 +1,22 @@
 # Changelog
 
-## 1.3.7 - 2026-09-06
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## 1.3.8 - 2026-10-04
 
 ### Fixed
-- Authenticated stream opens are rate-limited (300/60s per user via shared `ac_rate_limits` + exclusive lock); over-quota returns **429** `rate_limit_exceeded` instead of opening another file handle.
-- AJAX cron scan tick is **POST + CSRF** only — drive-by GET/`<img>` can no longer wake the scanner; `ApiCsrfGateTest` treats it as a mutation.
+
+- Mini-player touch targets now meet the 44px floor under Nextcloud core styles.
+- Localization: fixed media-playback mistranslations and restored missing nav subtitles; Swedish register cleaned up.
+- Uninstall/upgrade repair paths hardened.
+
+### Changed
+
+- Atlas v3.5.14 verification pass: expanded contract coverage; focus preservation extracted to a shared module; store screenshot URLs realigned with the published listing.
+
 
 ### Changed
 - Version **1.3.7**.
