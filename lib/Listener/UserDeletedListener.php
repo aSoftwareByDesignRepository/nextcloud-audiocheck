@@ -34,6 +34,9 @@ class UserDeletedListener implements IEventListener
 			$this->scan->purgeUserData($uid);
 			$this->queue->purgeUser($uid);
 		} catch (\Throwable $e) {
+			// best-effort: the user is already gone — cleanup failure must not
+			// break the deletion event chain; leftover rows are inert and are
+			// reclaimed by later scans.
 			$this->logger->error('AudioCheck user-deleted cleanup failed', ['exception' => $e]);
 		}
 	}

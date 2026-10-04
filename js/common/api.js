@@ -112,6 +112,18 @@
 			err.status = response.status;
 			err.payload = data;
 			err.code = code;
+			// WCAG 3.3.1/3.3.3: a server `fields` map must render per-control —
+			// aria-invalid + inline .ac-field-error via the canonical shared
+			// module (apps/_shared/field-errors, verbatim sync). A toast alone
+			// does not satisfy the error-identification contract.
+			if (data && data.fields && typeof data.fields === 'object'
+				&& window.CheckFieldErrors) {
+				try {
+					window.CheckFieldErrors.install({ prefix: 'ac' });
+					window.CheckFieldErrors.wireFieldClearOnEdit();
+					window.CheckFieldErrors.markValidationFields(data.fields);
+				} catch (_) { /* never break the error path */ }
+			}
 			throw err;
 		}
 		return data;

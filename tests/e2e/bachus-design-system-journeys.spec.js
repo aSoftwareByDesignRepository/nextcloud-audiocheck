@@ -4,6 +4,10 @@ const AxeBuilder = require('@axe-core/playwright').default;
 const fs = require('fs');
 const path = require('path');
 const { login, credsFromEnv, resolveE2eCreds } = require('./helpers/auth.js');
+const { appT } = require('./helpers/i18n.js');
+
+/** Escape a translated string for exact-match regex use. */
+const escRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
  * Bachus user-journey + axe gauntlet for design-system AudioCheck.
@@ -67,8 +71,10 @@ test.describe('Bachus design-system journeys', () => {
 	test('settings autosave chrome replaces Save button', async ({ page }) => {
 		await gotoApp(page, '/apps/audiocheck/settings');
 		await expect(page.locator('[data-ac-autosave="prefs"]')).toBeVisible({ timeout: 30000 });
-		await expect(page.locator('#ac-prefs-autosave')).toContainText(/save automatically|automatisch/i);
-		await expect(page.locator('button', { hasText: /^Save$/ })).toHaveCount(0);
+		// Locale-safe: resolve through the app's own t() (fixture may not be en/de).
+		await expect(page.locator('#ac-prefs-autosave')).toContainText(await appT(page, 'Changes save automatically.'));
+		const saveRe = new RegExp(`^\\s*${escRe(await appT(page, 'Save'))}\\s*$`, 'i');
+		await expect(page.locator('button', { hasText: saveRe })).toHaveCount(0);
 		await expect(page.locator('.ac-disclosure__summary')).toBeVisible();
 		await page.locator('.ac-disclosure__summary').click();
 		await expect(page.locator('.ac-controls-ref__list')).toBeVisible();
@@ -87,7 +93,7 @@ test.describe('Bachus design-system journeys', () => {
 
 		await expect(page.locator('.ac-settings-chips')).toBeVisible({ timeout: 30000 });
 		await expect(page.locator('.ac-access-mode')).toBeVisible();
-		await expect(page.locator('button', { hasText: /Save access|Zugriff speichern/i })).toBeVisible();
+		await expect(page.locator('button', { hasText: await appT(page, 'Save access') })).toBeVisible();
 
 		const openRadio = page.locator('input[name="ac-access-mode"][value="open"]');
 		const restrictedRadio = page.locator('input[name="ac-access-mode"][value="restricted"]');
@@ -104,7 +110,7 @@ test.describe('Bachus design-system journeys', () => {
 		await expect(page).toHaveURL(/\/apps\/audiocheck\/app-settings\/admins\/?$/);
 		await expect(page.locator('#ac-settings-admins')).toBeVisible();
 		await expect(page.locator('#ac-settings-access')).toHaveCount(0);
-		await expect(page.locator('button', { hasText: /Save admins|Admins speichern|Administratoren speichern/i })).toBeVisible();
+		await expect(page.locator('button', { hasText: await appT(page, 'Save admins') })).toBeVisible();
 		await expect(settingsParent).toHaveClass(/is-expanded/);
 
 		await page.locator('[data-ac-settings-chip="support"]').click();
@@ -200,7 +206,7 @@ test.describe('Bachus design-system journeys', () => {
 			});
 		});
 		await expect(page.locator('dialog.ac-native-dialog[open]')).toBeVisible({ timeout: 10000 });
-		await page.locator('dialog.ac-native-dialog .ac-modal__close, dialog.ac-native-dialog button', { hasText: /Cancel|Abbrechen/i }).first().click();
+		await page.locator('dialog.ac-native-dialog .ac-modal__actions .ac-btn:not(.ac-btn--danger):not(.ac-btn--primary), dialog.ac-native-dialog .ac-modal__close').first().click();
 		await expect(page.locator('dialog.ac-native-dialog[open]')).toHaveCount(0);
 		expect(await page.evaluate(() => window.__acConfirmHit)).toBe(false);
 
@@ -216,7 +222,7 @@ test.describe('Bachus design-system journeys', () => {
 			});
 		});
 		await expect(page.locator('dialog.ac-native-dialog[open]')).toBeVisible({ timeout: 10000 });
-		await page.locator('dialog.ac-native-dialog button', { hasText: /Clear queue|Warteschlange leeren|Confirm|Bestätigen/i }).first().click();
+		await page.locator('dialog.ac-native-dialog .ac-modal__actions .ac-btn--danger').first().click();
 		await expect(page.locator('dialog.ac-native-dialog[open]')).toHaveCount(0);
 		expect(await page.evaluate(() => window.__acConfirmHit)).toBe(true);
 	});
@@ -228,15 +234,13 @@ test.describe('Bachus design-system journeys', () => {
 				AudioCheckFolderPicker.resetIntroPreference();
 			}
 		});
-		const addBtn = page.getByRole('button', {
-			name: /add a folder|ordner hinzufügen|add music folder|musikordner hinzufügen|add folder \(auto-detect\)|automatisch/i,
-		}).first();
+		// Structural: js-ac-add-folder is the stable class on every add-folder CTA.
+		const addBtn = page.locator('.js-ac-add-folder').first();
 		await expect(addBtn).toBeVisible({ timeout: 30000 });
 		await addBtn.click();
 		const dlg = page.locator('dialog.ac-native-dialog[open]');
 		await expect(dlg).toBeVisible({ timeout: 10000 });
-		await expect(dlg).toContainText(/folder|Ordner/i);
-		await page.locator('dialog.ac-native-dialog .ac-modal__close, dialog.ac-native-dialog button', { hasText: /Cancel|Abbrechen/i }).first().click();
+		await page.locator('dialog.ac-native-dialog .ac-modal__close').first().click();
 		await expect(page.locator('dialog.ac-native-dialog[open]')).toHaveCount(0);
 	});
 

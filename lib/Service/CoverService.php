@@ -181,6 +181,9 @@ class CoverService
 			$folder->newFile($cacheKey, json_encode(['mime' => $mime], JSON_THROW_ON_ERROR));
 			$folder->newFile($cacheKey . '.bin', $data);
 		} catch (\Throwable $e) {
+			// best-effort: the cache only avoids re-extraction — a failed write is
+			// served uncached this request and retried on the next miss, so the
+			// failure must not bubble up and 500 the cover response.
 			$this->logger->info('Cover cache write failed', ['exception' => $e]);
 		}
 	}

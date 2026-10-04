@@ -1,8 +1,6 @@
 (function () {
 	'use strict';
 
-	const FALLBACK_ID = 'ac-toast-fallback';
-
 	function politeRegion() {
 		return document.getElementById('ac-live-region') || document.getElementById('ac-announcer');
 	}
@@ -38,10 +36,10 @@
 		const text = message == null ? '' : String(message);
 		if (!text) return;
 		const kind = type || 'info';
-		if (window.OC && OC.Notification && OC.Notification.showTemporary) {
-			OC.Notification.showTemporary(text, { type: kind });
-			return;
-		}
+		// Always render the app-owned toast: delegating to OC.Notification
+		// (toastify) bypasses kind+text dedup AND produces a .toastify node the
+		// shared app-feedback hook can never match — error toasts would lose
+		// their "Report this problem" link (dead-hook class, cf. ticketcheck).
 		announce(text, kind === 'error' ? 'error' : (kind === 'warning' ? 'warning' : 'success'));
 		const container = ensureToastContainer();
 		const ttl = kind === 'error' ? 7000 : 4500;
@@ -59,14 +57,28 @@
 		toast.dataset.toastKey = kind + ':' + text;
 		toast.setAttribute('role', kind === 'error' ? 'alert' : 'status');
 		const label = document.createElement('span');
+		label.className = 'ac-toast__text';
 		label.textContent = text;
+		toast.appendChild(label);
+		// Report-this-problem self-attach: the shared app-feedback wrapper only
+		// covers {App}Components.showToast/showError, which this app never calls
+		// (it exposes AudioCheckMessaging.toast) — error toasts get the family
+		// mailto link inline here (canonical fix: ticketcheck/mobilitycheck).
+		if (kind === 'error' && window.SbdAppFeedback && typeof window.SbdAppFeedback.buildMailto === 'function') {
+			try {
+				const report = document.createElement('a');
+				report.className = 'ac-nav-footer__toast-link ac-toast__report';
+				report.href = window.SbdAppFeedback.buildMailto('problem');
+				report.textContent = t('audiocheck', 'Report this problem');
+				toast.appendChild(report);
+			} catch (_) { /* mailto is best-effort */ }
+		}
 		const close = document.createElement('button');
 		close.type = 'button';
 		close.className = 'ac-toast__close';
 		close.setAttribute('aria-label', t('audiocheck', 'Dismiss'));
 		close.textContent = '×';
 		close.addEventListener('click', () => toast.remove());
-		toast.appendChild(label);
 		toast.appendChild(close);
 		container.appendChild(toast);
 		toast.dataset.toastTimer = String(window.setTimeout(() => {

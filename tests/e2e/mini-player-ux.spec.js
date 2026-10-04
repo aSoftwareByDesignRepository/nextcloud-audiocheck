@@ -4,6 +4,7 @@ const AxeBuilder = require('@axe-core/playwright').default;
 const fs = require('fs');
 const path = require('path');
 const { login, credsFromEnv, resolveE2eCreds } = require('./helpers/auth.js');
+const { appT } = require('./helpers/i18n.js');
 
 /**
  * Bachus mini-player gauntlet: idle simplicity, active chrome, Close, themes,
@@ -27,12 +28,15 @@ async function ensureAuthed(page) {
 }
 
 async function waitForShell(page) {
-	const upgradeNeeded = await page.getByRole('heading', { name: /Update needed/i }).count();
-	if (upgradeNeeded > 0) {
+	// NC core chrome (login form, upgrade screen) renders in the instance locale —
+	// detect structurally via the guest-layout body id + the #user field instead
+	// of locale-fragile heading text.
+	const loginField = await page.locator('input#user, input[name="user"]').count();
+	const guestChrome = await page.locator('body#body-login').count();
+	if (guestChrome > 0 && loginField === 0) {
 		test.skip(true, 'Nextcloud instance requires occ upgrade');
 	}
-	const loginForm = await page.getByRole('heading', { name: /Log in to Nextcloud/i }).count();
-	if (loginForm > 0) {
+	if (loginField > 0) {
 		test.skip(true, 'Not authenticated — set E2E_USER/E2E_PASS or refresh .auth/storage-state.json');
 	}
 	await page.waitForFunction(() => {
@@ -168,7 +172,8 @@ test.describe('Bachus mini-player UX', () => {
 		expect(idle.seekHidden).toBe(true);
 		expect(idle.sideHidden).toBe(true);
 		expect(idle.closeHidden).toBe(true);
-		expect(idle.title).toMatch(/Nothing playing|Nichts wird abgespielt|Rien n’est en cours|Rien n'est en cours/i);
+		// i18n: compare against the app's own localized string, not an EN|DE regex.
+		expect(idle.title).toBe(await appT(page, 'Nothing playing'));
 	});
 
 	test('active dock: Play + Close are obvious, Close clears the bar', async ({ page }) => {
@@ -206,7 +211,8 @@ test.describe('Bachus mini-player UX', () => {
 		expect(chrome.playW).toBeGreaterThanOrEqual(44);
 		expect(chrome.closeH).toBeGreaterThanOrEqual(44);
 		expect(chrome.closeW).toBeGreaterThanOrEqual(44);
-		expect(chrome.closeLabel).toMatch(/Close player|Player schließen/i);
+		// i18n: compare against the app's own localized string, not an EN|DE regex.
+		expect(chrome.closeLabel).toBe(await appT(page, 'Close player'));
 
 		await page.locator('#ac-mini-close').click();
 		await page.waitForFunction(() => {

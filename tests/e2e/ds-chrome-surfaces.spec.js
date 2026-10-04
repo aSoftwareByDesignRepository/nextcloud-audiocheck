@@ -4,6 +4,7 @@ const AxeBuilder = require('@axe-core/playwright').default;
 const fs = require('fs');
 const path = require('path');
 const { login, resolveE2eCreds } = require('./helpers/auth.js');
+const { appT } = require('./helpers/i18n.js');
 
 /**
  * ds_chrome gauntlet: role surfaces (anon/denied/user/admin), dialog shapes
@@ -137,6 +138,8 @@ test.describe('ds_chrome role surfaces', () => {
 
 	test('admin role: all routes render main content', async ({ page }) => {
 		test.skip(!hasAdminCreds(), 'needs admin creds');
+		// 15 full page loads on a shared lab — the 60s default is not enough.
+		test.setTimeout(180_000);
 		await login(page, resolveE2eCreds('ADMIN'));
 		for (const route of ROUTES) {
 			await page.goto(`${BASE}${route}`, { waitUntil: 'domcontentloaded' });
@@ -162,7 +165,10 @@ test.describe('ds_chrome dialogs + validation', () => {
 		const name = 'Atlas DS Probe ' + Date.now().toString(36);
 		await page.goto(`${BASE}/apps/audiocheck/playlists`, { waitUntil: 'domcontentloaded' });
 		await waitForShell(page);
-		const trigger = page.locator('button', { hasText: /New playlist|Neue Playlist/ }).first();
+		// Locale-safe: resolve labels through the app's t() — the fixture user
+		// may run any locale (EN|DE regexes fail under e.g. sv).
+		const newPlaylistLabel = await appT(page, 'New playlist');
+		const trigger = page.locator('button', { hasText: newPlaylistLabel }).first();
 		await expect(trigger).toBeVisible();
 		await trigger.focus();
 		await trigger.click();
@@ -185,7 +191,7 @@ test.describe('ds_chrome dialogs + validation', () => {
 		await page.keyboard.press('Escape');
 		await expect(dialog).toHaveCount(0);
 		const backOnTrigger = await page.evaluate(() => document.activeElement && document.activeElement.textContent);
-		expect(backOnTrigger).toMatch(/New playlist|Neue Playlist/);
+		expect(String(backOnTrigger)).toContain(newPlaylistLabel);
 
 		// Re-open → Cancel → no POST.
 		let posts = 0;
@@ -194,14 +200,14 @@ test.describe('ds_chrome dialogs + validation', () => {
 		});
 		await trigger.click();
 		await expect(dialog).toBeVisible();
-		await dialog.locator('.ac-modal__actions button', { hasText: /Cancel|Abbrechen/ }).click();
+		await dialog.locator('.ac-modal__actions .ac-btn:not(.ac-btn--primary):not(.ac-btn--danger)').click();
 		await expect(dialog).toHaveCount(0);
 		expect(posts).toBe(0);
 
 		// Re-open → empty name → warning toast, dialog stays, input refocused.
 		await trigger.click();
 		await expect(dialog).toBeVisible();
-		await dialog.locator('.ac-modal__actions button', { hasText: /Create|Erstellen/ }).click();
+		await dialog.locator('.ac-modal__actions .ac-btn--primary').click();
 		await expect(dialog).toBeVisible();
 		await expect(page.locator('.ac-toast, .ac-toast-fallback').first()).toBeVisible();
 		const stillFocused = await page.evaluate(() => document.activeElement && document.activeElement.id);
@@ -210,7 +216,7 @@ test.describe('ds_chrome dialogs + validation', () => {
 
 		// Valid name → POST fires → dialog closes → playlist listed.
 		await dialog.locator('#ac-new-playlist-name').fill(name);
-		await dialog.locator('.ac-modal__actions button', { hasText: /Create|Erstellen/ }).click();
+		await dialog.locator('.ac-modal__actions .ac-btn--primary').click();
 		await expect(dialog).toHaveCount(0);
 		expect(posts).toBe(1);
 		await expect(page.locator('#ac-main-content')).toContainText(name, { timeout: 15_000 });
@@ -223,7 +229,7 @@ test.describe('ds_chrome dialogs + validation', () => {
 		if (!(await row.evaluate((el) => el instanceof HTMLDetailsElement && el.open))) {
 			await row.locator('summary').first().click();
 		}
-		await row.locator('button', { hasText: /Rename|Umbenennen/ }).first().click();
+		await row.locator('button', { hasText: await appT(page, 'Rename') }).first().click();
 		await expect(dialog).toBeVisible();
 		const renamed = name + ' R';
 		await dialog.locator('#ac-rename-playlist').fill(renamed);
@@ -231,7 +237,7 @@ test.describe('ds_chrome dialogs + validation', () => {
 		page.on('request', (req) => {
 			if (req.method() === 'PUT' && req.url().includes('/api/playlists')) puts += 1;
 		});
-		await dialog.locator('.ac-modal__actions button', { hasText: /Save|Speichern/ }).click();
+		await dialog.locator('.ac-modal__actions .ac-btn--primary').click();
 		await expect(dialog).toHaveCount(0);
 		expect(puts).toBe(1);
 		await expect(page.locator('#ac-main-content')).toContainText(renamed, { timeout: 15_000 });
@@ -245,15 +251,15 @@ test.describe('ds_chrome dialogs + validation', () => {
 		if (!(await row2.evaluate((el) => el instanceof HTMLDetailsElement && el.open))) {
 			await row2.locator('summary').first().click();
 		}
-		await row2.locator('button', { hasText: /^Delete$|^Löschen$/ }).first().click();
+		await row2.locator('button', { hasText: await appT(page, 'Delete') }).first().click();
 		await expect(dialog).toBeVisible();
 		await shot(page, 'ac-dialog-delete-confirm');
-		await dialog.locator('.ac-modal__actions button', { hasText: /Cancel|Abbrechen/ }).click();
+		await dialog.locator('.ac-modal__actions .ac-btn:not(.ac-btn--primary):not(.ac-btn--danger)').click();
 		await expect(dialog).toHaveCount(0);
 		expect(deletes).toBe(0);
-		await row2.locator('button', { hasText: /^Delete$|^Löschen$/ }).first().click();
+		await row2.locator('button', { hasText: await appT(page, 'Delete') }).first().click();
 		await expect(dialog).toBeVisible();
-		await dialog.locator('.ac-modal__actions button', { hasText: /Delete playlist|Playlist löschen/ }).click();
+		await dialog.locator('.ac-modal__actions .ac-btn--danger').click();
 		await expect(dialog).toHaveCount(0);
 		expect(deletes).toBe(1);
 		await expect(page.locator('#ac-main-content')).not.toContainText(renamed, { timeout: 15_000 });
@@ -325,13 +331,14 @@ test.describe('ds_chrome states', () => {
 		await waitForShell(page);
 		const errorWell = page.locator('#ac-main-content .ac-empty-state');
 		await expect(errorWell.first()).toBeVisible({ timeout: 30_000 });
-		await expect(errorWell.first()).toContainText(/Could not load|konnte nicht geladen werden/);
-		const retry = errorWell.locator('button', { hasText: /Try again|Erneut versuchen/ }).first();
+		const loadErrLabel = await appT(page, 'Could not load this page');
+		await expect(errorWell.first()).toContainText(loadErrLabel);
+		const retry = errorWell.locator('button', { hasText: await appT(page, 'Try again') }).first();
 		await expect(retry).toBeVisible();
 		await shot(page, 'ac-state-error-music-retry');
 		await page.unroute('**/apps/audiocheck/api/tracks*');
 		await retry.click();
 		// After retry the error well must be gone (either content or honest empty state).
-		await expect(page.locator('#ac-main-content')).not.toContainText(/Could not load|konnte nicht geladen werden/, { timeout: 30_000 });
+		await expect(page.locator('#ac-main-content')).not.toContainText(loadErrLabel, { timeout: 30_000 });
 	});
 });

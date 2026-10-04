@@ -174,7 +174,7 @@ class ApiController extends Controller
 				$fileId,
 				(int)($body['positionMs'] ?? 0),
 				(int)($body['playbackSpeed'] ?? 100),
-				(bool)($body['finished'] ?? false),
+				UserPrefsService::coerceBool($body['finished'] ?? false),
 				(int)($body['durationMs'] ?? 0),
 				isset($body['clientUpdatedAt']) ? (int)$body['clientUpdatedAt'] : null,
 			)];
@@ -214,7 +214,7 @@ class ApiController extends Controller
 				$fileIds,
 				(int)($body['currentIndex'] ?? 0),
 				(int)($body['playbackSpeed'] ?? 100),
-				(bool)($body['shuffle'] ?? false),
+				UserPrefsService::coerceBool($body['shuffle'] ?? false),
 				(string)($body['repeatMode'] ?? 'off'),
 				isset($body['clientUpdatedAt']) ? (int)$body['clientUpdatedAt'] : null,
 			)];
@@ -248,7 +248,7 @@ class ApiController extends Controller
 	{
 		return $this->safe(function (string $userId): array {
 			$body = $this->getJsonBody();
-			return ['playlist' => $this->playlists->createPlaylist($userId, (string)($body['name'] ?? ''), (bool)($body['isPinned'] ?? false))];
+			return ['playlist' => $this->playlists->createPlaylist($userId, (string)($body['name'] ?? ''), UserPrefsService::coerceBool($body['isPinned'] ?? false))];
 		});
 	}
 
@@ -339,7 +339,8 @@ class ApiController extends Controller
 			$result = $this->library->addLibrary(
 				$userId,
 				$rootFileId > 0 ? $rootFileId : null,
-				(bool)($body['includeSubfolders'] ?? true),
+				// Default true only when the key is absent; "false"/0 must parse to false.
+				!array_key_exists('includeSubfolders', $body) ? true : UserPrefsService::coerceBool($body['includeSubfolders']),
 				isset($body['contentKind']) ? (string)$body['contentKind'] : LibraryService::CONTENT_KIND_AUTO,
 				$folderPath,
 			);
@@ -355,7 +356,7 @@ class ApiController extends Controller
 	{
 		return $this->safe(function (string $userId) use ($id): array {
 			$body = $this->getJsonBody();
-			$includeSubfolders = array_key_exists('includeSubfolders', $body) ? (bool)$body['includeSubfolders'] : null;
+			$includeSubfolders = array_key_exists('includeSubfolders', $body) ? UserPrefsService::coerceBool($body['includeSubfolders']) : null;
 			$contentKind = array_key_exists('contentKind', $body) ? (string)$body['contentKind'] : null;
 			$result = $this->library->updateLibrary($userId, $id, $includeSubfolders, $contentKind);
 			if ($result['rescanRecommended']) {
@@ -452,7 +453,7 @@ class ApiController extends Controller
 	{
 		return $this->safe(function (string $userId) use ($fileId): array {
 			$body = $this->getJsonBody();
-			return $this->library->setFavorite($userId, $fileId, (bool)($body['favorite'] ?? false));
+			return $this->library->setFavorite($userId, $fileId, UserPrefsService::coerceBool($body['favorite'] ?? false));
 		});
 	}
 
@@ -461,7 +462,7 @@ class ApiController extends Controller
 	{
 		return $this->safe(function (string $userId) use ($fileId): array {
 			$body = $this->getJsonBody();
-			return ['progress' => $this->playback->setListened($userId, $fileId, (bool)($body['listened'] ?? false))];
+			return ['progress' => $this->playback->setListened($userId, $fileId, UserPrefsService::coerceBool($body['listened'] ?? false))];
 		});
 	}
 
@@ -471,7 +472,7 @@ class ApiController extends Controller
 		return $this->safe(function (string $userId): array {
 			$body = $this->getJsonBody();
 			$fileIds = is_array($body['fileIds'] ?? null) ? $body['fileIds'] : [];
-			$result = $this->library->setListenedBulk($userId, array_map('intval', $fileIds), (bool)($body['listened'] ?? false));
+			$result = $this->library->setListenedBulk($userId, array_map('intval', $fileIds), UserPrefsService::coerceBool($body['listened'] ?? false));
 
 			return array_merge($result, [
 				'updatedCount' => $result['updated'],
@@ -484,7 +485,7 @@ class ApiController extends Controller
 	{
 		return $this->safe(function (string $userId) use ($key): array {
 			$body = $this->getJsonBody();
-			return $this->library->setCollectionListened($userId, $key, (bool)($body['listened'] ?? false));
+			return $this->library->setCollectionListened($userId, $key, UserPrefsService::coerceBool($body['listened'] ?? false));
 		});
 	}
 
@@ -515,7 +516,7 @@ class ApiController extends Controller
 				? $kind
 				: null;
 
-			return $this->library->setFolderPathListened($userId, $folder, $kindFilter, (bool)($body['listened'] ?? false));
+			return $this->library->setFolderPathListened($userId, $folder, $kindFilter, UserPrefsService::coerceBool($body['listened'] ?? false));
 		});
 	}
 
@@ -525,7 +526,7 @@ class ApiController extends Controller
 		return $this->safe(function (string $userId) use ($folderId): array {
 			$body = $this->getJsonBody();
 
-			return $this->library->setFolderIdListened($userId, $folderId, (bool)($body['listened'] ?? false));
+			return $this->library->setFolderIdListened($userId, $folderId, UserPrefsService::coerceBool($body['listened'] ?? false));
 		});
 	}
 

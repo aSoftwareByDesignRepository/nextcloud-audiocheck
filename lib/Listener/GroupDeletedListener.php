@@ -27,6 +27,8 @@ class GroupDeletedListener implements IEventListener
 		try {
 			$this->access->purgeGroup($event->getGroup()->getGID());
 		} catch (\Throwable $e) {
+			// best-effort: the group is already gone — cleanup failure must not
+			// break the deletion event chain; the stale allow-list entry is inert.
 			$this->logger->error('AudioCheck group-deleted cleanup failed', ['exception' => $e]);
 		}
 	}

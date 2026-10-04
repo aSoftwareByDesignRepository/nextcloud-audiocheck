@@ -248,6 +248,9 @@ class ScanService
 			$total = $this->countTracks($userId);
 			$this->setStatus($userId, self::STATUS_IDLE, null, $now, $total);
 		} catch (\Throwable $e) {
+			// Compensating, not swallowing: on scan failure the cursor is cleared
+			// and the user-visible status row is written as idle + lastError so
+			// the failure surfaces in the UI instead of hanging mid-scan.
 			$this->clearCursor($userId);
 			$this->logger->error('AudioCheck scan failed', ['userId' => $userId, 'exception' => $e]);
 			$this->setStatus($userId, self::STATUS_IDLE, mb_substr($e->getMessage(), 0, 1000));

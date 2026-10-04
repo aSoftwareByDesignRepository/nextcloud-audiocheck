@@ -311,7 +311,7 @@ OC.L10N.register(
 	"More playback options" : "Mer uppspelningsalternativ",
 	"Move down" : "Flytta ner",
 	"Move up" : "Flytta upp",
-	"Music" : "Musik Musik",
+	"Music" : "Musik",
 	"Music and audiobooks are separate: add one folder for albums, another for books (or chapter folders like CD1 and CD2)." : "Musik och ljudböcker är separata: lägg till en mapp för album, en annan för böcker (eller kapitelmappar som CD1 och CD2).",
 	"Music folders" : "Musikmappar",
 	"Music grouped by artist tag. Open an artist to see their tracks." : "Musik grupperad av artist tag. Öppna en artist för att se deras spår.",
@@ -717,5 +717,6 @@ OC.L10N.register(
 	"Music and audiobooks from your files" : "Musik och ljudböcker från dina filer",
 	"Playback context" : "Uppspelningskontext",
 	"Status" : "Status"
-	}
+	},
+	"nplurals=2; plural=(n != 1);"
 );

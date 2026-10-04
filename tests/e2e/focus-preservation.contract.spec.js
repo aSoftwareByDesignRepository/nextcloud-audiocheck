@@ -23,7 +23,9 @@ const { login, resolveE2eCreds } = require('./helpers/auth.js');
 
 const FOCUSABLE = 'button, summary, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 // Skip the skip-link: rescue targets live inside the main content region.
-const TARGET = `#ac-main-content ${FOCUSABLE}, main ${FOCUSABLE}`;
+// NOTE: `:is()` scoping is required — a bare comma list would leak unscoped
+// `[href]`/`input` selectors that match hidden <link>/<meta> nodes in <head>.
+const TARGET = `#ac-main-content :is(${FOCUSABLE}), main :is(${FOCUSABLE})`;
 
 // Inner list/group container holding the focused element — never the app
 // root itself (detaching #app-content exercises the stale-arm path, which

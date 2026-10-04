@@ -131,6 +131,9 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	list-style: none;
 }
 .ac-breadcrumb__brand {
+	display: inline-flex;
+	align-items: center;
+	min-height: var(--ac-touch, 44px);
 	color: inherit;
 	font-weight: 600;
 	text-decoration: none;
@@ -277,6 +280,17 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	font-size: 1.25rem;
 	line-height: 1;
 }
+/* "Report this problem" inside the horizontal toast row — the synced
+ * nav-footer__toast-link styles assume a block context under .toast-content. */
+.ac-toast .ac-nav-footer__toast-link {
+	margin-top: 0;
+	flex: 0 0 auto;
+	align-self: center;
+}
+.ac-toast .ac-toast__text {
+	flex: 1 1 auto;
+	min-width: 0;
+}
 
 /* Restore core #content flex row: sidebar + main (ProjectCheck / TicketCheck pattern). */
 #content[class*="app-audiocheck"] > #app-content.ac-app {
@@ -403,14 +417,11 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	width: var(--ac-icon-well);
 	height: var(--ac-icon-well);
 	border-radius: var(--ac-radius-sm);
-	background: linear-gradient(
-		145deg,
-		var(--color-primary-element) 0%,
-		color-mix(in srgb, var(--color-primary-element) 78%, var(--color-main-text)) 100%
-	);
-	box-shadow:
-		0 1px 2px color-mix(in srgb, var(--color-primary-element) 28%, transparent),
-		inset 0 1px 0 color-mix(in srgb, var(--color-main-background) 20%, transparent);
+	/* Flat well — DS bans decorative gradients on chrome. Solid primary (not
+	 * tint-info) because the app.svg glyph is white-only artwork. */
+	background: var(--color-primary-element);
+	border: 1px solid color-mix(in srgb, var(--color-primary-element) 72%, var(--color-main-text));
+	box-sizing: border-box;
 }
 .ac-nav__logo {
 	display: block;
@@ -1090,6 +1101,11 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	accent-color: var(--color-primary-element);
 }
 .ac-library-card__check-row label {
+	display: inline-flex;
+	align-items: center;
+	align-self: stretch;
+	flex: 1 1 auto;
+	min-height: var(--ac-touch, 44px);
 	font-size: var(--ac-fs-base);
 	font-weight: 600;
 	color: var(--color-main-text);
@@ -1384,11 +1400,8 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: linear-gradient(
-		145deg,
-		color-mix(in srgb, var(--color-primary-element) 18%, var(--ac-bg-soft)),
-		color-mix(in srgb, var(--color-main-text) 6%, var(--ac-bg-soft))
-	);
+	/* Flat tint well — decorative gradients are a DS reject class. */
+	background: var(--ac-tint-info);
 	font-size: 2rem;
 	color: var(--color-primary-element);
 }
@@ -1607,6 +1620,10 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 	align-items: center;
 	gap: var(--ac-space-3);
 	min-width: 0;
+	/* 44px touch floor: idle dock has no cover/artist line and collapsed to
+	 * ~34px — the button still opens Now Playing, so it must stay a full
+	 * touch target (WCAG 2.5.5 / DS --ac-touch). */
+	min-height: var(--ac-touch);
 	padding: var(--ac-space-1);
 	margin: 0;
 	border: none;
@@ -1618,6 +1635,12 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 	cursor: pointer;
 	grid-column: 1;
 	grid-row: 1;
+}
+/* NC core `button:not(.button-vue)` min-height: var(--default-clickable-area)
+ * (34px on NC ≤32) out-ranks the bare class (0-1-1 > 0-1-0) — rebind the
+ * 44px touch floor from an id scope so the idle dock never collapses. */
+#ac-mini-player .ac-mini-player__track {
+	min-height: var(--ac-touch);
 }
 .ac-mini-player__track:hover:not(:disabled) {
 	background: var(--ac-bg-soft);
@@ -2255,7 +2278,6 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 		border-top: 1px solid var(--ac-border);
 	}
 	.ac-track-list:not(.ac-track-list--compact):not(.ac-now-queue):not(.ac-track-list--collection) .ac-track-list__duration {
-		order: 0;
 		margin-inline-end: 0;
 		min-width: 0;
 	}
@@ -2390,6 +2412,10 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 
 .ac-form { padding: var(--ac-space-5); }
 .ac-fieldset {
+	/* UA fieldset has min-inline-size:min-content — without this the box
+	 * refuses to shrink below its widest row and overflows at 320px. */
+	min-width: 0;
+	min-inline-size: 0;
 	border: 1px solid var(--ac-border);
 	border-radius: var(--ac-radius-md);
 	padding: var(--ac-space-4);
@@ -2399,6 +2425,46 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 	font-weight: 700;
 	font-size: var(--ac-fs-md);
 	padding: 0 var(--ac-space-2);
+}
+/* Long unbreakable compound words (de/sv/fi labels like
+ * "Standarduppspelningshastighet") must wrap inside the box, not push the
+ * form past the 320px viewport. `anywhere` also shrinks the flex/grid
+ * min-content so rows can compress. */
+.ac-form-row label,
+.ac-field__label,
+.ac-field__hint,
+.ac-fieldset__legend,
+.ac-form-row--checkbox label,
+.ac-listened-threshold__option label,
+.ac-controls-ref__list dt,
+.ac-controls-ref__list dd,
+.ac-shortcuts__list dt,
+.ac-shortcuts__list dd {
+	overflow-wrap: anywhere;
+	min-width: 0;
+}
+.ac-controls-ref__list,
+.ac-shortcuts__list {
+	/* `auto` alone sizes the dt column to max-content and starves dd to 0;
+	 * minmax lets the term wrap when space is tight. */
+	grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+}
+@media (max-width: 520px) {
+	/* Not enough room for two columns — stack term above description. */
+	.ac-controls-ref__list,
+	.ac-shortcuts__list {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.ac-controls-ref__list dd,
+	.ac-shortcuts__list dd {
+		margin-bottom: var(--ac-space-3);
+	}
+}
+.ac-form-row--checkbox .ac-field__hint {
+	min-width: 0;
+}
+.ac-listened-threshold__option {
+	min-width: 0;
 }
 .ac-field { display: block; margin-bottom: var(--ac-space-4); }
 .ac-field__label { display: block; font-weight: 600; margin-bottom: var(--ac-space-2); }
@@ -2500,17 +2566,9 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 	}
 	.ac-facet-group__summary .ac-facet-group__play {
 		margin-left: auto;
-		order: 0;
 	}
 	.ac-facet-group__summary .ac-media-folder-group__name {
 		flex: 1 1 auto;
-	}
-	.ac-facet-group__summary .ac-playlist-group__actions {
-		order: 0;
-		flex: 0 1 auto;
-		justify-content: flex-end;
-		margin-left: auto;
-		margin-right: 0;
 	}
 }
 
@@ -2640,7 +2698,8 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 	display: block;
 }
 .ac-collection-detail__cover--placeholder {
-	background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary-element) 22%, var(--ac-bg-soft)), var(--ac-bg-soft));
+	/* Flat tint well — decorative gradients are a DS reject class. */
+	background: var(--ac-tint-info);
 }
 .ac-collection-detail__intro {
 	min-width: 0;
@@ -3219,13 +3278,12 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 	line-height: 1.4;
 }
 @media (min-width: 480px) {
+	/* DOM order (title → meta → clear) already equals the intended visual
+	 * order — no `order:` overrides (WCAG 2.4.3 reject class). */
 	.ac-now-queue__meta {
 		flex: 1 1 auto;
-		order: 2;
 		text-align: end;
 	}
-	.ac-now-queue__title { order: 1; }
-	.ac-now-queue__clear { order: 3; }
 }
 .ac-now-queue__clear {
 	margin-left: auto;
@@ -4064,7 +4122,6 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 .ac-facet-group__summary .ac-facet-group__play {
 	flex: 0 0 auto;
 	margin-left: 0;
-	order: 3;
 }
 .ac-facet-group__summary .ac-media-folder-group__count {
 	margin-right: var(--ac-space-2);
@@ -4072,13 +4129,12 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 .ac-facet-group__summary .ac-media-folder-group__name {
 	flex: 1 1 calc(100% - 5rem);
 }
-.ac-facet-group__summary .ac-playlist-group__actions {
-	order: 2;
-	flex: 1 1 100%;
-	justify-content: flex-start;
-	margin-left: 0;
-	margin-right: 0;
-}
+/* NOTE: no `.ac-facet-group__summary .ac-playlist-group__actions` rule —
+ * mountPlaylistSummaryActions inserts the actions as a SIBLING of <summary>
+ * (details.insertBefore(actions, summary.nextSibling)) to avoid
+ * nested-interactive. A descendant rule was dead CSS whose `order: 2`
+ * re-sequenced sections inside a flex summary — a learned gate reject class
+ * (WCAG 2.4.3 visual order must equal DOM/focus order). */
 
 .ac-playlist-group__actions {
 	display: flex;
@@ -4094,9 +4150,6 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 	padding: 0 var(--ac-space-3) var(--ac-space-2);
 	justify-content: flex-start;
 	margin-left: 0;
-}
-.ac-facet-group__summary .ac-playlist-group__actions + .ac-facet-group__play {
-	margin-left: var(--ac-space-2);
 }
 .ac-playlist-group__action {
 	min-height: var(--ac-touch, 44px);
@@ -4341,7 +4394,6 @@ body.ac-modal-open { overflow: hidden; }
 	}
 	.ac-now-queue .ac-track-list__duration,
 	.ac-track-list--compact .ac-track-list__duration {
-		order: -1;
 		margin-inline-end: auto;
 		min-width: 0;
 	}
@@ -4698,9 +4750,16 @@ body.ac-modal-open { overflow: hidden; }
 	flex-wrap: wrap;
 	align-items: center;
 	gap: var(--ac-space-2) var(--ac-space-3);
+	/* Label now carries the 44px target itself — the old centering padding
+	 * would double up and make the row ~70px tall. */
+	padding-block: 0;
 }
 .ac-form-row--checkbox label {
-	display: inline;
+	display: inline-flex;
+	align-items: center;
+	align-self: stretch;
+	flex: 1 1 auto;
+	min-height: var(--ac-touch, 44px);
 	margin-bottom: 0;
 	font-weight: 600;
 	cursor: pointer;
@@ -4787,10 +4846,20 @@ body.ac-modal-open { overflow: hidden; }
 	align-items: center;
 	gap: var(--ac-space-1);
 	min-height: var(--ac-touch);
-	padding: var(--ac-space-1) var(--ac-space-2);
+	/* No block padding — the label carries the full 44px touch target. */
+	padding: 0 var(--ac-space-2);
 	border: 1px solid var(--ac-border);
 	border-radius: var(--ac-radius-sm);
 	background: var(--ac-surface);
+}
+/* The label is the effective click target for the small native radio —
+ * give it the full 44px option height (WCAG 2.5.8). */
+.ac-listened-threshold__option label {
+	display: inline-flex;
+	align-items: center;
+	flex: 1 1 auto;
+	min-height: var(--ac-touch, 44px);
+	cursor: pointer;
 }
 
 .ac-listened-threshold__option:has(:checked) {
@@ -5044,13 +5113,7 @@ body.ac-modal-open { overflow: hidden; }
 		flex: 1 1 auto;
 		min-width: 0;
 	}
-	.ac-facet-group__summary .ac-playlist-group__actions {
-		flex: 0 1 auto;
-		order: 0;
-		margin-left: auto;
-	}
 	.ac-facet-group__summary .ac-facet-group__play {
-		order: 0;
 		margin-left: var(--ac-space-2);
 	}
 }
@@ -5726,7 +5789,10 @@ body.ac-modal-open { overflow: hidden; }
 	gap: var(--ac-space-2, 0.5rem);
 }
 
-.ac-nav-footer__trigger {
+/* Scoped under #content: bare .{p}-nav-footer__trigger loses to NC core
+ * `#app-content button` / `#app-navigation button` min-height rules
+ * (var(--default-clickable-area) → 34px) — Atlas touch-target defect. */
+#content .ac-nav-footer__trigger {
 	display: inline-flex;
 	gap: var(--ac-space-3, 0.75rem);
 	min-height: 44px;
@@ -5788,7 +5854,7 @@ body.ac-modal-open { overflow: hidden; }
 	display: none;
 }
 
-.ac-nav-footer__menu-item {
+#content .ac-nav-footer__menu-item {
 	display: flex;
 	align-items: center;
 	gap: var(--ac-space-3, 0.75rem);
@@ -5853,7 +5919,7 @@ body.ac-modal-open { overflow: hidden; }
 	border: 0;
 }
 
-.ac-nav-footer__toast-link {
+#content .ac-nav-footer__toast-link {
 	display: inline-flex;
 	align-items: center;
 	min-height: 44px;
@@ -5918,3 +5984,13 @@ body.ac-modal-open { overflow: hidden; }
 	}
 }
 /* === app-feedback:ac end === */
+
+/* Beat NC core `button:not(.button-vue,[class^=vs__])` (0-1-1), which clamps
+ * min-height to --default-clickable-area (34px) and strips the synced
+ * 44px touch target off the nav-footer Help trigger. App-local override —
+ * the synced block above must stay verbatim (sync_app_feedback.py). */
+.ac-nav-footer button.ac-nav-footer__trigger,
+#app-navigation .ac-nav-footer__trigger {
+	min-height: 44px;
+	min-width: 44px;
+}

@@ -46,7 +46,7 @@ test.describe('Library folders UX simplification', () => {
 		await expect(status).toBeVisible();
 		await expect(status).toHaveAttribute('aria-live', 'polite');
 
-		const scan = page.getByRole('button', { name: /scan now|jetzt scannen|scanning/i }).first();
+		const scan = page.locator('.ac-library-bar__scan').first();
 		await expect(scan).toBeVisible();
 
 		const cards = page.locator('.ac-library-card');
@@ -55,9 +55,13 @@ test.describe('Library folders UX simplification', () => {
 		const emptyVisible = await empty.isVisible().catch(() => false);
 
 		if (emptyVisible || cardCount === 0) {
-			await expect(page.getByRole('button', { name: /add music folder|musikordner hinzufügen/i }).first()).toBeVisible();
-			await expect(page.getByRole('button', { name: /add audiobook folder|hörbuchordner hinzufügen/i }).first()).toBeVisible();
-			await expect(page.getByRole('button', { name: /auto-detect|automatisch/i }).first()).toBeVisible();
+			// Empty-state CTAs render in fixed order: music, audiobook, auto-detect
+			// (js/views/library.js renderEmptyFolders) — assert all three by class.
+			const emptyBtns = page.locator('.ac-library-empty__actions .ac-library-empty__btn');
+			await expect(emptyBtns).toHaveCount(3);
+			await expect(emptyBtns.nth(0)).toBeVisible();
+			await expect(emptyBtns.nth(1)).toBeVisible();
+			await expect(emptyBtns.nth(2)).toHaveClass(/ac-btn--primary/);
 			// No always-on content-type modal on the page itself
 			await expect(page.getByRole('dialog')).toHaveCount(0);
 		} else {
@@ -65,7 +69,7 @@ test.describe('Library folders UX simplification', () => {
 			await expect(first.locator('.ac-library-card__main')).toBeVisible();
 			await expect(first.locator('.ac-library-card__name')).toBeVisible();
 			await expect(first.locator('.ac-library-card__count')).toBeVisible();
-			await expect(first.getByRole('button', { name: /remove|entfernen/i })).toBeVisible();
+			await expect(first.locator('.ac-library-card__remove')).toBeVisible();
 
 			// Advanced controls are collapsed by default (progressive disclosure)
 			const options = first.locator('details.ac-library-card__options');
@@ -76,7 +80,7 @@ test.describe('Library folders UX simplification', () => {
 			await options.locator('summary').click();
 			await expect(options).toHaveAttribute('open', '');
 			await expect(first.locator('.ac-seg[role="radiogroup"]')).toBeVisible();
-			await expect(first.getByRole('checkbox', { name: /include nested folders|unterordner einbeziehen/i })).toBeVisible();
+			await expect(first.locator('.ac-library-card__check[type="checkbox"]')).toBeVisible();
 
 			// Keyboard: focus summary and toggle with Enter
 			await options.locator('summary').focus();
@@ -91,7 +95,9 @@ test.describe('Library folders UX simplification', () => {
 		if (!(await howDetails.getAttribute('open'))) {
 			await howDetails.locator('summary').click();
 		}
-		await expect(page.locator('.ac-library-layout-hint')).toContainText(/Author \/ Book|Autor \/ Buch/i);
+		// Locale-safe: the nesting-layout hint keeps a "X / Y / Z" slash pattern in
+		// every shipped l10n (e.g. pt_BR "Autor / Livro / capítulo").
+		await expect(page.locator('.ac-library-layout-hint')).toContainText(/\w+ ?\/ ?\w+/);
 
 		const results = await new AxeBuilder({ page })
 			.withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
@@ -106,19 +112,19 @@ test.describe('Library folders UX simplification', () => {
 		await page.setViewportSize({ width: 375, height: 812 });
 		await openLibrary(page);
 
-		const scan = page.getByRole('button', { name: /scan now|jetzt scannen|scanning/i }).first();
+		const scan = page.locator('.ac-library-bar__scan').first();
 		const scanBox = await scan.boundingBox();
 		expect(scanBox, 'Scan now must be visible').toBeTruthy();
 		expect(scanBox.height).toBeGreaterThanOrEqual(40);
 
 		const cards = page.locator('.ac-library-card');
 		if (await cards.count()) {
-			const remove = cards.first().getByRole('button', { name: /remove|entfernen/i });
+			const remove = cards.first().locator('.ac-library-card__remove');
 			const box = await remove.boundingBox();
 			expect(box).toBeTruthy();
 			expect(box.height).toBeGreaterThanOrEqual(40);
 		} else {
-			const music = page.getByRole('button', { name: /add music folder|musikordner hinzufügen/i }).first();
+			const music = page.locator('.ac-library-empty__actions .ac-library-empty__btn').first();
 			const box = await music.boundingBox();
 			expect(box).toBeTruthy();
 			expect(box.height).toBeGreaterThanOrEqual(40);
@@ -135,7 +141,11 @@ test.describe('Library folders UX simplification', () => {
 
 	test('settings still explains Author/Book nesting for scan defaults', async ({ page }) => {
 		await page.goto(BASE + '/apps/audiocheck/settings', { waitUntil: 'domcontentloaded' });
-		await expect(page.getByText(/Author\/Book\/Chapter|Autor\/Buch\/Kapitel/i).first()).toBeVisible({ timeout: 30000 });
+		// Structural anchor: the scan-subfolders checkbox row carries the
+		// nested-layout hint; its "A/B/C" example keeps slashes in every l10n.
+		const subRow = page.locator('.ac-form-row--checkbox', { has: page.locator('#ac-scan-subfolders') });
+		await expect(subRow).toBeVisible({ timeout: 30000 });
+		await expect(subRow.locator('.ac-field__hint')).toContainText(/\w+\/\w+/);
 
 		const results = await new AxeBuilder({ page })
 			.withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])

@@ -717,5 +717,6 @@ OC.L10N.register(
 	"Music and audiobooks from your files" : "Muziek en audioboeken uit je bestanden",
 	"Playback context" : "Afspeelcontext",
 	"Status" : "Status"
-	}
+	},
+	"nplurals=2; plural=(n != 1);"
 );

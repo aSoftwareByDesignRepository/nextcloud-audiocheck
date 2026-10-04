@@ -90,8 +90,15 @@ final class GetTheAppPageContractTest extends TestCase
 	public function testCssSeparatesStaticFeaturesFromActionButtons(): void
 	{
 		$css = (string) file_get_contents($this->root . '/css/common/page-patterns.css');
-		self::assertMatchesRegularExpression(
+		// Hero is a flat bordered card: page-level gradient "stage washes" are a
+		// DS reject class — assert no linear-gradient in the hero block and that
+		// the card chrome (border + solid surface) is pinned instead.
+		self::assertDoesNotMatchRegularExpression(
 			'/\.ac-get-app__hero[^{]*\{[^}]*linear-gradient/s',
+			$css,
+		);
+		self::assertMatchesRegularExpression(
+			'/\.ac-get-app__hero[^{]*\{[^}]*border:\s*1px solid var\(--ac-border\)/s',
 			$css,
 		);
 		self::assertMatchesRegularExpression(

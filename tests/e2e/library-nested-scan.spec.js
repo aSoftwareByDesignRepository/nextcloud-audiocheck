@@ -32,7 +32,8 @@ test.describe('Library nested scan UX', () => {
 	test('library page explains Author/Book nesting and stays WCAG AA', async ({ page }) => {
 		await page.goto(BASE + '/apps/audiocheck/library', { waitUntil: 'domcontentloaded' });
 		await expect(page.locator('#app-content.ac-app, #content.app-audiocheck').first()).toBeVisible({ timeout: 30000 });
-		await expect(page.getByRole('heading', { name: /library|bibliothek|your folders|deine ordner/i }).first()).toBeVisible();
+		// Stable heading id — locale-fragile names were removed (pt_BR et al).
+		await expect(page.locator('#ac-library-folders-heading')).toBeVisible();
 
 		const how = page.locator('#ac-library-how-heading').first();
 		await expect(how).toBeVisible();
@@ -40,17 +41,20 @@ test.describe('Library nested scan UX', () => {
 		if (!(await howDetails.getAttribute('open'))) {
 			await howDetails.locator('summary').click();
 		}
-		await expect(page.locator('.ac-library-layout-hint')).toContainText(/Author \/ Book|Autor \/ Buch/i);
+		// "A / B / C" slash pattern survives every shipped l10n (e.g. pt_BR).
+		await expect(page.locator('.ac-library-layout-hint')).toContainText(/\w+ ?\/ ?\w+/);
 
 		const card = page.locator('.ac-library-card').first();
 		if (await card.count()) {
 			const options = card.locator('details.ac-library-card__options');
 			await options.locator('summary').click();
-			await expect(card.getByRole('checkbox', { name: /include nested folders|unterordner einbeziehen/i })).toBeVisible();
+			await expect(card.locator('.ac-library-card__check[type="checkbox"]')).toBeVisible();
 		}
 
 		await page.goto(BASE + '/apps/audiocheck/settings', { waitUntil: 'domcontentloaded' });
-		await expect(page.getByText(/Author\/Book\/Chapter|Autor\/Buch\/Kapitel/i).first()).toBeVisible({ timeout: 30000 });
+		const subRow = page.locator('.ac-form-row--checkbox', { has: page.locator('#ac-scan-subfolders') });
+		await expect(subRow).toBeVisible({ timeout: 30000 });
+		await expect(subRow.locator('.ac-field__hint')).toContainText(/\w+\/\w+/);
 
 		const results = await new AxeBuilder({ page })
 			.withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])

@@ -195,10 +195,15 @@ class PageController extends Controller
 	private function registerFrontEndAssets(): void
 	{
 		Util::addStyle(Application::APP_ID, 'app');
+		// Canonical shared field-errors (apps/_shared/field-errors, verbatim sync):
+		// styles for .ac-field-error / aria-invalid marks emitted by the api layer.
+		Util::addStyle(Application::APP_ID, 'common/field-errors');
 		foreach ([
 			'common/constants',
 			'common/messaging',
 			'common/time',
+			// Must load before common/api so the central error hook finds it.
+			'common/field-errors',
 			'common/api',
 			'common/icons',
 			'common/components',

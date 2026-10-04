@@ -166,6 +166,9 @@ class UpgradeBackupService
 			try {
 				$snapshots[] = $this->readManifest($this->getSnapshotFolder($snapshotId), $snapshotId);
 			} catch (\Throwable $e) {
+				// best-effort listing: one corrupt snapshot folder must not blank
+				// the whole list — it is skipped here and removed by
+				// purgeIncompleteSnapshotFolders().
 				$this->logger->warning('AudioCheck: skipping unreadable upgrade backup folder', [
 					'app' => UpgradeBackupCatalog::APP_ID,
 					'folder' => $snapshotId,
@@ -237,6 +240,9 @@ class UpgradeBackupService
 				$this->db->executeStatement('ALTER SESSION SET CONSTRAINTS = DEFERRED');
 				$oracleConstraintsDeferred = true;
 			} catch (\Throwable $e) {
+				// best-effort: deferring is an optimisation only — the restore
+				// iterates tables in dependency order, so a failed DEFERRED still
+				// restores correctly; nothing is written by this catch.
 				$this->logger->warning('AudioCheck: Oracle constraints could not be deferred for restore; relying on restore table order.', [
 					'exception' => $e,
 				]);
@@ -804,6 +810,10 @@ class UpgradeBackupService
 					$folder->delete();
 				}
 			} catch (\Throwable $e) {
+				// best-effort cleanup with compensation: a corrupt snapshot folder
+				// (unreadable manifest, half-deleted node) must not abort the
+				// sweep — the catch deletes the folder outright so the corrupt
+				// snapshot cannot be restored later.
 				$this->logger->warning('AudioCheck: removing corrupt upgrade backup folder', [
 					'app' => UpgradeBackupCatalog::APP_ID,
 					'folder' => $snapshotId,

@@ -4,6 +4,7 @@ const AxeBuilder = require('@axe-core/playwright').default;
 const fs = require('fs');
 const path = require('path');
 const { login, credsFromEnv, resolveE2eCreds } = require('./helpers/auth.js');
+const { appT } = require('./helpers/i18n.js');
 
 const BASE = (process.env.E2E_BASE || process.env.BASE_URL || process.env.NC_BASE_URL || 'http://localhost:8081').replace(/\/$/, '');
 
@@ -22,12 +23,15 @@ async function ensureAuthed(page) {
 }
 
 async function waitForShell(page) {
-	const upgradeNeeded = await page.getByRole('heading', { name: /Update needed/i }).count();
-	if (upgradeNeeded > 0) {
+	// NC core chrome (login form, upgrade screen) renders in the instance locale —
+	// detect structurally via the guest-layout body id + the #user field instead
+	// of locale-fragile heading text.
+	const loginField = await page.locator('input#user, input[name="user"]').count();
+	const guestChrome = await page.locator('body#body-login').count();
+	if (guestChrome > 0 && loginField === 0) {
 		test.skip(true, 'Nextcloud instance requires occ upgrade — seek-jump e2e blocked by maintenance page');
 	}
-	const loginForm = await page.getByRole('heading', { name: /Log in to Nextcloud/i }).count();
-	if (loginForm > 0) {
+	if (loginField > 0) {
 		test.skip(true, 'Not authenticated — set E2E_USER/E2E_PASS or refresh .auth/storage-state.json');
 	}
 	await page.waitForFunction(() => {
@@ -139,8 +143,9 @@ test.describe('AudioCheck seek jump (±30s)', () => {
 		const fwd = page.locator('#ac-now-jump-forward');
 		await expect(back).toBeVisible();
 		await expect(fwd).toBeVisible();
-		await expect(back).toHaveAttribute('aria-label', /(Jump back 30 seconds|30 Sekunden zurück)/i);
-		await expect(fwd).toHaveAttribute('aria-label', /(Jump forward 30 seconds|30 Sekunden vor)/i);
+		// i18n: localized via the app's own t(), not an EN|DE regex.
+		await expect(back).toHaveAttribute('aria-label', await appT(page, 'Jump back {seconds} seconds', { seconds: 30 }));
+		await expect(fwd).toHaveAttribute('aria-label', await appT(page, 'Jump forward {seconds} seconds', { seconds: 30 }));
 
 		// Ensure media has metadata, park mid-track (or as far as duration allows), then jump.
 		await page.waitForFunction(() => {
@@ -342,8 +347,9 @@ test.describe('AudioCheck seek jump (±30s)', () => {
 		const fwd = page.locator('#ac-mini-jump-forward');
 		await expect(back).toBeVisible();
 		await expect(fwd).toBeVisible();
-		await expect(back).toHaveAttribute('aria-label', /(Jump back 30 seconds|30 Sekunden zurück)/i);
-		await expect(fwd).toHaveAttribute('aria-label', /(Jump forward 30 seconds|30 Sekunden vor)/i);
+		// i18n: localized via the app's own t(), not an EN|DE regex.
+		await expect(back).toHaveAttribute('aria-label', await appT(page, 'Jump back {seconds} seconds', { seconds: 30 }));
+		await expect(fwd).toHaveAttribute('aria-label', await appT(page, 'Jump forward {seconds} seconds', { seconds: 30 }));
 		const sizes = await page.evaluate(() => {
 			const b = document.getElementById('ac-mini-jump-back');
 			const f = document.getElementById('ac-mini-jump-forward');

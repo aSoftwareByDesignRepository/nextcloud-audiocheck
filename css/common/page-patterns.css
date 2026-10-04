@@ -346,13 +346,9 @@
 	padding: var(--ac-space-5) var(--ac-space-5);
 	border: 1px solid var(--ac-border);
 	border-radius: var(--ac-radius-lg, 12px);
-	background:
-		linear-gradient(
-			165deg,
-			color-mix(in srgb, var(--color-primary-element) 14%, var(--color-main-background)) 0%,
-			var(--color-main-background) 58%
-		);
-	box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-main-background) 55%, transparent);
+	/* Flat bordered card — page-level gradient "stage washes" are a DS reject
+	 * class; the family look is solid canvas + bordered surfaces. */
+	background: var(--ac-bg-card);
 }
 
 #app-content.ac-app .ac-get-app__icon-well {
