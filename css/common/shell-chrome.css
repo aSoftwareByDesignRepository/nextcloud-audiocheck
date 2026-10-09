@@ -121,7 +121,9 @@
 #app-content.ac-app .ac-btn--danger,
 .ac-modal .ac-btn--danger {
 	background-color: var(--ac-danger-fill);
-	border-color: transparent;
+	/* WCAG 1.4.11 boundary: fill alone is <3:1 on dark surfaces — keep a
+	   painted error-ink edge (the app.css copy wins the late cascade). */
+	border-color: var(--ac-danger-ink, var(--color-error-text, var(--color-error)));
 	color: var(--ac-danger-on-fill);
 	font-weight: 700;
 }
@@ -135,7 +137,7 @@
 .ac-modal .ac-btn--danger:hover,
 .ac-modal .ac-btn--danger:focus-visible {
 	background-color: var(--ac-danger-fill-hover);
-	border-color: transparent;
+	border-color: var(--ac-danger-ink, var(--color-error-text, var(--color-error)));
 	color: var(--ac-danger-on-fill);
 }
 

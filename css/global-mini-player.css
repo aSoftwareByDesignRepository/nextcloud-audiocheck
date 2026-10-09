@@ -19,16 +19,20 @@ body.ac-global-mini-player-host {
 	--ac-bg-soft: color-mix(in srgb, var(--color-main-background) 96%, var(--color-main-text) 4%);
 	--ac-border: color-mix(in srgb, var(--color-main-text) 16%, transparent);
 	--ac-border-strong: color-mix(in srgb, var(--color-main-text) 24%, transparent);
+	/* Interactive controls need >=3:1 (WCAG 1.4.11) — same rule as tokens.css;
+	   this sheet is self-contained on host pages (tokens.css never loads). */
+	--ac-form-border: var(--color-border-maxcontrast, var(--ac-border-strong));
 	--ac-muted: var(--color-text-maxcontrast, color-mix(in srgb, var(--color-main-text) 62%, transparent));
-	--ac-muted-strong: var(--color-text-maxcontrast, color-mix(in srgb, var(--color-main-text) 72%, transparent));
+	--ac-muted-strong: color-mix(in srgb, var(--color-main-text) 82%, var(--color-text-maxcontrast, transparent));
 	--ac-text: var(--color-main-text);
 	--ac-shadow-sm: 0 1px 3px color-mix(in srgb, var(--color-main-text) 10%, transparent);
 	--ac-shadow-md: 0 4px 16px color-mix(in srgb, var(--color-main-text) 12%, transparent);
 	--ac-shadow-raised: 0 8px 24px color-mix(in srgb, var(--color-main-text) 16%, transparent);
-	--ac-tint-success: color-mix(in srgb, var(--color-success, #2d7a3e) 14%, var(--ac-bg-card));
-	--ac-danger-border: color-mix(in srgb, var(--color-error, #c00) 44%, var(--ac-border));
-	--ac-danger-bg: color-mix(in srgb, var(--color-error, #c00) 12%, var(--ac-bg-card));
-	--ac-danger-ink: var(--color-error, #c00);
+	--ac-tint-success: color-mix(in srgb, var(--color-success-text, var(--color-success, #2d7a3e)) 18%, var(--ac-bg-card));
+	--ac-tint-danger: color-mix(in srgb, var(--color-error-text, var(--color-error, #c00)) 18%, var(--ac-bg-card));
+	--ac-danger-border: color-mix(in srgb, var(--color-error-text, var(--color-error, #c00)) 44%, var(--ac-border));
+	--ac-danger-bg: var(--ac-tint-danger);
+	--ac-danger-ink: var(--color-error-text, var(--color-error, #c00));
 }
 
 .ac-sr-only {
@@ -123,7 +127,7 @@ body.ac-global-mini-player-host {
 .ac-mini-player button.ac-btn--success {
 	background-color: var(--ac-tint-success);
 	color: var(--color-success-text, var(--color-success));
-	border-color: var(--color-success);
+	border-color: var(--color-success-text, var(--color-success));
 }
 
 #app-content.ac-app button.ac-btn--success:not(:disabled):hover,
@@ -503,7 +507,7 @@ body.ac-global-mini-player-host {
 	height: 0.5rem;
 	border-radius: 999px;
 	background: color-mix(in srgb, var(--color-main-text) 32%, var(--ac-bg-card));
-	border: 1px solid var(--ac-border-strong);
+	border: 1px solid var(--ac-form-border, var(--color-border-maxcontrast, var(--ac-border-strong)));
 }
 
 .ac-seek::-webkit-slider-thumb {
@@ -522,7 +526,7 @@ body.ac-global-mini-player-host {
 	height: 0.5rem;
 	border-radius: 999px;
 	background: color-mix(in srgb, var(--color-main-text) 32%, var(--ac-bg-card));
-	border: 1px solid var(--ac-border-strong);
+	border: 1px solid var(--ac-form-border, var(--color-border-maxcontrast, var(--ac-border-strong)));
 }
 
 .ac-seek::-moz-range-thumb {
@@ -584,7 +588,7 @@ body.ac-global-mini-player-host {
 .ac-mini-player button.ac-btn.ac-transport-btn:not(:disabled):hover,
 .ac-mini-player button.ac-btn.ac-transport-btn:not(:disabled):focus-visible {
 	background-color: color-mix(in srgb, var(--color-primary-element) 14%, var(--ac-bg-card));
-	border-color: color-mix(in srgb, var(--color-primary-element) 45%, var(--ac-border));
+	border-color: color-mix(in srgb, var(--color-primary-element) 45%, var(--ac-form-border));
 	color: var(--color-main-text);
 }
 
@@ -661,23 +665,32 @@ body.ac-global-mini-player-host {
 	margin: 0;
 	padding: calc((var(--ac-touch) - 0.5rem) / 2) 0;
 	accent-color: var(--color-primary-element);
+	cursor: pointer;
+	background: transparent;
 	box-sizing: content-box;
+	/* Without appearance:none Chromium ignores the custom track/thumb below
+	   and falls back to a native slider whose faint track fails WCAG 1.4.11. */
+	-webkit-appearance: none;
+	appearance: none;
+	border: none;
 }
 
 .ac-volume__slider::-webkit-slider-runnable-track {
 	height: 0.5rem;
 	border-radius: 999px;
 	background: color-mix(in srgb, var(--color-main-text) 32%, var(--ac-bg-card));
-	border: 1px solid var(--ac-border-strong);
+	border: 1px solid var(--ac-form-border, var(--color-border-maxcontrast, var(--ac-border-strong)));
 }
 
 .ac-volume__slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
 	margin-top: -0.3125rem;
 	width: 1.25rem;
 	height: 1.25rem;
 	border: 2px solid var(--color-main-background);
 	background: var(--color-primary-element);
-	box-shadow: 0 0 0 2px var(--ac-border-strong);
+	box-shadow: 0 0 0 2px var(--ac-form-border, var(--color-border-maxcontrast, var(--ac-border-strong)));
 }
 
 .ac-volume button.ac-btn--icon .ac-icon {

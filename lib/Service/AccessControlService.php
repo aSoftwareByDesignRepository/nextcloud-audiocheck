@@ -254,6 +254,26 @@ class AccessControlService
 
 		$this->bumpPolicyVersion();
 
+		// Audit record on every policy mutation: actor + new revision + what
+		// changed (same bar as license/ledger writes in sibling ops apps).
+		// warning-level because the default NC loglevel=2 drops info entries —
+		// an audit trail must be durable on stock configs.
+		$this->logger->warning('AudioCheck app policy updated', [
+			'actor' => $this->userSession->getUser()?->getUID() ?? '',
+			'policyVersion' => $this->getPolicyVersion(),
+			'sections' => array_values(array_filter([
+				$touchAdmins ? 'admins' : null,
+				$touchAccess ? 'access' : null,
+				$touchDefaults ? 'defaults' : null,
+			])),
+			'appAdminUserIds' => $adminIds,
+			'accessRestrictionEnabled' => $restrictionEnabled,
+			'allowedUserIds' => $allowedUserIds,
+			'allowedGroupIds' => $allowedGroupIds,
+			'defaultLibraryFolder' => $defaultFolder,
+			'maxMetaTempMb' => $maxMetaTempMb,
+		]);
+
 		return $this->getAppPolicy();
 	}
 

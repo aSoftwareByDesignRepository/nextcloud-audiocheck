@@ -50,55 +50,80 @@ class RateLimitService
 		$windowSeconds = max(1, $windowSeconds);
 		$lockKey = self::LOCK_PREFIX . md5($userId . "\0" . $bucket);
 
+		// A single browser page load fires many parallel cover requests; a
+		// one-shot retry after 50 ms routinely loses to that same-session burst
+		// and 429s legitimate media loads. Retry on a bounded deadline (~750 ms)
+		// instead — still serialized, still fail-closed on real contention.
 		$acquired = false;
-		try {
-			$this->locking->acquireLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
-			$acquired = true;
-		} catch (LockedException) {
-			usleep(50_000);
+		$lockDeadline = microtime(true) + 0.75;
+		do {
 			try {
 				$this->locking->acquireLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
 				$acquired = true;
 			} catch (LockedException) {
-				$this->logger->warning('AudioCheck: rate-limit lock contested (fail-closed)', [
-					'app' => 'audiocheck',
-					'bucket' => $bucket,
-				]);
-				throw new RateLimitExceededException();
+				usleep(random_int(15_000, 45_000));
 			}
+		} while (!$acquired && microtime(true) < $lockDeadline);
+
+		if (!$acquired) {
+			$this->logger->warning('AudioCheck: rate-limit lock contested (fail-closed)', [
+				'app' => 'audiocheck',
+				'bucket' => $bucket,
+			]);
+			throw new RateLimitExceededException();
 		}
 
 		try {
 			$now = time();
 			$cutoff = $now - $windowSeconds;
 
-			// Opportunistic purge of this user's stale rows (keeps index small).
-			$del = $this->db->getQueryBuilder();
-			$del->delete('ac_rate_limits')
-				->where($del->expr()->eq('bucket', $del->createNamedParameter($bucket)))
-				->andWhere($del->expr()->eq('user_id', $del->createNamedParameter($userId)))
-				->andWhere($del->expr()->lt('hit_at', $del->createNamedParameter($cutoff, IQueryBuilder::PARAM_INT)));
-			$del->executeStatement();
+			for ($attempt = 0; ; $attempt++) {
+				try {
+					// Occasional purge of this user's stale rows keeps the index
+					// small without adding a write to every hit — a per-request
+					// DELETE needlessly widens the InnoDB gap-lock window under
+					// parallel media loads (real 1213 deadlocks observed).
+					if (random_int(1, 25) === 1) {
+						$del = $this->db->getQueryBuilder();
+						$del->delete('ac_rate_limits')
+							->where($del->expr()->eq('bucket', $del->createNamedParameter($bucket)))
+							->andWhere($del->expr()->eq('user_id', $del->createNamedParameter($userId)))
+							->andWhere($del->expr()->lt('hit_at', $del->createNamedParameter($cutoff, IQueryBuilder::PARAM_INT)));
+						$del->executeStatement();
+					}
 
-			$qb = $this->db->getQueryBuilder();
-			$qb->select($qb->func()->count('*', 'cnt'))
-				->from('ac_rate_limits')
-				->where($qb->expr()->eq('bucket', $qb->createNamedParameter($bucket)))
-				->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
-				->andWhere($qb->expr()->gte('hit_at', $qb->createNamedParameter($cutoff, IQueryBuilder::PARAM_INT)));
-			$count = (int)$qb->executeQuery()->fetchOne();
+					$qb = $this->db->getQueryBuilder();
+					$qb->select($qb->func()->count('*', 'cnt'))
+						->from('ac_rate_limits')
+						->where($qb->expr()->eq('bucket', $qb->createNamedParameter($bucket)))
+						->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+						->andWhere($qb->expr()->gte('hit_at', $qb->createNamedParameter($cutoff, IQueryBuilder::PARAM_INT)));
+					$count = (int)$qb->executeQuery()->fetchOne();
 
-			if ($count >= $max) {
-				throw new RateLimitExceededException();
+					if ($count >= $max) {
+						throw new RateLimitExceededException();
+					}
+
+					$ins = $this->db->getQueryBuilder();
+					$ins->insert('ac_rate_limits')->values([
+						'bucket' => $ins->createNamedParameter($bucket),
+						'user_id' => $ins->createNamedParameter($userId),
+						'hit_at' => $ins->createNamedParameter($now, IQueryBuilder::PARAM_INT),
+					]);
+					$ins->executeStatement();
+					break;
+				} catch (RateLimitExceededException $e) {
+					throw $e;
+				} catch (\Throwable $e) {
+					// Transient InnoDB deadlock between concurrent buckets is
+					// retryable; retry twice then stay fail-closed.
+					if ($attempt < 2 && $this->isDeadlock($e)) {
+						usleep(random_int(20_000, 60_000));
+						continue;
+					}
+					throw $e;
+				}
 			}
-
-			$ins = $this->db->getQueryBuilder();
-			$ins->insert('ac_rate_limits')->values([
-				'bucket' => $ins->createNamedParameter($bucket),
-				'user_id' => $ins->createNamedParameter($userId),
-				'hit_at' => $ins->createNamedParameter($now, IQueryBuilder::PARAM_INT),
-			]);
-			$ins->executeStatement();
 		} catch (RateLimitExceededException $e) {
 			throw $e;
 		} catch (\Throwable $e) {
@@ -113,6 +138,23 @@ class RateLimitService
 				$this->locking->releaseLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
 			}
 		}
+	}
+
+	/**
+	 * True when the exception chain carries an InnoDB deadlock (SQLSTATE
+	 * 40001 / errno 1213) — transient under concurrent bucket traffic.
+	 */
+	private function isDeadlock(\Throwable $e): bool
+	{
+		for ($cur = $e; $cur !== null; $cur = $cur->getPrevious()) {
+			if ($cur instanceof \Doctrine\DBAL\Exception\DeadlockException) {
+				return true;
+			}
+			if (in_array($cur->getCode(), [1213, 40001, '40001'], true)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private function normalizeBucket(string $action): string

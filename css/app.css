@@ -80,13 +80,13 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	color: var(--ac-danger-ink);
 }
 .ac-toast-fallback--warning {
-	border-color: color-mix(in srgb, var(--color-warning, var(--color-main-text)) 44%, var(--ac-border));
-	background: color-mix(in srgb, var(--color-warning, var(--color-main-text)) 14%, var(--ac-bg-card));
+	border-color: color-mix(in srgb, var(--color-warning-text, var(--color-warning, var(--color-main-text))) 44%, var(--ac-border));
+	background: color-mix(in srgb, var(--color-warning-text, var(--color-warning, var(--color-main-text))) 14%, var(--ac-bg-card));
 	color: var(--color-warning-text, var(--color-main-text));
 }
 .ac-toast-fallback--success {
-	border-color: color-mix(in srgb, var(--color-success, var(--color-primary-element)) 44%, var(--ac-border));
-	background: color-mix(in srgb, var(--color-success, var(--color-primary-element)) 14%, var(--ac-bg-card));
+	border-color: color-mix(in srgb, var(--color-success-text, var(--color-success, var(--color-primary-element))) 44%, var(--ac-border));
+	background: color-mix(in srgb, var(--color-success-text, var(--color-success, var(--color-primary-element))) 14%, var(--ac-bg-card));
 	color: var(--color-success-text, var(--color-main-text));
 }
 
@@ -259,14 +259,14 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	color: var(--ac-danger-ink);
 }
 .ac-toast--warning {
-	border-color: color-mix(in srgb, var(--color-warning, var(--color-main-text)) 44%, var(--ac-border));
-	background: color-mix(in srgb, var(--color-warning, var(--color-main-text)) 14%, var(--ac-bg-card));
+	border-color: color-mix(in srgb, var(--color-warning-text, var(--color-warning, var(--color-main-text))) 44%, var(--ac-border));
+	background: color-mix(in srgb, var(--color-warning-text, var(--color-warning, var(--color-main-text))) 14%, var(--ac-bg-card));
 	color: var(--color-warning-text, var(--ac-text));
 }
 .ac-toast--success,
 .ac-toast--info {
-	border-color: color-mix(in srgb, var(--color-success, var(--color-primary-element)) 44%, var(--ac-border));
-	background: color-mix(in srgb, var(--color-success, var(--color-primary-element)) 14%, var(--ac-bg-card));
+	border-color: color-mix(in srgb, var(--color-success-text, var(--color-success, var(--color-primary-element))) 44%, var(--ac-border));
+	background: color-mix(in srgb, var(--color-success-text, var(--color-success, var(--color-primary-element))) 14%, var(--ac-bg-card));
 	color: var(--color-success-text, var(--ac-text));
 }
 .ac-toasts .ac-toast__close,
@@ -1021,7 +1021,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	line-height: 1.2;
 }
 .ac-library-card__count--ok .ac-library-card__count-value {
-	color: var(--color-success-text, var(--color-success, var(--color-main-text)));
+	color: var(--color-success-text, var(--color-success-text, var(--color-success, var(--color-main-text))));
 }
 .ac-library-card__count--empty .ac-library-card__count-label {
 	text-transform: none;
@@ -1165,15 +1165,15 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 }
 .ac-library-card__message.ac-library-card__warn {
 	color: var(--color-warning-text, var(--color-warning));
-	background: color-mix(in srgb, var(--color-warning, var(--color-main-text)) 8%, var(--ac-bg-card));
+	background: color-mix(in srgb, var(--color-warning-text, var(--color-warning, var(--color-main-text))) 8%, var(--ac-bg-card));
 }
 .ac-library-card--highlight {
 	box-shadow: 0 0 0 2px var(--color-primary-element);
 	animation: ac-library-highlight 1.2s ease 2;
 }
 .ac-library-card--disabled {
-	border-color: color-mix(in srgb, var(--color-warning, var(--color-main-text)) 45%, var(--ac-border-strong));
-	background: color-mix(in srgb, var(--color-warning, var(--color-main-text)) 6%, var(--ac-bg-card));
+	border-color: color-mix(in srgb, var(--color-warning-text, var(--color-warning, var(--color-main-text))) 45%, var(--ac-border-strong));
+	background: color-mix(in srgb, var(--color-warning-text, var(--color-warning, var(--color-main-text))) 6%, var(--ac-bg-card));
 }
 @media (forced-colors: active) {
 	.ac-library-card {
@@ -1272,7 +1272,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	flex-shrink: 0;
 	width: 1rem;
 	height: 1rem;
-	color: var(--color-warning, var(--color-main-text));
+	color: var(--color-warning-text, var(--color-warning, var(--color-main-text)));
 }
 .ac-compat-note__text {
 	min-width: 0;
@@ -1284,8 +1284,8 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	align-self: flex-start;
 	padding: 0.15rem 0.55rem;
 	border-radius: var(--ac-radius-pill, 999px);
-	background: color-mix(in srgb, var(--color-warning) 18%, var(--color-main-background));
-	border: 1px solid color-mix(in srgb, var(--color-warning) 40%, var(--ac-border-strong));
+	background: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 18%, var(--color-main-background));
+	border: 1px solid color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 40%, var(--ac-border-strong));
 }
 .ac-badge--active {
 	background: color-mix(in srgb, var(--color-primary-element) 15%, var(--color-main-background));
@@ -1293,9 +1293,9 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	border: 1px solid color-mix(in srgb, var(--color-primary-element) 40%, var(--ac-border-strong));
 }
 .ac-badge--ok {
-	background: color-mix(in srgb, var(--color-success, var(--color-main-text)) 15%, var(--color-main-background));
-	color: var(--color-success-text, var(--color-success, var(--color-main-text)));
-	border: 1px solid color-mix(in srgb, var(--color-success, var(--color-main-text)) 35%, var(--ac-border-strong));
+	background: color-mix(in srgb, var(--color-success-text, var(--color-success, var(--color-main-text))) 15%, var(--color-main-background));
+	color: var(--color-success-text, var(--color-success-text, var(--color-success, var(--color-main-text))));
+	border: 1px solid color-mix(in srgb, var(--color-success-text, var(--color-success, var(--color-main-text))) 35%, var(--ac-border-strong));
 }
 .ac-empty--section {
 	padding: var(--ac-space-5) var(--ac-space-4);
@@ -1379,9 +1379,9 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	margin-top: 0;
 }
 .ac-badge--warn {
-	background: color-mix(in srgb, var(--color-warning) 18%, var(--color-main-background));
+	background: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 18%, var(--color-main-background));
 	color: var(--color-warning-text, var(--color-main-text));
-	border: 1px solid color-mix(in srgb, var(--color-warning) 40%, var(--ac-border-strong));
+	border: 1px solid color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 40%, var(--ac-border-strong));
 }
 .ac-badge--muted {
 	background: var(--ac-bg-soft);
@@ -1501,7 +1501,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 .ac-mini-player button.ac-btn--success {
 	background-color: var(--ac-tint-success);
 	color: var(--color-success-text, var(--color-success));
-	border-color: var(--color-success);
+	border-color: var(--color-success-text, var(--color-success));
 }
 #app-content.ac-app button.ac-btn--success:not(:disabled):hover,
 #app-content.ac-app button.ac-btn--success:not(:disabled):focus-visible,
@@ -1561,7 +1561,10 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 dialog.ac-native-dialog button.ac-btn--danger,
 .ac-mini-player button.ac-btn--danger {
 	background-color: var(--ac-danger-fill);
-	border-color: transparent;
+	/* WCAG 1.4.11: the solid fill alone does not reach 3:1 against dark
+	   surfaces, so the component boundary needs a painted edge. error-text
+	   stays bright on dark themes and keeps the semantic danger signal. */
+	border-color: var(--ac-danger-ink, var(--color-error-text, var(--color-error)));
 	color: var(--ac-danger-on-fill);
 	font-weight: 700;
 }
@@ -1572,7 +1575,7 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 .ac-mini-player button.ac-btn--danger:not(:disabled):hover,
 .ac-mini-player button.ac-btn--danger:not(:disabled):focus-visible {
 	background-color: var(--ac-danger-fill-hover);
-	border-color: transparent;
+	border-color: var(--ac-danger-ink, var(--color-error-text, var(--color-error)));
 	color: var(--ac-danger-on-fill);
 }
 
@@ -1921,7 +1924,7 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 	height: 0.5rem;
 	border-radius: 999px;
 	background: color-mix(in srgb, var(--color-main-text) 32%, var(--ac-bg-card));
-	border: 1px solid var(--ac-border-strong);
+	border: 1px solid var(--ac-form-border, var(--color-border-maxcontrast, var(--ac-border-strong)));
 }
 .ac-seek::-webkit-slider-thumb {
 	-webkit-appearance: none;
@@ -1938,7 +1941,7 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 	height: 0.5rem;
 	border-radius: 999px;
 	background: color-mix(in srgb, var(--color-main-text) 32%, var(--ac-bg-card));
-	border: 1px solid var(--ac-border-strong);
+	border: 1px solid var(--ac-form-border, var(--color-border-maxcontrast, var(--ac-border-strong)));
 }
 .ac-seek::-moz-range-thumb {
 	width: 1.125rem;
@@ -1996,7 +1999,7 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 .ac-mini-player button.ac-btn.ac-transport-btn:not(:disabled):hover,
 .ac-mini-player button.ac-btn.ac-transport-btn:not(:disabled):focus-visible {
 	background-color: color-mix(in srgb, var(--color-primary-element) 14%, var(--ac-bg-card));
-	border-color: color-mix(in srgb, var(--color-primary-element) 45%, var(--ac-border));
+	border-color: color-mix(in srgb, var(--color-primary-element) 45%, var(--ac-form-border));
 	color: var(--color-main-text);
 }
 #app-content.ac-app button.ac-btn.ac-transport-btn--primary,
@@ -2064,21 +2067,30 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 	margin: 0;
 	padding: calc((var(--ac-touch) - 0.5rem) / 2) 0;
 	accent-color: var(--color-primary-element);
+	cursor: pointer;
+	background: transparent;
 	box-sizing: content-box;
+	/* Without appearance:none Chromium ignores the custom track/thumb below
+	   and falls back to a native slider whose faint track fails WCAG 1.4.11. */
+	-webkit-appearance: none;
+	appearance: none;
+	border: none;
 }
 .ac-volume__slider::-webkit-slider-runnable-track {
 	height: 0.5rem;
 	border-radius: 999px;
 	background: color-mix(in srgb, var(--color-main-text) 32%, var(--ac-bg-card));
-	border: 1px solid var(--ac-border-strong);
+	border: 1px solid var(--ac-form-border, var(--color-border-maxcontrast, var(--ac-border-strong)));
 }
 .ac-volume__slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
 	margin-top: -0.3125rem;
 	width: 1.25rem;
 	height: 1.25rem;
 	border: 2px solid var(--color-main-background);
 	background: var(--color-primary-element);
-	box-shadow: 0 0 0 2px var(--ac-border-strong);
+	box-shadow: 0 0 0 2px var(--ac-form-border, var(--color-border-maxcontrast, var(--ac-border-strong)));
 }
 .ac-volume button.ac-btn--icon .ac-icon {
 	pointer-events: none;
@@ -2211,7 +2223,7 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 .ac-track-list__play.ac-btn--icon {
 	background: var(--ac-tint-info);
 	color: var(--color-primary-element);
-	border-color: color-mix(in srgb, var(--color-primary-element) 25%, var(--ac-border));
+	border-color: color-mix(in srgb, var(--color-primary-element) 25%, var(--ac-form-border));
 }
 .ac-track-list__play.ac-btn--icon:not(:disabled):hover,
 .ac-track-list__play.ac-btn--icon:not(:disabled):focus-visible {
@@ -3396,8 +3408,8 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 }
 
 .ac-now-status--playing {
-	border-color: color-mix(in srgb, var(--color-success) 40%, var(--ac-border));
-	background: color-mix(in srgb, var(--color-success) 12%, var(--ac-surface));
+	border-color: color-mix(in srgb, var(--color-success-text, var(--color-success)) 40%, var(--ac-border));
+	background: color-mix(in srgb, var(--color-success-text, var(--color-success)) 12%, var(--ac-surface));
 	color: var(--color-success-text, var(--color-success));
 }
 
@@ -3406,8 +3418,8 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 }
 
 .ac-now-status--buffering {
-	border-color: color-mix(in srgb, var(--color-warning) 40%, var(--ac-border));
-	background: color-mix(in srgb, var(--color-warning) 12%, var(--ac-surface));
+	border-color: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 40%, var(--ac-border));
+	background: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 12%, var(--ac-surface));
 }
 
 .ac-now-status__icon {
@@ -4414,8 +4426,8 @@ body.ac-modal-open { overflow: hidden; }
 		justify-content: center;
 		padding: 0 var(--ac-space-1);
 		border-radius: var(--ac-radius-sm);
-		background: color-mix(in srgb, var(--color-warning) 14%, var(--color-main-background));
-		border: 1px solid color-mix(in srgb, var(--color-warning) 35%, var(--ac-border-strong));
+		background: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 14%, var(--color-main-background));
+		border: 1px solid color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 35%, var(--ac-border-strong));
 	}
 
 	@media (min-width: 640px) {
@@ -4877,7 +4889,7 @@ body.ac-modal-open { overflow: hidden; }
 .ac-sleep-timer-banner {
 	padding: var(--ac-space-3);
 	border-radius: var(--ac-radius-md);
-	border: 1px solid var(--color-warning);
+	border: 1px solid var(--color-warning-text, var(--color-warning));
 	background: var(--ac-tint-warning);
 	color: var(--color-main-text);
 	font-weight: 600;
@@ -4985,7 +4997,7 @@ body.ac-modal-open { overflow: hidden; }
 	align-items: center;
 	min-height: var(--ac-touch);
 	padding: var(--ac-space-1) var(--ac-space-3);
-	border: 1px solid var(--ac-border);
+	border: 1px solid var(--ac-form-border);
 	border-radius: 999px;
 	background: var(--ac-surface);
 	color: inherit;
@@ -5343,9 +5355,9 @@ body.ac-modal-open { overflow: hidden; }
 	border-radius: 999px;
 	font-size: var(--ac-fs-sm);
 	font-weight: 600;
-	color: var(--color-error);
-	background: color-mix(in srgb, var(--color-error) 12%, var(--color-main-background));
-	border: 1px solid color-mix(in srgb, var(--color-error) 35%, transparent);
+	color: var(--color-error-text, var(--color-error));
+	background: color-mix(in srgb, var(--color-error-text, var(--color-error)) 12%, var(--color-main-background));
+	border: 1px solid color-mix(in srgb, var(--color-error-text, var(--color-error)) 35%, transparent);
 }
 .ac-home-hero__resume {
 	align-self: flex-start;
@@ -5993,4 +6005,25 @@ body.ac-modal-open { overflow: hidden; }
 #app-navigation .ac-nav-footer__trigger {
 	min-height: 44px;
 	min-width: 44px;
+}
+
+/*
+ * Control-border baseline (WCAG 1.4.11 >= 3:1 vs background) — DESIGN-SYSTEM §3.6.0.
+ * NC core styles every button/input with the faint `--color-border-dark`, and its
+ * `button:disabled` rule (0,2,1) outranks page-level `.button.secondary` (0,2,0),
+ * so disabled controls silently lose their frame. This rule only re-colours
+ * borders that are already drawn — borderless icon buttons are unaffected —
+ * and state classes keep their semantic borders.
+ */
+#app-content input:not([type='range'], [type='hidden'], [type='color'], [type='file'], [type='image'], [type='submit'], [type='button'], [type='reset'], .form-input--error, .form-input--success, .form-input--warning, .has-error, [aria-invalid='true'], .has-error *),
+#app-content select:not(.form-input--error, .form-input--success, .form-input--warning, [aria-invalid='true'], .has-error *),
+#app-content textarea:not(.form-input--error, .form-input--success, .form-input--warning, [aria-invalid='true'], .has-error *),
+#app-content button:not(.primary, .error, .warning, .success, .danger, .button-vue),
+#app-content .button:not(.primary, .error, .warning, .success, .danger),
+.oc-dialog input:not([type='range'], [type='hidden'], [type='color'], [type='file']),
+.oc-dialog select,
+.oc-dialog textarea,
+.oc-dialog button:not(.primary, .error, .warning, .success, .danger, .button-vue),
+.oc-dialog .button:not(.primary, .error, .warning, .success, .danger) {
+	border-color: var(--ac-form-border, var(--color-border-maxcontrast, var(--color-border)));
 }

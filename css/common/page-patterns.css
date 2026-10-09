@@ -130,7 +130,7 @@
 	justify-content: center;
 	min-height: var(--ac-touch, 44px);
 	padding: var(--ac-space-2) var(--ac-space-4);
-	border: 1px solid var(--ac-border);
+	border: 1px solid var(--ac-form-border);
 	border-radius: var(--ac-radius-pill);
 	background: var(--ac-bg-soft);
 	color: var(--ac-text);

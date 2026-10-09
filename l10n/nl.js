@@ -193,7 +193,7 @@ OC.L10N.register(
 	"Download for offline listening" : "Downloaden voor offline luisteren",
 	"Duration unknown" : "Duur onbekend",
 	"Duration {time}" : "Duur {time}",
-	"Email is best-effort — no reply SLA. Need booked help? Use Support & us." : "E-mail zonder antwoord-SLA. Geboekte hulp nodig? Gebruik Support en wij.",
+	"Email is best-effort — no reply SLA. Need booked help? Use Support & us." : "E-mail zonder antwoord-SLA. Geboekte hulp nodig? Gebruik Ondersteuning & wij.",
 	"End of chapter" : "Einde hoofdstuk",
 	"End of track" : "Einde spoor",
 	"Enter a playlist name." : "Voer een afspeellijstnaam in.",

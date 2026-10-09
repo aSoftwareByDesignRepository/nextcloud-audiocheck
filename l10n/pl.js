@@ -81,7 +81,7 @@ OC.L10N.register(
 	"Audio player failed to load. Reload the page." : "Nie udało się wczytać odtwarzacza. Odśwież stronę.",
 	"Audiobook" : "Książka audio",
 	"Audiobook folders" : "Foldery Audiobook",
-	"Audiobook layout tip: Author \/ Book \/ files.mp3, or Author \/ Book \/ CD 1 \/ files.mp3. Keep “All nested folders” on so every level is scanned." : "Audiobook: Autor \/ Book \/ files.mp3 lub Autor \/ Book \/ CD 1 \/ files.mp3. Zachować \"Wszystkie zagnieżdżone foldery\" na tak każdy poziom jest skanowany.",
+	"Audiobook layout tip: Author \/ Book \/ files.mp3, or Author \/ Book \/ CD 1 \/ files.mp3. Keep “All nested folders” on so every level is scanned." : "Wskazówka dotycząca układu audiobooka: Autor \/ Książka \/ pliki.mp3 lub Autor \/ Książka \/ CD 1 \/ pliki.mp3. Pozostaw \"Wszystkie zagnieżdżone foldery\" włączone, aby każdy poziom był skanowany.",
 	"Audiobook series from your file tags. Open a series to see its titles." : "Seria Audiobook z pańskich tagów. Otwórz serię, aby zobaczyć jej tytuły.",
 	"Audiobook series tags appear here when your files include them." : "Znaczniki serii Audiobook pojawiają się tutaj, gdy pliki je zawierają.",
 	"Audiobook views" : "Widoki Audiobook",

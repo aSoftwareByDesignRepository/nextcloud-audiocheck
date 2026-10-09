@@ -193,7 +193,7 @@ OC.L10N.register(
 	"Download for offline listening" : "Télécharger pour l'écoute hors ligne",
 	"Duration unknown" : "Durée inconnue",
 	"Duration {time}" : "Durée {time}",
-	"Email is best-effort — no reply SLA. Need booked help? Use Support & us." : "E-mail sans engagement de réponse. Pour une aide réservée, utilisez Support et nous.",
+	"Email is best-effort — no reply SLA. Need booked help? Use Support & us." : "E-mail sans engagement de réponse. Pour une aide réservée, utilisez Assistance & nous.",
 	"End of chapter" : "Fin du chapitre",
 	"End of track" : "Fin de piste",
 	"Enter a playlist name." : "Saisissez un nom de liste de lecture.",
