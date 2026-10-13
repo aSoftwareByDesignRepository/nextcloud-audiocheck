@@ -24,7 +24,8 @@ $locales = array (
   7 => 'pl',
   8 => 'sv',
   9 => 'nb',
-  10 => 'pt_BR',
+  10 => 'pt',
+  11 => 'pt_BR',
 );
 
 $plurals = array (
@@ -37,6 +38,7 @@ $plurals = array (
   'nb' => 'nplurals=2; plural=(n != 1);',
   'nl' => 'nplurals=2; plural=(n != 1);',
   'pl' => 'nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);',
+  'pt' => 'nplurals=2; plural=(n != 1);',
   'pt_BR' => 'nplurals=2; plural=(n != 1);',
   'sv' => 'nplurals=2; plural=(n != 1);',
 );
