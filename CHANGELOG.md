@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.3.10 - 2026-10-13
+
+### Fixed
+
+- App Store install failure: the 1.3.9 store record was registered with a corrupted signature field, so every installation aborted with "App with id audiocheck has invalid signature". This release is published with a valid signature; installs work again.
+
+### Changed
+
+- Added Portuguese (pt) UI translations alongside Brazilian Portuguese.
+- Localization: escape literal % in .json values (PHP vsprintf safety); fixed untranslated/case-only values.
+- Internal: comment/migration tidy-up and test support refactor (no behavior change).
+
 ## 1.3.9 - 2026-10-10
 
 ### Changed
