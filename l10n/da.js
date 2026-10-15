@@ -730,5 +730,6 @@ OC.L10N.register(
 	"{title}, listened" : "{title}, lyttede",
 	"← \/ →" : "← \/ →",
 	"↑ \/ ↓" : "↑ \/ ↓"
-	}
+	},
+	"nplurals=2; plural=(n != 1);"
 );

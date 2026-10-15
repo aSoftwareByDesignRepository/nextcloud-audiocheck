@@ -136,6 +136,7 @@ function main() {
 	assert(link && /^mailto:dev@software-by-design\.de/.test(link.href || link.attrs.href || ''), 'report link is the family mailto');
 	assert(link && String(link.className).includes('ac-nav-footer__toast-link'), 'report link uses synced nav-footer__toast-link class');
 	assert(link && link.textContent === 'Report this problem', 'report link label');
+	assert(toast.dataset.appFeedbackBound === '1', 'self-attached toast marked data-app-feedback-bound (observer dedup)');
 	const label = toast.children.find((c) => c.tagName === 'SPAN');
 	assert(label && label.textContent === 'Save failed', 'toast text rendered');
 

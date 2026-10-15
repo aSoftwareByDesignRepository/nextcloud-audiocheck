@@ -700,7 +700,7 @@ OC.L10N.register(
 	"You can control playback without the keyboard. Look for these controls:" : "Puede controlar la reproducción sin el teclado. Busque estos controles:",
 	"You do not have access to AudioCheck. Your account is not among the users or groups allowed to use this app. Ask a server or app administrator if you need access." : "No tienes acceso a AudioCheck. Su cuenta no está entre los usuarios o grupos autorizados a usar esta aplicación. Pregúntele a un administrador del servidor o de la aplicación si necesita acceso.",
 	"You do not have permission to do this." : "No tienes permiso para hacer esto.",
-	"Your audio library in Nextcloud" : "Tu biblioteca de audio en Nextcloud",
+	"Your audio library in Nextcloud" : "Su biblioteca de audio en Nextcloud",
 	"Your audio stays in Files. Add folders here so AudioCheck knows what to scan." : "Su audio se queda en Archivos. Añadir carpetas aquí para que AudioCheck sepa qué escanear.",
 	"Your curated playlists." : "Sus listas de reproducción curadas.",
 	"Your folder is saved. Tap Scan now if tracks do not appear after a moment." : "Carpeta guardada. Pulse Analizar ahora si los títulos no aparecen al momento.",
@@ -730,5 +730,6 @@ OC.L10N.register(
 	"{title}, listened" : "{title}, escuchada",
 	"← \/ →" : "← \/ →",
 	"↑ \/ ↓" : "↑ \/ ↓"
-	}
+	},
+	"nplurals=2; plural=(n != 1);"
 );

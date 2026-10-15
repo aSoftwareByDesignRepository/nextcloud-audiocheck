@@ -226,7 +226,7 @@ OC.L10N.register(
 	"Favorite" : "Ulubiony",
 	"Favorite tracks from Now playing or Browse. They also sync with the Files app." : "Ulubione utwory z Now playing lub Przeglądaj. Zsynchronizują się również z aplikacją Files.",
 	"Favorites" : "Ulubione",
-	"Favorites and your lists" : "Ulubione i Twoje listy",
+	"Favorites and your lists" : "Ulubione i listy",
 	"Favorites, {detail}" : "Ulubione, {detail}",
 	"File unavailable." : "Plik niedostępny.",
 	"Files home" : "Pliki w domu",
@@ -700,14 +700,14 @@ OC.L10N.register(
 	"You can control playback without the keyboard. Look for these controls:" : "Możesz kontrolować odtwarzanie bez klawiatury. Szukaj tych urządzeń sterujących:",
 	"You do not have access to AudioCheck. Your account is not among the users or groups allowed to use this app. Ask a server or app administrator if you need access." : "Brak dostępu do AudioCheck. To konto nie należy do dozwolonych użytkowników ani grup. W razie potrzeby skontaktuj się z administratorem serwera lub aplikacji.",
 	"You do not have permission to do this." : "Nie masz na to pozwolenia.",
-	"Your audio library in Nextcloud" : "Twoja biblioteka audio w Nextcloud",
+	"Your audio library in Nextcloud" : "Biblioteka audio w Nextcloud",
 	"Your audio stays in Files. Add folders here so AudioCheck knows what to scan." : "Audio pozostaje w Plikach. Dodaj tutaj foldery, aby AudioCheck wiedział, co skanować.",
 	"Your curated playlists." : "Przygotowane playlisty.",
 	"Your folder is saved. Tap Scan now if tracks do not appear after a moment." : "Folder zapisany. Kliknij Skanuj teraz, jeśli utwory nie pojawią się od razu.",
 	"Your folders" : "Foldery",
 	"Your library on your phone" : "Biblioteka w telefonie",
 	"Your playlists" : "Playlisty",
-	"Your preferences" : "Twoje preferencje",
+	"Your preferences" : "Preferencje",
 	"Your saved position is kept if you stop early." : "Zapisana pozycja zostaje zachowana po wcześniejszym zatrzymaniu.",
 	"Your session has expired. Reload the page to sign in again." : "Sesja wygasła. Odśwież stronę, aby zalogować się ponownie.",
 	"{count} collections" : "Kolekcje {count}",
@@ -730,5 +730,6 @@ OC.L10N.register(
 	"{title}, listened" : "{title}, słucham.",
 	"← \/ →" : "← \/ →",
 	"↑ \/ ↓" : "↑ \/ ↓"
-	}
+	},
+	"nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);"
 );

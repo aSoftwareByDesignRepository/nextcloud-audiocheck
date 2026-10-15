@@ -20,6 +20,7 @@ use OCA\AudioCheck\Middleware\AppAccessMiddleware;
 use OCA\AudioCheck\Repair\EnsureAudioCheckSchema;
 use OCA\AudioCheck\Repair\UninstallDropTables;
 use OCA\AudioCheck\Service\AccessControlService;
+use OCA\AudioCheck\Support\NavGate;
 use OCA\AudioCheck\Service\AppIconService;
 use OCA\AudioCheck\Service\CoverService;
 use OCA\AudioCheck\Service\FileAccessService;
@@ -44,7 +45,6 @@ use OCP\Files\Events\Node\NodeRenamedEvent;
 use OCP\Files\Events\Node\NodeWrittenEvent;
 use OCP\AppFramework\Http\Events\BeforeTemplateRenderedEvent;
 use OCP\Group\Events\GroupDeletedEvent;
-use OCP\INavigationManager;
 use OCP\L10N\IFactory;
 use OCP\User\Events\UserDeletedEvent;
 use OCP\Util;
@@ -253,24 +253,19 @@ class Application extends App implements IBootstrap
 
 	public function boot(IBootContext $context): void
 	{
-		$container = $context->getAppContainer();
-
-		$access = $container->get(AccessControlService::class);
-		$userSession = $container->get(\OCP\IUserSession::class);
-		$user = $userSession->getUser();
-		if ($user !== null && $access->canUseApp($user->getUID())) {
-			$navigation = $container->get(INavigationManager::class);
-			$navigation->add(function () use ($container) {
-				$l = $container->get(IFactory::class)->get(self::APP_ID);
-				$url = $container->get(\OCP\IURLGenerator::class);
-				return [
-					'id' => self::APP_ID,
-					'order' => 12,
-					'href' => $url->linkToRoute('audiocheck.page.index'),
-					'icon' => $container->get(AppIconService::class)->headerIconPath(),
-					'name' => $l->t('AudioCheck'),
-				];
-			});
+		$app = $context->getAppContainer();
+		// The predicate runs lazily inside NavigationManager::init() — after
+		// basic-auth login on OCS requests. An eager check here sees no user.
+		NavGate::register(
+			$app,
+			'audiocheck.page.index',
+			'app.svg',
+			'AudioCheck',
+			12,
+			static fn(string $uid): bool => $app->get(AccessControlService::class)->canUseApp($uid),
+		);
+		$user = $app->get(\OCP\IUserSession::class)->getUser();
+		if ($user !== null && $app->get(AccessControlService::class)->canUseApp($user->getUID())) {
 			Util::addScript(self::APP_ID, 'files-action', 'files');
 			Util::addScript(self::APP_ID, 'dashboard', 'dashboard');
 		}

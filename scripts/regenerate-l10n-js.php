@@ -63,11 +63,19 @@ foreach ($locales as $lang) {
 		}
 		$lines[] = "\t" . $k . ' : ' . $v . ",\n";
 	}
+	// The catalog's own pluralForm declaration is canonical; the hardcoded
+	// table is only a fallback for catalogs that lack it. Catalogs may store
+	// the bare expression — normalise to the full "nplurals=…; plural=(…);".
+	$pluralForm = (string)($cat['pluralForm'] ?? $plurals[$lang]);
+	if (!str_starts_with($pluralForm, 'nplurals')) {
+		$pluralForm = 'nplurals=2; plural=(' . trim($pluralForm, " \t;") . ');';
+	}
+
 	$last = array_pop($lines);
 	$last = rtrim($last, ",\n") . "\n";
 	$lines[] = $last;
 	$lines[] = "\t},\n";
-	$lines[] = "\t" . json_encode($plurals[$lang]) . "\n";
+	$lines[] = "\t" . json_encode($pluralForm) . "\n";
 	$lines[] = ");\n";
 	file_put_contents($jsPath, implode('', $lines));
 	echo "Wrote $jsPath (" . count($translations) . " keys)\n";

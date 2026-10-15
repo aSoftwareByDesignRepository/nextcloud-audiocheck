@@ -82,11 +82,16 @@ final class AppIconAssetsContractTest extends TestCase
 
 		$app = (string)file_get_contents($this->root . '/lib/AppInfo/Application.php');
 		$this->assertStringContainsString('AppIconService', $app);
-		$this->assertStringContainsString('headerIconPath()', $app);
+		$this->assertStringContainsString('NavGate::register(', $app, 'App menu entry must go through access-gated NavGate');
+		$this->assertMatchesRegularExpression(
+			"/NavGate::register\([\s\S]*?'app\.svg'/",
+			$app,
+			'NavGate must register the white header icon'
+		);
 		$this->assertStringNotContainsString(
 			"imagePath(self::APP_ID, 'app.svg')",
 			$app,
-			'Navigation must use cache-busted white header icon'
+			'Navigation must not bypass NavGate with a bare imagePath'
 		);
 
 		$widget = (string)file_get_contents($this->root . '/lib/Dashboard/ContinueWidget.php');
@@ -104,6 +109,6 @@ final class AppIconAssetsContractTest extends TestCase
 		$info = (string)file_get_contents($this->root . '/appinfo/info.xml');
 		$ver = trim((string)file_get_contents($this->root . '/appinfo/version'));
 		$this->assertMatchesRegularExpression('/<version>\s*' . preg_quote($ver, '/') . '\s*<\/version>/', $info);
-		$this->assertSame('1.3.9', $ver);
+		$this->assertSame('1.3.10', $ver);
 	}
 }

@@ -71,6 +71,9 @@
 				report.href = window.SbdAppFeedback.buildMailto('problem');
 				report.textContent = t('audiocheck', 'Report this problem');
 				toast.appendChild(report);
+				// Mark bound so the shared app-feedback MutationObserver does
+				// not append a second report link to this toast.
+				toast.dataset.appFeedbackBound = '1';
 			} catch (_) { /* mailto is best-effort */ }
 		}
 		const close = document.createElement('button');

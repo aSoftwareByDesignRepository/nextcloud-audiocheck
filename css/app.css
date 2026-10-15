@@ -5579,7 +5579,7 @@ body.ac-modal-open { overflow: hidden; }
 
 .ac-support-us__coverage,
 .ac-support-us__hint {
-	color: var(--color-text-maxcontrast);
+	color: var(--ac-muted-strong, var(--color-main-text));
 }
 
 .ac-support-us__hint a {

@@ -394,8 +394,6 @@ class PageController extends Controller
 			'apiScan' => $this->urlGenerator->linkToRoute('audiocheck.api.scanStatus'),
 			'apiPrefs' => $this->urlGenerator->linkToRoute('audiocheck.api.getPrefs'),
 			'apiPolicy' => $this->urlGenerator->linkToRoute('audiocheck.api.getAppPolicy'),
-			'stream' => $this->urlGenerator->linkToRoute('audiocheck.stream.play', ['fileId' => 'FILE_ID']),
-			'cover' => $this->urlGenerator->linkToRoute('audiocheck.cover.get', ['fileId' => 'FILE_ID']),
 		];
 	}
 }
