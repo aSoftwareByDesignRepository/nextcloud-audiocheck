@@ -56,7 +56,7 @@
 	height: 56px;
 	border-radius: var(--ac-radius-md);
 	background: var(--ac-tint-info);
-	color: var(--color-primary-element);
+	color: var(--ac-accent-ink, var(--color-primary-element));
 }
 
 #app-content.ac-app .ac-page-header__icon .ac-icon,

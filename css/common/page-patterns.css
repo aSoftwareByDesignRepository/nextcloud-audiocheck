@@ -71,7 +71,7 @@
 	margin: 0;
 	border-radius: var(--ac-radius-md);
 	background: var(--ac-tint-info);
-	color: var(--color-primary-element);
+	color: var(--ac-accent-ink, var(--color-primary-element));
 	box-shadow: none;
 }
 
@@ -82,7 +82,7 @@
 
 #app-content.ac-app .ac-empty__icon--app {
 	background: var(--ac-tint-info);
-	color: var(--color-primary-element);
+	color: var(--ac-accent-ink, var(--color-primary-element));
 	box-shadow: none;
 }
 
@@ -356,7 +356,7 @@
 	align-items: center;
 	justify-content: center;
 	flex-shrink: 0;
-	color: var(--color-primary-element);
+	color: var(--ac-accent-ink, var(--color-primary-element));
 }
 
 #app-content.ac-app .ac-get-app__icon-well .ac-icon {
@@ -371,7 +371,7 @@
 	font-weight: 650;
 	letter-spacing: 0.02em;
 	text-transform: uppercase;
-	color: var(--color-primary-element);
+	color: var(--ac-accent-ink, var(--color-primary-element));
 }
 
 #app-content.ac-app .ac-get-app__title {
@@ -461,7 +461,7 @@
 	border: 2px solid var(--color-primary-element);
 	border-radius: var(--ac-radius-md, 10px);
 	background: transparent;
-	color: var(--color-primary-element);
+	color: var(--ac-accent-ink, var(--color-primary-element));
 	font-weight: 700;
 	text-decoration: none;
 	cursor: pointer;
@@ -577,7 +577,7 @@
 	border: 2px solid var(--color-primary-element);
 	border-radius: var(--ac-radius-md, 10px);
 	background: transparent;
-	color: var(--color-primary-element);
+	color: var(--ac-accent-ink, var(--color-primary-element));
 	font-weight: 700;
 	font-size: var(--ac-fs-base, 1rem);
 	line-height: var(--ac-line-tight, 1.25);
