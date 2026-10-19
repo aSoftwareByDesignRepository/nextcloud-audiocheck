@@ -9,10 +9,19 @@
 	let seekJumpPendingKey = null;
 	let seekJumpSeq = 0;
 
+	/**
+	 * Deferred resume position for a track whose metadata has not loaded yet.
+	 * Any user-initiated seek must win over this pending restore — otherwise a
+	 * slow stream lets the loadedmetadata handler clobber a ±30 jump/scrub that
+	 * already landed (mini-jump e2e flake on loaded shared instances).
+	 */
+	let pendingRestoreSeekMs = null;
+
 	function clearSeekJumpPending() {
 		seekJumpPendingSec = null;
 		seekJumpPendingKey = null;
 		seekJumpSeq += 1;
+		pendingRestoreSeekMs = null;
 	}
 
 	const queue = [];
@@ -1052,6 +1061,7 @@
 			seekJumpPendingSec = nextSec;
 		}
 		const seq = ++seekJumpSeq;
+		pendingRestoreSeekMs = null;
 		a.currentTime = nextSec;
 		// Browsers often skip `seeked` when the assigned time equals the current
 		// position (e.g. −30 already at 0). Clear pending immediately then; otherwise
@@ -1390,11 +1400,15 @@
 					});
 				}
 			}
+			pendingRestoreSeekMs = Number(seekMs) || 0;
 			a.addEventListener('loadedmetadata', function onMeta() {
 				a.removeEventListener('loadedmetadata', onMeta);
 				if (gen !== loadGeneration || index !== i) return;
 				applyPlaybackRate(a);
-				const seek = Number(seekMs) || 0;
+				// User seeks (jump/scrub/chapters) clear pendingRestoreSeekMs;
+				// only apply the resume position when it is still ours to apply.
+				const seek = pendingRestoreSeekMs;
+				pendingRestoreSeekMs = null;
 				if (seek > 0) a.currentTime = seek / 1000;
 			});
 			if (!track.chapters) {
@@ -1467,6 +1481,7 @@
 	function prev() {
 		const a = audio();
 		if (a && a.currentTime > 3) {
+			pendingRestoreSeekMs = null;
 			a.currentTime = 0;
 			updateTransport();
 			return;

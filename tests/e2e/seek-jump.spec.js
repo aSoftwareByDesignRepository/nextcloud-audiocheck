@@ -419,6 +419,49 @@ test.describe('AudioCheck seek jump (±30s)', () => {
 		}, before, { timeout: 10_000 });
 	});
 
+	test('user jump wins over a late-arriving pending restore position', async ({ page }) => {
+		// Regression: on a slow stream, loadedmetadata lands AFTER the user has
+		// already seeked. The deferred resume position must not clobber that
+		// seek — previously the once-handler wrote a.currentTime = seekMs/1000
+		// unconditionally, snapping playback to the resume point (~45s).
+		await page.setViewportSize({ width: 900, height: 800 });
+		await page.route('**/apps/audiocheck/api/stream/**', async (route) => {
+			await new Promise((r) => setTimeout(r, 2500));
+			await route.continue();
+		});
+		await page.goto(`${BASE}/apps/audiocheck/`, { waitUntil: 'domcontentloaded' });
+		await waitForShell(page);
+		const loaded = await loadPlayableTrack(page);
+		test.skip(!loaded, 'No playable tracks in library — seed audio before seeking e2e');
+		// Clobber signature only detectable when the resume point is far from
+		// the seeked position — needs a long enough fixture track.
+		test.skip(loaded.startedAt < 30_000, 'Fixture track too short to distinguish a clobbered seek');
+
+		await page.waitForFunction(() => {
+			const back = document.getElementById('ac-mini-jump-back');
+			return !!(back && !back.disabled && window.getComputedStyle(back).display !== 'none');
+		}, null, { timeout: 25_000 });
+
+		await page.evaluate(() => { document.getElementById('ac-audio').currentTime = 35; });
+		const atClick = await page.evaluate(() => {
+			const a = document.getElementById('ac-audio');
+			return { currentTime: a.currentTime, readyState: a.readyState };
+		});
+		await page.locator('#ac-mini-jump-back').click();
+
+		const samples = [];
+		for (let i = 0; i < 40; i++) {
+			// eslint-disable-next-line no-await-in-loop
+			samples.push(await page.evaluate(() => document.getElementById('ac-audio').currentTime));
+			// eslint-disable-next-line no-await-in-loop
+			await page.waitForTimeout(250);
+		}
+		// The jump lands at ~5s and playback may advance normally from there;
+		// a clobbered seek would snap forward to the ~45s resume position.
+		const maxLate = Math.max(...samples);
+		expect(maxLate, `pending restore clobbered user seek (at-click ${JSON.stringify(atClick)})`).toBeLessThan(30);
+	});
+
 	test('mini player stays usable at 320px with three core controls', async ({ page }) => {
 		await page.setViewportSize({ width: 320, height: 640 });
 		await page.goto(`${BASE}/apps/audiocheck/`, { waitUntil: 'domcontentloaded' });

@@ -129,6 +129,10 @@ body,
 	--ac-danger-bg-hover: color-mix(in srgb, var(--ac-danger-ink) 24%, var(--color-main-background));
 	--ac-danger-border: color-mix(in srgb, var(--ac-danger-ink) 44%, var(--ac-border));
 	--ac-favorite-ink: var(--ac-danger-ink);
+	/* Status inks for tint wells/badges — *-text primaries, never bare pale
+	   --color-success/--color-warning in fills (fails AA on NC 30+). */
+	--ac-success-ink: var(--color-success-text, var(--color-success));
+	--ac-warning-ink: var(--color-warning-text, var(--color-warning));
 
 	--ac-notif-fg-info: var(--color-primary-element);
 	--ac-notif-fg-warning: var(--color-warning-text, var(--color-warning));
@@ -172,4 +176,15 @@ body[data-theme-dark-highcontrast],
 		--ac-shadow-md: 0 0 0 1px var(--ac-border-strong);
 		--ac-shadow-lg: 0 0 0 2px var(--ac-border-strong);
 	}
+}
+
+/* Accent ink for text-on-surface: --color-primary-element as text drops below
+   WCAG AA (~4.3:1) on dark themes — blend toward main-text there. */
+body {
+	--ac-accent-ink: var(--color-primary-element);
+}
+
+body[data-theme-dark],
+body[data-theme-dark-highcontrast] {
+	--ac-accent-ink: color-mix(in srgb, var(--color-primary-element) 70%, var(--color-main-text));
 }

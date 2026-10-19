@@ -30,7 +30,7 @@ final class DeskletStylesContractTest extends TestCase
 		self::assertStringContainsString('prefers-reduced-motion', $css);
 		self::assertStringContainsString('a.more', $css);
 		self::assertStringContainsString('-webkit-line-clamp: 3', $css);
-		self::assertStringContainsString('@media (max-width: 480px)', $css);
+		self::assertStringContainsString('@media (max-width: 479.98px)', $css);
 		self::assertStringContainsString('forced-colors: active', $css);
 	}
 

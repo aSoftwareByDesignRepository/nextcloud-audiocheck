@@ -41,6 +41,8 @@
 	max-width: 42ch;
 	margin: var(--ac-space-6) auto 0;
 	box-sizing: border-box;
+	/* clearance off the pinned mini-player edge for revealPageState() */
+	scroll-margin-block-end: var(--ac-space-3);
 	/* Principle 14: never frame empty states as cards */
 	background: transparent;
 	border: none;
@@ -51,6 +53,19 @@
 #app-content.ac-app .ac-page-body > .ac-empty--page,
 #app-content.ac-app .ac-page-body > .ac-empty-state--page {
 	max-width: 42ch;
+}
+
+/* Bounded panels sit under the pinned mini-player — the stacked page offset
+ * (space-6 margin + space-7 padding) pushed the whole state below the fold at
+ * common heights. Trim it so the reveal scroll keeps the most chrome in view,
+ * and keep clearance off the player edge for scrollIntoView alignment. */
+#app-content.ac-app .ac-media-library-panel > .ac-empty--page,
+#app-content.ac-app .ac-media-library-panel > .ac-empty-state--page,
+#app-content.ac-app .ac-library-shell .ac-empty--page,
+#app-content.ac-app .ac-library-shell .ac-empty-state--page {
+	margin-top: var(--ac-space-3);
+	padding-top: var(--ac-space-5);
+	padding-bottom: var(--ac-space-5);
 }
 
 #app-content.ac-app .ac-grid > .ac-empty,
@@ -618,7 +633,7 @@
 	}
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
 	#app-content.ac-app .ac-settings-chips {
 		flex-direction: column;
 	}

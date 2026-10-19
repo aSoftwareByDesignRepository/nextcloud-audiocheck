@@ -17,8 +17,8 @@ if (!function_exists('p')) {
 
 if (!function_exists('print_unescaped')) {
 	/**
-	 * Trusted markup helper (mirrors Nextcloud template API for unit renders).
-	 *
+	 * Trusted-markup escape hatch used for IconCatalog SVG output — mirrors
+	 * Nextcloud's print_unescaped() which echoes without escaping.
 	 * @param mixed $text
 	 */
 	function print_unescaped($text): void {

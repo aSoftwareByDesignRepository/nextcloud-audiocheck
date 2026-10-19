@@ -119,12 +119,12 @@ final class GlobalMiniPlayerContractTest extends TestCase
 		self::assertStringContainsString('data-ac-mini-state', $js);
 		$css = (string)file_get_contents($this->root . '/css/global-mini-player.css');
 		self::assertStringContainsString('ac-mini-player--idle', $css);
-		self::assertStringContainsString('max-width: 639px', $css);
+		self::assertStringContainsString('max-width: 639.98px', $css);
 		self::assertStringContainsString('.ac-mini-player .ac-transport-btn--jump', $css);
 		self::assertStringContainsString('ac-mini-player__transport[hidden]', $css);
 		$appCss = (string)file_get_contents($this->root . '/css/app.css');
 		self::assertStringContainsString('ac-mini-player--idle', $appCss);
-		self::assertStringContainsString('max-width: 639px', $appCss);
+		self::assertStringContainsString('max-width: 639.98px', $appCss);
 		self::assertFileExists($this->root . '/tests/e2e/mini-player-ux.spec.js');
 	}
 

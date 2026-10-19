@@ -174,6 +174,22 @@
 		}
 	}
 
+	/**
+	 * Keep a page-level state inside the scrollport. The pinned mini-player
+	 * eats the bottom edge of .ac-shell, so a state rendered below the fold
+	 * otherwise shows only its icon — title/message/recovery CTA hidden.
+	 * Skipped while the user is editing a field (never yank their input).
+	 * @param {HTMLElement} box
+	 */
+	function revealPageState(box) {
+		window.requestAnimationFrame(() => {
+			if (!box.isConnected || typeof box.scrollIntoView !== 'function') return;
+			const active = document.activeElement;
+			if (active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)) return;
+			box.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+		});
+	}
+
 	function browserCompatNote() {
 		const label = t('audiocheck', 'May not play in this browser');
 		const note = el('span', {
@@ -290,6 +306,7 @@
 					onClick: onCta,
 				}));
 			}
+			if (!isSection) revealPageState(box);
 			return box;
 		},
 		/**

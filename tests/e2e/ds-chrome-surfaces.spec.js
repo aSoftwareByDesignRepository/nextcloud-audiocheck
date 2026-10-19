@@ -316,8 +316,13 @@ test.describe('ds_chrome states', () => {
 				await waitForShell(page);
 				const empty = page.locator('#ac-main-content .ac-empty-state, #ac-main-content .ac-empty');
 				await expect(empty.first(), route).toBeVisible({ timeout: 30_000 });
+				// toBeVisible is bounding-box-based — the state must actually sit
+				// inside the scrollport (pinned mini-player eats the bottom edge).
+				await expect(empty.first(), route).toBeInViewport();
+				const cta = empty.first().locator('.ac-btn--primary');
+				await expect(cta, route).toBeInViewport();
+				await shot(page, 'ac-state-empty-' + route.split('/').pop());
 			}
-			await shot(page, 'ac-state-empty-music');
 		} finally {
 			await ctx.close();
 		}
@@ -335,6 +340,8 @@ test.describe('ds_chrome states', () => {
 		await expect(errorWell.first()).toContainText(loadErrLabel);
 		const retry = errorWell.locator('button', { hasText: await appT(page, 'Try again') }).first();
 		await expect(retry).toBeVisible();
+		// Occlusion regression: retry CTA must land inside the scrollport.
+		await expect(retry).toBeInViewport();
 		await shot(page, 'ac-state-error-music-retry');
 		await page.unroute('**/apps/audiocheck/api/tracks*');
 		await retry.click();

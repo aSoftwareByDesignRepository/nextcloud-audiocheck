@@ -29,6 +29,7 @@ body.ac-global-mini-player-host {
 	--ac-shadow-md: 0 4px 16px color-mix(in srgb, var(--color-main-text) 12%, transparent);
 	--ac-shadow-raised: 0 8px 24px color-mix(in srgb, var(--color-main-text) 16%, transparent);
 	--ac-tint-success: color-mix(in srgb, var(--color-success-text, var(--color-success, #2d7a3e)) 18%, var(--ac-bg-card));
+	--ac-success-ink: var(--color-success-text, var(--color-success, #2d7a3e));
 	--ac-tint-danger: color-mix(in srgb, var(--color-error-text, var(--color-error, #c00)) 18%, var(--ac-bg-card));
 	--ac-danger-border: color-mix(in srgb, var(--color-error-text, var(--color-error, #c00)) 44%, var(--ac-border));
 	--ac-danger-bg: var(--ac-tint-danger);
@@ -126,8 +127,8 @@ body.ac-global-mini-player-host {
 .ac-modal button.ac-btn--success,
 .ac-mini-player button.ac-btn--success {
 	background-color: var(--ac-tint-success);
-	color: var(--color-success-text, var(--color-success));
-	border-color: var(--color-success-text, var(--color-success));
+	color: var(--ac-success-ink);
+	border-color: var(--ac-success-ink);
 }
 
 #app-content.ac-app button.ac-btn--success:not(:disabled):hover,
@@ -136,7 +137,7 @@ body.ac-global-mini-player-host {
 .ac-modal button.ac-btn--success:not(:disabled):focus-visible,
 .ac-mini-player button.ac-btn--success:not(:disabled):hover,
 .ac-mini-player button.ac-btn--success:not(:disabled):focus-visible {
-	background-color: color-mix(in srgb, var(--color-success-text, var(--color-success)) 26%, var(--color-main-background));
+	background-color: color-mix(in srgb, var(--ac-success-ink) 26%, var(--color-main-background));
 }
 
 #app-content.ac-app button.ac-btn--icon,
@@ -439,7 +440,7 @@ body.ac-global-mini-player-host {
 }
 
 /* Phone: hide ±30s jumps on the mini bar (still on Now Playing) — 3 obvious buttons. */
-@media (max-width: 639px) {
+@media (max-width: 639.98px) {
 	.ac-mini-player .ac-transport-btn--jump {
 		display: none !important;
 	}
@@ -830,7 +831,7 @@ body.ac-global-mini-player-host {
 	}
 }
 
-@media (min-width: 768px) and (max-width: 1279px) {
+@media (min-width: 768px) and (max-width: 1279.98px) {
 	.ac-mini-player__inner {
 		grid-template-columns: minmax(0, 1fr) auto auto;
 		grid-template-rows: auto auto;

@@ -241,6 +241,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 }
 .ac-toast {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
 	gap: var(--ac-space-3);
@@ -290,6 +291,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 .ac-toast .ac-toast__text {
 	flex: 1 1 auto;
 	min-width: 0;
+	overflow-wrap: anywhere;
 }
 
 /* Restore core #content flex row: sidebar + main (ProjectCheck / TicketCheck pattern). */
@@ -1865,7 +1867,7 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 	border-radius: 999px;
 	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary-element) 35%, transparent);
 }
-@media (max-width: 639px) {
+@media (max-width: 639.98px) {
 	.ac-mini-player .ac-transport-btn--jump {
 		display: none !important;
 	}
@@ -2248,7 +2250,7 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 }
 
 /* Mobile card-list layout for library track rows (MobilityCheck-style) */
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
 	.ac-track-list:not(.ac-track-list--compact):not(.ac-now-queue):not(.ac-track-list--collection) {
 		display: grid;
 		gap: var(--ac-space-3);
@@ -3408,9 +3410,9 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 }
 
 .ac-now-status--playing {
-	border-color: color-mix(in srgb, var(--color-success-text, var(--color-success)) 40%, var(--ac-border));
-	background: color-mix(in srgb, var(--color-success-text, var(--color-success)) 12%, var(--ac-surface));
-	color: var(--color-success-text, var(--color-success));
+	border-color: color-mix(in srgb, var(--ac-success-ink) 40%, var(--ac-border));
+	background: color-mix(in srgb, var(--ac-success-ink) 12%, var(--ac-surface));
+	color: var(--ac-success-ink);
 }
 
 .ac-now-status--paused {
@@ -4358,7 +4360,7 @@ body.ac-modal-open { overflow: hidden; }
 }
 
 /* —— Mobile / tablet shell (<1024px): drawer nav + hide core NC toggle —— */
-@media (max-width: 1023px) {
+@media (max-width: 1023.98px) {
 
 	.ac-now-queue .ac-track-list__item,
 	.ac-track-list--compact .ac-track-list__item {
@@ -4958,7 +4960,7 @@ body.ac-modal-open { overflow: hidden; }
 	display: none;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 479.98px) {
 	.ac-global-search__inner {
 		flex-direction: column;
 		align-items: stretch;
@@ -5355,9 +5357,9 @@ body.ac-modal-open { overflow: hidden; }
 	border-radius: 999px;
 	font-size: var(--ac-fs-sm);
 	font-weight: 600;
-	color: var(--color-error-text, var(--color-error));
-	background: color-mix(in srgb, var(--color-error-text, var(--color-error)) 12%, var(--color-main-background));
-	border: 1px solid color-mix(in srgb, var(--color-error-text, var(--color-error)) 35%, transparent);
+	color: var(--ac-danger-ink);
+	background: color-mix(in srgb, var(--ac-danger-ink) 12%, var(--color-main-background));
+	border: 1px solid color-mix(in srgb, var(--ac-danger-ink) 35%, transparent);
 }
 .ac-home-hero__resume {
 	align-self: flex-start;
@@ -5579,7 +5581,7 @@ body.ac-modal-open { overflow: hidden; }
 
 .ac-support-us__coverage,
 .ac-support-us__hint {
-	color: var(--ac-muted-strong, var(--color-main-text));
+	color: var(--color-text-maxcontrast);
 }
 
 .ac-support-us__hint a {
@@ -5721,7 +5723,7 @@ body.ac-modal-open { overflow: hidden; }
 	border: 0;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
 	.ac-support-us__options {
 		grid-template-columns: 1fr;
 	}
