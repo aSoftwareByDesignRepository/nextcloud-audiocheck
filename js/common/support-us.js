@@ -84,13 +84,16 @@
 	}
 
 	function t(appId, key, args) {
-		if (typeof global.t === 'function') {
-			return global.t(appId, key, args);
-		}
-		if (args && args[0] !== undefined && key.indexOf('%s') !== -1) {
-			return key.replace('%s', String(args[0]));
-		}
-		return key;
+		var out = (typeof global.t === 'function') ? global.t(appId, key, args) : key;
+		// OC.L10N.translate substitutes only %n (count) and {name} tokens —
+		// sprintf-style %s in the shared catalog keys must be applied after
+		// lookup, or the placeholder renders literally on real pages.
+		var list = args || [];
+		var i = 0;
+		return out.replace(/%s/g, function () {
+			var v = list[i++];
+			return v === undefined || v === null ? '%s' : String(v);
+		});
 	}
 
 	function el(tag, attrs, children) {

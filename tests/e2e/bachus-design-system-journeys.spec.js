@@ -116,6 +116,13 @@ test.describe('Bachus design-system journeys', () => {
 		await page.locator('[data-ac-settings-chip="support"]').click();
 		await expect(page).toHaveURL(/\/apps\/audiocheck\/app-settings\/support\/?$/);
 		await expect(page.locator('#ac-settings-support')).toBeVisible();
+		// raw_placeholder_rendered regression: the shared support-us intro must
+		// name the app — OC.L10N never substitutes sprintf %s, so a raw
+		// placeholder here means the post-lookup substitution broke again.
+		const intro = page.locator('.ac-support-us__intro');
+		await expect(intro).toBeVisible();
+		await expect(intro).toContainText('AudioCheck');
+		await expect(intro).not.toContainText('%s');
 		await expect(page.locator('[data-ac-settings-savebar]')).toHaveCount(0);
 	});
 

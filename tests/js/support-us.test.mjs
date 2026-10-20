@@ -113,6 +113,8 @@ assert.ok(noMobileText.includes('(opens in a new tab)'));
 assert.ok(noMobileText.includes('invoiceable service'));
 assert.ok(noMobileText.includes('individual partner offer'));
 assert.ok(noMobileText.includes('bookable help on an invoice, choose an option below'));
+assert.ok(noMobileText.includes('AudioCheck'), 'intro must name the app, not a placeholder');
+assert.ok(!noMobileText.includes('%s'), 'literal %s must never reach the DOM');
 assert.ok(noMobileText.includes('billed as a service'));
 assert.ok(noMobileText.includes('billed as project work'));
 assert.ok(!noMobileText.includes('official mobile licenses'));
@@ -135,5 +137,23 @@ const mobileText = collectText(mobileMount);
 assert.ok(mobileText.includes('official mobile licenses'));
 assert.ok(mobileText.includes('software licence on invoice'));
 assert.ok(!mobileText.includes('bookable help on an invoice, choose an option below'));
+assert.ok(mobileText.includes('AudioCheck'), 'mobile-variant intro must name the app');
+assert.ok(!mobileText.includes('%s'), 'literal %s must never reach the DOM');
+
+// Regression (raw_placeholder_rendered): real OC.L10N.translate substitutes
+// only %n/{name} — never a bare sprintf %s. Replay the module with a faithful
+// stub so this class cannot hide behind the no-t fallback branch again.
+const rawDoc = makeDocument();
+const rawSandbox = { window: {}, globalThis: {}, document: rawDoc, OC: { getLanguage: () => 'en' } };
+rawSandbox.window = rawSandbox;
+rawSandbox.globalThis = rawSandbox;
+rawSandbox.t = (appId2, text) => text;
+vm.runInNewContext(src, rawSandbox);
+const rawMount = rawDoc.createElement('div');
+const rawSection = rawSandbox.SbdSupportUs.render(rawMount, { appId: 'audiocheck', shellPrefix: 'ac' });
+const rawText = collectText(rawSection);
+assert.ok(rawText.includes('AudioCheck'), 'intro must name the app under real OC.L10N semantics');
+assert.ok(!rawText.includes('%s'), 'literal %s must never reach the DOM');
+assert.ok(rawText.includes('stays free (AGPL)'));
 
 console.log('support-us.js contract OK (audiocheck)');
