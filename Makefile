@@ -38,7 +38,7 @@ release: composer-prod
 			rm -rf "$$staging"; \
 			exit 1; \
 		fi && \
-		tar -czf $(archive_path) -C "$$staging" $(app_name) && \
+		tar --mode='u+rwX,go+rX,go-w' --owner=0 --group=0 --numeric-owner -czf $(archive_path) -C "$$staging" $(app_name) && \
 		rm -rf "$$staging"
 	@echo "Created $(archive_path)"
 
@@ -57,6 +57,7 @@ verify-release:
 
 verify-signature-manifest:
 	@test -f $(archive_path) || (echo "Error: Run 'make release-signed' first"; exit 1)
+	@python3 ../../ready2publish/scripts/verify-app-signature-archive.py $(app_name) $(archive_path)
 	@tmpdir=$$(mktemp -d) && \
 		trap 'rm -rf "$$tmpdir"' EXIT && \
 		tar -xzf $(archive_path) -C "$$tmpdir" "$(app_name)/appinfo/signature.json" && \
