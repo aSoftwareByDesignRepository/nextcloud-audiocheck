@@ -689,7 +689,7 @@ OC.L10N.register(
 	"Volume" : "Volume",
 	"Volume controls" : "Controlos de volume",
 	"Volume up \/ down" : "Aumentar \/ diminuir volume",
-	"Volume {percent}%" : "Volume {percent}%%",
+	"Volume {percent}%" : "Volume {percent} %%",
 	"What is in this folder?" : "O que existe nesta pasta?",
 	"What you can do" : "O que pode fazer",
 	"When enabled, opening a track continues from your saved position." : "Quando ativo, abrir uma faixa continua da sua posição guardada.",
