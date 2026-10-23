@@ -582,7 +582,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	gap: var(--ac-space-3);
 	margin-bottom: var(--ac-space-4);
 }
-@media (min-width: 768px) {
+@media (min-width: 769px) {
 	.ac-section__header {
 		grid-template-columns: minmax(0, 1fr) auto;
 		align-items: start;
@@ -1331,7 +1331,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 		grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
 	}
 }
-@media (min-width: 768px) {
+@media (min-width: 769px) {
 	.ac-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
 }
 @media (min-width: 1200px) {
@@ -2250,7 +2250,7 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 }
 
 /* Mobile card-list layout for library track rows (MobilityCheck-style) */
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	.ac-track-list:not(.ac-track-list--compact):not(.ac-now-queue):not(.ac-track-list--collection) {
 		display: grid;
 		gap: var(--ac-space-3);
@@ -2378,7 +2378,7 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 		justify-content: flex-start;
 	}
 }
-@media (min-width: 768px) {
+@media (min-width: 769px) {
 	.ac-actions-overflow {
 		display: contents;
 	}
@@ -2411,7 +2411,7 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 	box-sizing: border-box;
 }
 /* ≥768px: cap form field width on tablet/desktop (labels already block-stacked) */
-@media (min-width: 768px) {
+@media (min-width: 769px) {
 	.ac-form-row select,
 	.ac-form-row input[type="text"],
 	.ac-form-row input[type="number"],
@@ -2942,7 +2942,7 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 
 .ac-entity-picker { position: relative; width: 100%; max-width: none; }
 /* ≥768px: align entity picker width with other form fields */
-@media (min-width: 768px) {
+@media (min-width: 769px) {
 	.ac-entity-picker { max-width: 420px; }
 }
 .ac-entity-picker__q { width: 100%; }
@@ -4296,7 +4296,7 @@ body.ac-modal-open { overflow: hidden; }
 		grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
 	}
 }
-@media (min-width: 768px) {
+@media (min-width: 769px) {
 	.ac-playlist-grid { grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); }
 }
 .ac-playlist-card {
@@ -4661,7 +4661,7 @@ body.ac-modal-open { overflow: hidden; }
 }
 
 /* Mini-player: tablet 2-row (track + transport + volume popover | full-width seek) */
-@media (min-width: 768px) and (max-width: 1279.98px) {
+@media (min-width: 769px) and (max-width: 1279.98px) {
 	.ac-mini-player__inner {
 		grid-template-columns: minmax(0, 1fr) auto auto;
 		grid-template-rows: auto auto;
@@ -5122,7 +5122,7 @@ body.ac-modal-open { overflow: hidden; }
 	gap: var(--ac-space-2);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 769px) {
 	.ac-facet-group__summary .ac-media-folder-group__name {
 		flex: 1 1 auto;
 		min-width: 0;
@@ -5723,7 +5723,7 @@ body.ac-modal-open { overflow: hidden; }
 	border: 0;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 768.98px) {
 	.ac-support-us__options {
 		grid-template-columns: 1fr;
 	}

@@ -1,0 +1,3 @@
+# Reviewed Norwegian Bokmål compounds OOV in the flat nb_NO wordlist.
+pauset # reviewed — past participle of å pause (correct Bokmål)
+forespørselstoken # reviewed — forespørsel + token (CSRF term; token is the accepted loanword)

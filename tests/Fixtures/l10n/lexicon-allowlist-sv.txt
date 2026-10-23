@@ -1,0 +1,2 @@
+# Reviewed Swedish compounds / loanwords OOV in the flat sv_SE wordlist.
+fjärronboarding # reviewed — fjärr + onboarding (accepted loanword compound)
