@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.3.11 - 2026-10-25
+
+### Fixed
+
+- media-boundary migration + l10n donor-bleed/mangle sweep
+- Fix literal %s in Support & us intro (shared pack re-sync)
+- r3 close-out — status-ink tokens, seek-restore race, revealPageState viewport
+- dark-theme accent-ink token + e2e user-state reset
+
+### Changed
+
+- l10n: fix playlist-item mistranslations (fr poste->element, pt_BR ponto->item)
+- normalize tarball modes + host-side signature audit (GH #47)
+- shared e2e instance-lock harness
+- app-feedback footer parity + contract test sync
+- Atlas v3.5.15 evaluated tree — NavGate, strict-id routes, toast-dedup, UpgradeBackup hardening
+- add UpgradeBackupStateGuard test support; sync contract tests + l10n catalogs
+
 ## 1.3.10 - 2026-10-13
 
 ### Fixed
