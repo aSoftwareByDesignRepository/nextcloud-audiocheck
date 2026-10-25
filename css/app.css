@@ -144,7 +144,7 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 
 .ac-page-header__main {
 	display: grid;
-	grid-template-columns: 56px 1fr;
+	grid-template-columns: 56px minmax(0, 1fr);
 	gap: var(--ac-space-4);
 	align-items: start;
 }
@@ -164,6 +164,9 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	font-size: var(--ac-fs-2xl, var(--ac-fs-xl));
 	font-weight: 600;
 	line-height: var(--ac-line-tight, 1.2);
+	/* Long compounds must wrap, never widen the header track. */
+	overflow-wrap: anywhere;
+	hyphens: auto;
 }
 .ac-page-header__lead,
 #ac-page-lead {
@@ -2121,7 +2124,7 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 .ac-controls-ref__intro { margin-bottom: var(--ac-space-4); }
 .ac-controls-ref__list {
 	display: grid;
-	grid-template-columns: auto 1fr;
+	grid-template-columns: auto minmax(0, 1fr);
 	gap: var(--ac-space-2) var(--ac-space-4);
 	margin: 0 0 var(--ac-space-4);
 	padding: 0;
@@ -4603,7 +4606,7 @@ body.ac-modal-open { overflow: hidden; }
 
 @media (min-width: 1024px) {
 	#app-content.ac-app .ac-page-header__main {
-		grid-template-columns: 64px 1fr auto;
+		grid-template-columns: 64px minmax(0, 1fr) auto;
 	}
 	#app-content.ac-app #ac-page-actions.ac-page-header__actions {
 		grid-column: 3;
@@ -4787,7 +4790,7 @@ body.ac-modal-open { overflow: hidden; }
 
 .ac-shortcuts__list {
 	display: grid;
-	grid-template-columns: auto 1fr;
+	grid-template-columns: auto minmax(0, 1fr);
 	gap: var(--ac-space-2) var(--ac-space-4);
 	margin: 0;
 	padding: 0;

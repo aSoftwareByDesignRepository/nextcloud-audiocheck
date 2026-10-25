@@ -395,7 +395,7 @@ OC.L10N.register(
 	"On" : "Attivo",
 	"On-screen controls" : "Controlli sullo schermo",
 	"One" : "Uno",
-	"One-time purchase in Google Play. The price for your country is shown on the listing. No public iOS app yet." : "Acquisto di una volta in Google Play. Il prezzo per il vostro paese è indicato nella lista. Nessuna applicazione iOS pubblica ancora.",
+	"One-time purchase in Google Play. The price for your country is shown on the listing. No public iOS app yet." : "Acquisto una tantum su Google Play. Il prezzo per il Suo Paese è indicato nella scheda. Nessuna app iOS pubblica per ora.",
 	"Only folders you add appear in your library." : "In libreria compaiono solo le cartelle aggiunte.",
 	"Only listed people and groups can open the app." : "Solo le persone e i gruppi elencati possono aprire l’app.",
 	"Only listed users and groups can open the app. Administrators always keep access." : "Solo utenti e gruppi elencati possono aprire l'app. Gli amministratori tengono sempre l'accesso.",
