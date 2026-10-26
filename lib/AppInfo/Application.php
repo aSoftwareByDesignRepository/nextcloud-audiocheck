@@ -248,6 +248,8 @@ class Application extends App implements IBootstrap
 		$context->registerService(\OCA\AudioCheck\BackgroundJob\ScanSchedulerJob::class, fn ($c) => new \OCA\AudioCheck\BackgroundJob\ScanSchedulerJob(
 			$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
 			$c->query(ScanService::class),
+			$c->query(ILockingProvider::class),
+			$c->query(\Psr\Log\LoggerInterface::class),
 		));
 	}
 

@@ -38,7 +38,7 @@ final class EnsureAudioCheckSchema implements IRepairStep
 		$needsMigrate = $missingBefore !== [] || $this->missingLibraryContentKindColumn();
 
 		if (!$needsMigrate) {
-			$output->info('AudioCheck: all ' . count(AudioCheckTableCatalog::TABLES) . ' tables are present.');
+			$output->info('AudioCheck: all ' . count(SchemaTableCatalog::EXPECTED_TABLES) . ' tables are present.');
 			return;
 		}
 
@@ -74,7 +74,7 @@ final class EnsureAudioCheckSchema implements IRepairStep
 	private function missingTables(): array
 	{
 		$missing = [];
-		foreach (AudioCheckTableCatalog::TABLES as $table) {
+		foreach (SchemaTableCatalog::EXPECTED_TABLES as $table) {
 			if (!$this->connection->tableExists($table)) {
 				$missing[] = $table;
 			}
