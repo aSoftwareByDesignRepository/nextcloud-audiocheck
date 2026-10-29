@@ -5884,7 +5884,8 @@ body.ac-modal-open { overflow: hidden; }
 	font-size: var(--ac-fs-sm, 0.875rem);
 	line-height: var(--ac-line-base, 1.45);
 	white-space: normal;
-	overflow-wrap: anywhere;
+	/* Menu labels keep normal word breaks — anywhere tears mid-word. */
+	overflow-wrap: break-word;
 }
 
 .ac-nav-footer__menu-item:hover {
