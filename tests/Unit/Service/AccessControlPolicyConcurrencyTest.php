@@ -145,11 +145,29 @@ final class AccessControlPolicyConcurrencyTest extends TestCase
 		]);
 	}
 
-	public function testLegacyFullPayloadWithoutSectionStillReplacesAll(): void
+	public function testFullPayloadWithoutPolicyVersionRaisesConflict(): void
+	{
+		// Fail-closed CAS: omitting the base version must never silently win —
+		// a version-less write can clobber a concurrent admin's change.
+		$svc = $this->makeService();
+		$this->expectException(ConflictException::class);
+		$svc->saveAppPolicy([
+			'appAdminUserIds' => [],
+			'accessRestrictionEnabled' => false,
+			'allowedUserIds' => [],
+			'allowedGroupIds' => [],
+			'defaultLibraryFolder' => '/',
+			'maxMetaTempMb' => 256,
+		]);
+	}
+
+	public function testFullPayloadWithCurrentVersionStillReplacesAll(): void
 	{
 		$this->store[AccessControlService::KEY_APP_ADMINS] = json_encode(['delegate'], JSON_THROW_ON_ERROR);
 		$svc = $this->makeService();
+		$before = $svc->getAppPolicy();
 		$out = $svc->saveAppPolicy([
+			'policyVersion' => $before['policyVersion'],
 			'appAdminUserIds' => [],
 			'accessRestrictionEnabled' => false,
 			'allowedUserIds' => [],
@@ -158,7 +176,7 @@ final class AccessControlPolicyConcurrencyTest extends TestCase
 			'maxMetaTempMb' => 256,
 		]);
 		$this->assertSame([], $out['appAdminUserIds']);
-		$this->assertGreaterThan(3, $out['policyVersion']);
+		$this->assertGreaterThan($before['policyVersion'], $out['policyVersion']);
 	}
 
 	public function testInvalidSectionRejected(): void

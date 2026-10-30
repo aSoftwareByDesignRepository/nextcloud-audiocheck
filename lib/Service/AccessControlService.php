@@ -167,12 +167,14 @@ class AccessControlService
 		}
 		$sectionScoped = $section !== null && $section !== '';
 
-		if (array_key_exists('policyVersion', $payload)) {
-			$clientVersion = (int)$payload['policyVersion'];
-			$currentVersion = $this->getPolicyVersion();
-			if ($clientVersion !== $currentVersion) {
-				throw new ConflictException('Policy was changed elsewhere. Reload and try again.');
-			}
+		// Fail-closed CAS: a write without the base version can silently clobber a
+		// concurrent admin's change — omitting the token is a 409, never a merge.
+		if (!array_key_exists('policyVersion', $payload)) {
+			throw new ConflictException('Policy was changed elsewhere. Reload and try again.');
+		}
+		$clientVersion = (int)$payload['policyVersion'];
+		if ($clientVersion !== $this->getPolicyVersion()) {
+			throw new ConflictException('Policy was changed elsewhere. Reload and try again.');
 		}
 
 		$adminIds = $this->getAppAdminIds();
