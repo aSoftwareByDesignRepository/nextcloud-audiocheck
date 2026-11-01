@@ -76,8 +76,7 @@
 					const ta = a.trackNo != null ? a.trackNo : null;
 					const tb = b.trackNo != null ? b.trackNo : null;
 					if (ta !== null && tb !== null && ta !== tb) cmp = ta - tb;
-					else if (ta !== null) cmp = -1;
-					else if (tb !== null) cmp = 1;
+					else if ((ta === null) !== (tb === null)) cmp = ta !== null ? -1 : 1;
 				}
 			}
 			if (cmp === 0) {

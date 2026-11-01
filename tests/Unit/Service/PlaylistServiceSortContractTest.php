@@ -64,6 +64,17 @@ final class PlaylistServiceSortContractTest extends TestCase
 		$this->assertStringContainsString("'sortMode' =>", $src);
 	}
 
+	public function testItemPayloadExposesTrackNumbers(): void
+	{
+		// The web client re-sorts playlist items locally for the 'track' modes;
+		// without m.track_no/m.disc_no in the payload it silently title-sorts.
+		$src = self::src('lib/Service/PlaylistService.php');
+		$this->assertStringContainsString("'m.track_no'", $src);
+		$this->assertStringContainsString("'m.disc_no'", $src);
+		$this->assertStringContainsString("'trackNo' =>", $src);
+		$this->assertStringContainsString("'discNo' =>", $src);
+	}
+
 	public function testMigrationAddsUiSortColumn(): void
 	{
 		$src = self::src('lib/Migration/Version1009Date20261031130000.php');

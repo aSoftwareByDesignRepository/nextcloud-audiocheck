@@ -80,7 +80,17 @@ test.describe('Library folders UX simplification', () => {
 			await options.locator('summary').click();
 			await expect(options).toHaveAttribute('open', '');
 			await expect(first.locator('.ac-seg[role="radiogroup"]')).toBeVisible();
-			await expect(first.locator('.ac-library-card__check[type="checkbox"]')).toBeVisible();
+			// Two opt-in checkboxes: include-subfolders scope + group-by-folder.
+			await expect(first.locator('.ac-library-card__check[type="checkbox"]')).toHaveCount(2);
+			const groupToggle = first.locator('input[id^="ac-library-group-"]');
+			await expect(groupToggle).toBeVisible();
+			// The hint text must be wired via aria-describedby to a real element.
+			const hintId = await groupToggle.getAttribute('aria-describedby');
+			expect(hintId, 'group toggle needs aria-describedby').toBeTruthy();
+			await expect(first.locator(`[id="${hintId}"]`)).toHaveText(/./);
+			// Label association: clicking the label must toggle the input.
+			const groupLabel = first.locator(`label[for="${await groupToggle.getAttribute('id')}"]`);
+			await expect(groupLabel).toBeVisible();
 
 			// Keyboard: focus summary and toggle with Enter
 			await options.locator('summary').focus();
@@ -137,6 +147,88 @@ test.describe('Library folders UX simplification', () => {
 			.exclude('.ac-toast-fallback')
 			.analyze();
 		expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
+	});
+
+	test('group-by-folder toggle persists through the API and restores', async ({ page }) => {
+		test.skip(!hasAnyCreds(), 'needs creds');
+		await openLibrary(page);
+
+		const cards = page.locator('.ac-library-card');
+		test.skip((await cards.count()) === 0, 'no library cards on this fixture');
+
+		// Pick the lightest library so the triggered rescan stays cheap.
+		const listRes = await page.evaluate(async () => {
+			const token = document.querySelector('input[name="requesttoken"]')?.getAttribute('value') || '';
+			const res = await fetch('/index.php/apps/audiocheck/api/libraries', {
+				credentials: 'same-origin',
+				headers: { requesttoken: token, 'OCS-APIRequest': 'true', Accept: 'application/json' },
+			});
+			return res.json();
+		});
+		const libs = (listRes.libraries || []).filter((l) => l && l.id);
+		test.skip(libs.length === 0, 'no libraries for this user');
+		const target = libs.reduce((a, b) => (a.trackCount <= b.trackCount ? a : b));
+
+		const input = page.locator(`#ac-library-group-${target.id}`);
+		const card = page.locator('.ac-library-card', { has: input });
+		const options = card.locator('details.ac-library-card__options');
+		if (!(await options.getAttribute('open'))) {
+			await options.locator('summary').click();
+		}
+		await expect(input).toBeVisible();
+		const before = target.groupByFolder === true;
+		await expect(input).toBeChecked({ checked: before });
+
+		const readBack = async () => {
+			const r = await page.evaluate(async () => {
+				const token = document.querySelector('input[name="requesttoken"]')?.getAttribute('value') || '';
+				const res = await fetch('/index.php/apps/audiocheck/api/libraries', {
+					credentials: 'same-origin',
+					headers: { requesttoken: token, 'OCS-APIRequest': 'true', Accept: 'application/json' },
+				});
+				return res.json();
+			});
+			return (r.libraries || []).find((l) => l.id === target.id);
+		};
+
+		try {
+			// Flip → PUT persists → API re-read shows the new flag.
+			const putResp = page.waitForResponse(
+				(r) => r.url().includes(`/api/libraries/${target.id}`) && r.request().method() === 'PUT',
+			);
+			await input.click();
+			expect((await putResp).status()).toBe(200);
+			await expect.poll(async () => (await readBack())?.groupByFolder).toBe(!before);
+			// The card re-rendered on refresh (options collapsed) — reopen and
+			// confirm the control reflects the persisted server flag.
+			const freshCard = page.locator('.ac-library-card', { has: page.locator(`#ac-library-group-${target.id}`) });
+			await freshCard.locator('details.ac-library-card__options summary').click();
+			const freshInput = page.locator(`#ac-library-group-${target.id}`);
+			await expect(freshInput).toBeChecked({ checked: !before });
+		} finally {
+			// Restore via the API (the card re-renders closed on refresh — a UI
+			// re-click is teardown churn, not additional contract).
+			const now = (await readBack())?.groupByFolder === true;
+			if (now !== before) {
+				const res = await page.evaluate(async ({ id, val }) => {
+					const token = document.querySelector('input[name="requesttoken"]')?.getAttribute('value') || '';
+					const r = await fetch(`/index.php/apps/audiocheck/api/libraries/${id}`, {
+						method: 'PUT',
+						credentials: 'same-origin',
+						headers: {
+							requesttoken: token,
+							'OCS-APIRequest': 'true',
+							Accept: 'application/json',
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify({ groupByFolder: val }),
+					});
+					return r.status;
+				}, { id: target.id, val: before });
+				expect(res).toBe(200);
+			}
+			await expect.poll(async () => (await readBack())?.groupByFolder).toBe(before);
+		}
 	});
 
 	test('settings still explains Author/Book nesting for scan defaults', async ({ page }) => {

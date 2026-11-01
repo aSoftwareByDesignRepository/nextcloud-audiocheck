@@ -82,3 +82,14 @@ test('sortPlaylistItems: track mode honors disc then trackNo, nulls last', () =>
 	assert.deepEqual(sortPlaylistItems(items, 'track').map((i) => i.id), [4, 3, 2, 1]);
 	assert.deepEqual(sortPlaylistItems(items, 'track_desc').map((i) => i.id), [1, 2, 3, 4]);
 });
+
+test('sortPlaylistItems: equal trackNo on same disc falls back to title (PHP parity)', (t) => {
+	const { sortPlaylistItems } = load();
+	// Same disc + same trackNo must not pick an arbitrary winner — the title
+	// tiebreak decides, exactly like PlaylistService::sortItems (cmp stays 0).
+	const items = [
+		{ id: 1, title: 'Zulu', discNo: 1, trackNo: 3 },
+		{ id: 2, title: 'Alpha', discNo: 1, trackNo: 3 },
+	];
+	assert.deepEqual(sortPlaylistItems(items, 'track').map((i) => i.id), [2, 1]);
+});

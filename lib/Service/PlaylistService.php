@@ -360,7 +360,7 @@ class PlaylistService
 	private function listItems(string $userId, int $playlistId): array
 	{
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('pi.id', 'pi.file_id', 'pi.sort_order', 'm.title', 'm.artist', 'm.album', 'm.duration_ms', 'm.mimetype', 'm.kind')
+		$qb->select('pi.id', 'pi.file_id', 'pi.sort_order', 'm.title', 'm.artist', 'm.album', 'm.duration_ms', 'm.mimetype', 'm.kind', 'm.track_no', 'm.disc_no')
 			->from('ac_playlist_items', 'pi')
 			->leftJoin('pi', 'ac_tracks', 't', $qb->expr()->andX(
 				$qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)),
@@ -389,6 +389,8 @@ class PlaylistService
 				'browserPlayable' => $mime === '' || $this->fileAccess->isLikelyBrowserPlayable($mime),
 				'nativePlayable' => $mime === '' || $this->fileAccess->isLikelyNativeMobilePlayable($mime),
 				'unavailable' => !$accessible,
+				'trackNo' => $accessible && $row['track_no'] !== null ? (int)$row['track_no'] : null,
+				'discNo' => $accessible && $row['disc_no'] !== null ? (int)$row['disc_no'] : null,
 			];
 		}
 		$result->closeCursor();

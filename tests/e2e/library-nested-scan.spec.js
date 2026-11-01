@@ -48,7 +48,7 @@ test.describe('Library nested scan UX', () => {
 		if (await card.count()) {
 			const options = card.locator('details.ac-library-card__options');
 			await options.locator('summary').click();
-			await expect(card.locator('.ac-library-card__check[type="checkbox"]')).toBeVisible();
+			await expect(card.locator('input[id^="ac-library-scope-"]')).toBeVisible();
 		}
 
 		await page.goto(BASE + '/apps/audiocheck/settings', { waitUntil: 'domcontentloaded' });
