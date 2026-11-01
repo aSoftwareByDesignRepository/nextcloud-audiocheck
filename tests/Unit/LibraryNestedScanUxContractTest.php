@@ -80,6 +80,45 @@ final class LibraryNestedScanUxContractTest extends TestCase
 		}
 	}
 
+	public function testGroupByFolderToggleCopyFollowsContentKind(): void
+	{
+		$js = (string)file_get_contents($this->root . '/js/views/library.js');
+		// The flag groups collections for every content kind — the toggle copy
+		// must name what the card actually holds, not claim audiobook-only scope.
+		$this->assertStringContainsString("t('audiocheck', 'Group audiobooks by folder')", $js);
+		$this->assertStringContainsString("t('audiocheck', 'Group albums by folder')", $js);
+		$this->assertStringContainsString("t('audiocheck', 'Group collections by folder')", $js);
+		$this->assertStringContainsString("kind === 'audiobook'", $js);
+		$this->assertStringContainsString("kind === 'music'", $js);
+		$this->assertStringContainsString('under each book folder', $js);
+		$this->assertStringContainsString('under each folder', $js);
+	}
+
+	public function testGroupByFolderKindCopyTranslated(): void
+	{
+		foreach (['en', 'de', 'fr'] as $lang) {
+			$json = json_decode((string)file_get_contents($this->root . '/l10n/' . $lang . '.json'), true);
+			$t = $json['translations'] ?? [];
+			foreach ([
+				'Group albums by folder',
+				'Group collections by folder',
+				'Collects every audio file under each folder — including CD 1 / CD 2 subfolders — into one collection, even when tags are missing or inconsistent.',
+			] as $key) {
+				$this->assertArrayHasKey($key, $t);
+				$this->assertNotSame('', trim((string)$t[$key]));
+			}
+			// No catalog may reuse the audiobook wording for the generic label.
+			$this->assertNotSame(
+				(string)$t['Group audiobooks by folder'],
+				(string)$t['Group collections by folder'],
+			);
+			$this->assertNotSame(
+				(string)$t['Group audiobooks by folder'],
+				(string)$t['Group albums by folder'],
+			);
+		}
+	}
+
 	public function testLayoutHintHasReadableSpacing(): void
 	{
 		$css = (string)file_get_contents($this->root . '/css/app.css');

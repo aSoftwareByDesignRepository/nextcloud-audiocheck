@@ -478,6 +478,15 @@
 			function renderGroupByFolderToggle(lib, handlersRef) {
 				const groupId = 'ac-library-group-' + lib.id;
 				const hintId = groupId + '-hint';
+				const kind = lib.contentKind || 'auto';
+				const labelText = kind === 'audiobook'
+					? t('audiocheck', 'Group audiobooks by folder')
+					: (kind === 'music'
+						? t('audiocheck', 'Group albums by folder')
+						: t('audiocheck', 'Group collections by folder'));
+				const hintText = kind === 'audiobook'
+					? t('audiocheck', 'Collects every audio file under each book folder — including CD 1 / CD 2 subfolders — into one collection, even when tags are missing or inconsistent.')
+					: t('audiocheck', 'Collects every audio file under each folder — including CD 1 / CD 2 subfolders — into one collection, even when tags are missing or inconsistent.');
 				const field = C.el('div', { className: 'ac-library-card__field ac-library-card__field--group' });
 				const row = C.el('div', { className: 'ac-library-card__check-row' });
 				const input = C.el('input', {
@@ -513,13 +522,13 @@
 				row.appendChild(input);
 				row.appendChild(C.el('label', {
 					attrs: { for: groupId },
-					text: t('audiocheck', 'Group audiobooks by folder'),
+					text: labelText,
 				}));
 				field.appendChild(row);
 				field.appendChild(C.el('p', {
 					className: 'ac-field__hint',
 					id: hintId,
-					text: t('audiocheck', 'Collects every audio file under each book folder — including CD 1 / CD 2 subfolders — into one collection, even when tags are missing or inconsistent.'),
+					text: hintText,
 				}));
 				return field;
 			}
