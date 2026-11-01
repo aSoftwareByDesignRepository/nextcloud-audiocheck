@@ -93,3 +93,76 @@ test('sortPlaylistItems: equal trackNo on same disc falls back to title (PHP par
 	];
 	assert.deepEqual(sortPlaylistItems(items, 'track').map((i) => i.id), [2, 1]);
 });
+
+test('sortQueueTracks: fileId tiebreak replaces playlist item id', () => {
+	const { sortQueueTracks } = load();
+	const items = [
+		{ fileId: 90, title: 'Same', trackNo: 1 },
+		{ fileId: 7, title: 'Same', trackNo: 1 },
+	];
+	// Identical sort keys → stable id order, never engine-dependent.
+	assert.deepEqual(sortQueueTracks(items, 'track').map((i) => i.fileId), [7, 90]);
+	assert.deepEqual(sortQueueTracks(items, 'track_desc').map((i) => i.fileId), [90, 7]);
+});
+
+test('sortQueueTracks: manual and unknown modes keep order, input not mutated', () => {
+	const { sortQueueTracks } = load();
+	const items = [{ fileId: 2, title: 'B' }, { fileId: 1, title: 'A' }];
+	assert.deepEqual(sortQueueTracks(items, 'manual').map((i) => i.fileId), [2, 1]);
+	assert.deepEqual(sortQueueTracks(items, 'bogus').map((i) => i.fileId), [1, 2]);
+	assert.deepEqual(items.map((i) => i.fileId), [2, 1], 'input array must not be mutated');
+});
+
+test('sortQueueTracks: null disc/track fall back to name (degraded payload)', () => {
+	const { sortQueueTracks } = load();
+	// Queue items that never carried disc/track metadata must still produce a
+	// deterministic order — disc collapses to name compare, never throws.
+	const items = [
+		{ fileId: 1, title: 'Zulu' },
+		{ fileId: 2, title: 'Alpha' },
+	];
+	assert.deepEqual(sortQueueTracks(items, 'track').map((i) => i.fileId), [2, 1]);
+});
+
+test('queueSortModeFor: detects each matching order, null for custom', () => {
+	const { queueSortModeFor, sortQueueTracks } = load();
+	const items = [
+		{ fileId: 1, title: 'Ch. 10' },
+		{ fileId: 2, title: 'Ch. 2' },
+		{ fileId: 3, title: 'Ch. 1' },
+	];
+	for (const mode of ['name', 'name_desc']) {
+		const sorted = sortQueueTracks(items, mode);
+		assert.equal(queueSortModeFor(sorted), mode, `order produced by ${mode}`);
+	}
+	// Track order must differ from every name order or 'name'/'name_desc'
+	// legitimately wins the first-match check.
+	const numbered = [
+		{ fileId: 1, title: 'Alpha', trackNo: 2 },
+		{ fileId: 2, title: 'Zulu', trackNo: 1 },
+		{ fileId: 3, title: 'Mike', trackNo: 3 },
+	];
+	assert.equal(queueSortModeFor(sortQueueTracks(numbered, 'track')), 'track');
+	assert.equal(queueSortModeFor(sortQueueTracks(numbered, 'track_desc')), 'track_desc');
+	// No track metadata → track sort collapses to name order; 'name' wins
+	// first-match — the derived chip reports the order the list IS in.
+	assert.equal(queueSortModeFor(sortQueueTracks(items, 'track')), 'name');
+	assert.equal(queueSortModeFor([{ fileId: 2, title: 'Z' }, { fileId: 1, title: 'A' }]), 'name_desc');
+	// Three items can sit in an order no mode produces → custom order.
+	const custom = [
+		{ fileId: 1, title: 'Zulu' },
+		{ fileId: 2, title: 'Alpha' },
+		{ fileId: 3, title: 'Mike' },
+	];
+	assert.equal(queueSortModeFor(custom), null);
+});
+
+test('queueSortModeFor: degenerate sizes and duplicate fileIds', () => {
+	const { queueSortModeFor } = load();
+	assert.equal(queueSortModeFor([]), null);
+	assert.equal(queueSortModeFor([{ fileId: 1, title: 'A' }]), null);
+	assert.equal(queueSortModeFor(undefined), null);
+	// Same element twice — element identity must not confuse the matcher.
+	const dup = { fileId: 9, title: 'Same' };
+	assert.equal(queueSortModeFor([dup, dup]), 'name');
+});

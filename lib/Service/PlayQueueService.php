@@ -249,6 +249,8 @@ class PlayQueueService
 				'fileName' => '',
 				'artist' => '',
 				'album' => '',
+				'trackNo' => null,
+				'discNo' => null,
 				'unavailable' => true,
 			];
 		}

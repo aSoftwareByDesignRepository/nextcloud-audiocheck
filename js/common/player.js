@@ -243,6 +243,10 @@
 			playbackSpeed: speed,
 			shuffle: !!shuffle,
 			repeatMode,
+			// Lets the server reject an older write that lands after a newer
+			// one (fetch-vs-beacon reorder, mobile write in between) — unix
+			// seconds, same contract as the mobile client.
+			clientUpdatedAt: Math.floor(Date.now() / 1000),
 		};
 	}
 
@@ -1620,6 +1624,41 @@
 			if (shuffle) rebuildShuffleOrder();
 			schedulePersistSession();
 			notify();
+		},
+		/**
+		 * Reorder the whole queue by a named sort mode (see
+		 * AudioCheckNaturalSort.QUEUE_SORT_MODES). Playback is untouched — the
+		 * current element keeps playing and lands at its sorted position
+		 * (identity lookup, so duplicate fileIds stay exact). Persists through
+		 * the same session + server-queue path as moveItem.
+		 * @param {string} mode
+		 * @returns {boolean} false when the queue is too small or sorting
+		 *                    helpers are unavailable
+		 */
+		sortQueue(mode) {
+			if (queue.length < 2) return false;
+			const NS = window.AudioCheckNaturalSort;
+			if (!NS || typeof NS.sortQueueTracks !== 'function') return false;
+			const sorted = NS.sortQueueTracks(queue, mode);
+			let sameOrder = sorted.length === queue.length;
+			for (let i = 0; sameOrder && i < queue.length; i++) {
+				if (sorted[i] !== queue[i]) sameOrder = false;
+			}
+			if (sameOrder) return true;
+			const curTrack = index >= 0 && index < queue.length ? queue[index] : null;
+			const prevIds = currentFileIds();
+			queue.length = 0;
+			sorted.forEach((tr) => queue.push(tr));
+			if (curTrack) {
+				index = Math.max(0, sorted.indexOf(curTrack));
+			} else {
+				index = sorted.length === 0 ? -1 : Math.min(Math.max(index, 0), sorted.length - 1);
+			}
+			queuePlaybackPolicy = AudioCheckQueuePlaybackMode.policyAfterQueueEdit(queuePlaybackPolicy, prevIds, currentFileIds());
+			if (shuffle) rebuildShuffleOrder();
+			schedulePersistSession();
+			notify();
+			return true;
 		},
 		clearQueue() {
 			const a = audio();

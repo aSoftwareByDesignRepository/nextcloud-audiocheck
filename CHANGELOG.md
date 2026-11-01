@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- Queue sorting on Now playing: order the live queue by name or track number, ascending or descending — the playing track keeps its position in the new order and the result persists through the same session/server queue sync as manual reordering; the active mode is derived from the actual order and clears automatically on manual moves, and sorting is disabled while shuffle is on
+- `trackNo`/`discNo` now ride the shared track payload (queue items, playable, track lists) so track-number ordering works on every surface
+- Companion app: queue sort picker on Now playing with the same four modes and semantics
+
 ## 1.3.12 - 2026-10-31
 
 ### Added

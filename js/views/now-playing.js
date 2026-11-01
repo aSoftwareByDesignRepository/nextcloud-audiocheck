@@ -2,6 +2,14 @@
 	'use strict';
 	const C = AudioCheckComponents;
 
+	/** Live-queue sort modes — 'manual' does not exist for an ephemeral queue. */
+	const QUEUE_SORT_OPTIONS = [
+		{ v: 'name', l: t('audiocheck', 'Name A→Z') },
+		{ v: 'name_desc', l: t('audiocheck', 'Name Z→A') },
+		{ v: 'track', l: t('audiocheck', 'Track 1→9') },
+		{ v: 'track_desc', l: t('audiocheck', 'Track 9→1') },
+	];
+
 	function repeatShortLabel(mode) {
 		if (mode === AudioCheckConstants.REPEAT_ONE) return t('audiocheck', 'One');
 		if (mode === AudioCheckConstants.REPEAT_ALL) return t('audiocheck', 'All');
@@ -137,6 +145,9 @@
 			let queueUl = null;
 			let queueMeta = null;
 			let queueClear = null;
+			let queueSortWrap = null;
+			let queueShuffleHint = null;
+			const queueSortChips = {};
 			let chaptersSection = null;
 			let chaptersUl = null;
 			let optionsSection = null;
@@ -479,6 +490,43 @@
 				});
 				head.appendChild(queueClear);
 				section.appendChild(head);
+				queueSortWrap = C.el('div', { className: 'ac-now-queue__sortwrap' });
+				queueSortWrap.appendChild(C.el('p', {
+					className: 'ac-facet-group__sort-label',
+					text: t('audiocheck', 'Sort queue'),
+				}));
+				const queueSortRow = C.el('div', {
+					className: 'ac-chip-row ac-now-queue__sort',
+					attrs: { role: 'group', 'aria-label': t('audiocheck', 'Sort queue') },
+				});
+				QUEUE_SORT_OPTIONS.forEach((opt) => {
+					const chip = C.el('button', {
+						type: 'button',
+						className: 'ac-filter-chip',
+						text: opt.l,
+						attrs: {
+							'data-sort': opt.v,
+							'aria-pressed': 'false',
+						},
+						onClick: () => {
+							if (queueSortChips[opt.v] && queueSortChips[opt.v].disabled) return;
+							if (queueSortChips[opt.v] && queueSortChips[opt.v].getAttribute('aria-pressed') === 'true') return;
+							if (AudioCheckPlayer.sortQueue(opt.v)) {
+								AudioCheckMessaging.toast(t('audiocheck', 'Queue sorted.'));
+							}
+						},
+					});
+					queueSortChips[opt.v] = chip;
+					queueSortRow.appendChild(chip);
+				});
+				queueSortWrap.appendChild(queueSortRow);
+				section.appendChild(queueSortWrap);
+				queueShuffleHint = C.el('p', {
+					className: 'ac-now-queue__hint',
+					text: t('audiocheck', 'Turn off shuffle to reorder the queue.'),
+					attrs: { hidden: true },
+				});
+				section.appendChild(queueShuffleHint);
 				section.appendChild(C.el('p', {
 					className: 'ac-now-queue__hint',
 					text: t('audiocheck', 'Tap a track to jump to it. Use the arrows to reorder.'),
@@ -633,7 +681,8 @@
 					? Math.floor(a.duration * 1000)
 					: 0;
 				const playing = !!(a && !a.paused);
-				return cur + ':' + (playing ? '1' : '0') + ':' + dur + ':' + queue.map((tr) => String(tr.fileId) + (tr.unavailable ? 'u' : '')).join(',');
+				const shuffleOn = AudioCheckPlayer.getShuffle() ? '1' : '0';
+				return cur + ':' + (playing ? '1' : '0') + ':' + dur + ':' + shuffleOn + ':' + queue.map((tr) => String(tr.fileId) + (tr.unavailable ? 'u' : '')).join(',');
 			}
 
 			function trackForQueueRow(qTrack, index, cur) {
@@ -1063,6 +1112,8 @@
 					}
 				}
 				if (queueClear) queueClear.hidden = queue.length === 0;
+				const shuffleOn = AudioCheckPlayer.getShuffle();
+				paintQueueSortControls(queue, shuffleOn);
 				queueUl.textContent = '';
 				if (!queue.length) {
 					queueUl.appendChild(C.el('li', {
@@ -1071,7 +1122,6 @@
 					}));
 					return;
 				}
-				const shuffleOn = AudioCheckPlayer.getShuffle();
 				queue.forEach((qTrack, i) => {
 					const rowTrack = trackForQueueRow(qTrack, i, cur);
 					const canReorder = !shuffleOn && queue.length > 1;
@@ -1104,6 +1154,30 @@
 					queueUl.appendChild(C.trackRow(rowTrack, playHandler, rowOpts));
 				});
 				paintStatusMeta();
+			}
+
+			/**
+			 * Active sort chip is *derived*: it lights only while the queue order
+			 * exactly equals what that mode produces — a manual arrow move or a
+			 * remove clears it automatically (no state to desynchronize).
+			 */
+			function paintQueueSortControls(queue, shuffleOn) {
+				if (!queueSortWrap) return;
+				const canSort = queue.length >= 2;
+				queueSortWrap.hidden = !canSort;
+				if (queueShuffleHint) queueShuffleHint.hidden = !canSort || !shuffleOn;
+				const NS = window.AudioCheckNaturalSort;
+				const activeMode = canSort && NS && typeof NS.queueSortModeFor === 'function'
+					? NS.queueSortModeFor(queue)
+					: null;
+				QUEUE_SORT_OPTIONS.forEach((opt) => {
+					const chip = queueSortChips[opt.v];
+					if (!chip) return;
+					const active = activeMode === opt.v;
+					chip.disabled = !canSort || shuffleOn;
+					chip.classList.toggle('ac-filter-chip--active', active);
+					chip.setAttribute('aria-pressed', active ? 'true' : 'false');
+				});
 			}
 
 			function updateOptionRow(row, opts) {

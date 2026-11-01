@@ -315,7 +315,7 @@ class LibraryService
 		// the COUNT query is rejected by PostgreSQL and by MySQL 8 with
 		// ONLY_FULL_GROUP_BY (default), even though MariaDB tolerates it.
 		$this->applyTrackSort($qb, $sort);
-		$qb->select('t.file_id', 't.file_name', 't.rel_path', 't.added_at', 't.size', 'm.title', 'm.artist', 'm.album', 'm.album_artist', 'm.duration_ms', 'm.mimetype', 'm.has_chapters', 'm.cover_state')
+		$qb->select('t.file_id', 't.file_name', 't.rel_path', 't.added_at', 't.size', 'm.title', 'm.artist', 'm.album', 'm.album_artist', 'm.duration_ms', 'm.mimetype', 'm.track_no', 'm.disc_no', 'm.has_chapters', 'm.cover_state')
 			->selectAlias($qb->createFunction($this->effectiveKindSql()), 'kind');
 		$qb->setMaxResults($limit)->setFirstResult($offset);
 		$result = $qb->executeQuery();
@@ -1242,6 +1242,8 @@ class LibraryService
 			'coverState' => (string)($row['cover_state'] ?? 'none'),
 			'addedAt' => (int)($row['added_at'] ?? 0),
 			'relPath' => (string)($row['rel_path'] ?? ''),
+			'trackNo' => isset($row['track_no']) ? (int)$row['track_no'] : null,
+			'discNo' => isset($row['disc_no']) ? (int)$row['disc_no'] : null,
 		];
 	}
 
@@ -1263,6 +1265,8 @@ class LibraryService
 		$track['artist'] = '';
 		$track['album'] = '';
 		$track['fileName'] = '';
+		$track['trackNo'] = null;
+		$track['discNo'] = null;
 		return $track;
 	}
 
@@ -1480,6 +1484,8 @@ class LibraryService
 			'coverState' => 'none',
 			'addedAt' => 0,
 			'relPath' => '',
+			'trackNo' => null,
+			'discNo' => null,
 			'sizeBytes' => max(0, (int)$file->getSize()),
 			'favorite' => $this->isFavorite((int)$file->getId()),
 			'listened' => false,

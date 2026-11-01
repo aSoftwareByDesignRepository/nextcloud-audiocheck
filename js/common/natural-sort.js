@@ -56,17 +56,15 @@
 	}
 
 	/**
-	 * Sort playlist items by a persisted mode — parity with
-	 * PlaylistService::SORT_MODES. 'manual' keeps the stored order.
-	 * @param {Array<object>} items
+	 * Shared comparator core for playlist items and queue tracks — parity with
+	 * PlaylistService::SORT_MODES. `idOf` supplies the deterministic tiebreak
+	 * (playlist item id vs. queue track fileId).
 	 * @param {string} mode
+	 * @param {(item: object) => (number|undefined)} idOf
 	 */
-	function sortPlaylistItems(items, mode) {
-		const list = (items || []).slice();
-		if (!mode || mode === 'manual') return list;
-		const desc = mode.endsWith('_desc');
+	function trackLikeComparator(mode, idOf) {
 		const byTrack = mode.indexOf('track') === 0;
-		list.sort((a, b) => {
+		return (a, b) => {
 			let cmp = 0;
 			if (byTrack) {
 				const da = a.discNo != null ? a.discNo : 0;
@@ -84,12 +82,69 @@
 					a.title || a.fileName || '',
 					b.title || b.fileName || '',
 				);
-				if (cmp === 0) cmp = (a.id || 0) - (b.id || 0);
+				if (cmp === 0) cmp = (idOf(a) || 0) - (idOf(b) || 0);
 			}
 			return cmp;
-		});
+		};
+	}
+
+	function sortTrackLike(items, mode, idOf) {
+		const list = (items || []).slice();
+		if (!mode || mode === 'manual') return list;
+		const desc = mode.endsWith('_desc');
+		list.sort(trackLikeComparator(mode, idOf));
 		return desc ? list.reverse() : list;
 	}
 
-	window.AudioCheckNaturalSort = { naturalCompare, sortPlaylistItems };
+	/**
+	 * Sort playlist items by a persisted mode — parity with
+	 * PlaylistService::SORT_MODES. 'manual' keeps the stored order.
+	 * @param {Array<object>} items
+	 * @param {string} mode
+	 */
+	function sortPlaylistItems(items, mode) {
+		return sortTrackLike(items, mode, (item) => item.id);
+	}
+
+	/** Modes a live queue can be sorted by — 'manual' does not exist here. */
+	const QUEUE_SORT_MODES = ['name', 'name_desc', 'track', 'track_desc'];
+
+	/**
+	 * Sort queue tracks by mode — same ordering semantics as
+	 * {@see sortPlaylistItems} but tiebreaks on fileId (queue entries have no
+	 * playlist item id).
+	 * @param {Array<object>} items
+	 * @param {string} mode
+	 */
+	function sortQueueTracks(items, mode) {
+		return sortTrackLike(items, mode, (item) => item.fileId);
+	}
+
+	/**
+	 * Which sort mode the current item order equals, if any — element-identity
+	 * comparison so duplicate fileIds cannot produce a false match. First
+	 * matching mode in QUEUE_SORT_MODES order wins when orders coincide.
+	 * @param {Array<object>} items
+	 * @returns {?string}
+	 */
+	function queueSortModeFor(items) {
+		if (!items || items.length < 2) return null;
+		for (const mode of QUEUE_SORT_MODES) {
+			const sorted = sortQueueTracks(items, mode);
+			let same = sorted.length === items.length;
+			for (let i = 0; same && i < items.length; i++) {
+				if (sorted[i] !== items[i]) same = false;
+			}
+			if (same) return mode;
+		}
+		return null;
+	}
+
+	window.AudioCheckNaturalSort = {
+		naturalCompare,
+		sortPlaylistItems,
+		sortQueueTracks,
+		queueSortModeFor,
+		QUEUE_SORT_MODES,
+	};
 })();
