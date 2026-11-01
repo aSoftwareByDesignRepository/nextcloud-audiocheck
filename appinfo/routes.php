@@ -49,6 +49,7 @@ return [
 		['name' => 'api#deletePlaylist', 'url' => '/api/playlists/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\\d+']],
 		['name' => 'api#addPlaylistItem', 'url' => '/api/playlists/{id}/items', 'verb' => 'POST', 'requirements' => ['id' => '\\d+']],
 		['name' => 'api#reorderPlaylistItems', 'url' => '/api/playlists/{id}/items/reorder', 'verb' => 'PUT', 'requirements' => ['id' => '\\d+']],
+		['name' => 'api#sortPlaylistItems', 'url' => '/api/playlists/{id}/items/sort', 'verb' => 'PUT', 'requirements' => ['id' => '\\d+']],
 		['name' => 'api#removePlaylistItem', 'url' => '/api/playlist-items/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\\d+']],
 		['name' => 'api#listLibraries', 'url' => '/api/libraries', 'verb' => 'GET'],
 		['name' => 'api#addLibrary', 'url' => '/api/libraries', 'verb' => 'POST'],

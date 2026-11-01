@@ -204,11 +204,14 @@
 				className: 'ac-chip-row ac-facet-group__sort',
 				attrs: { role: 'group', 'aria-label': t('audiocheck', 'Sort tracks in group') },
 			});
-			const sortOptions = [
+			const sortOptions = opts.sortOptions || [
 				{ v: 'title', l: t('audiocheck', 'Title') },
 				{ v: 'added', l: t('audiocheck', 'Recently added') },
 				{ v: 'artist', l: t('audiocheck', 'Artist') },
 			];
+			const sortHeadingLabel = opts.sortHeadingLabel || t('audiocheck', 'Sort tracks in group');
+			sortHeading.textContent = sortHeadingLabel;
+			sortRow.setAttribute('aria-label', sortHeadingLabel);
 			sortOptions.forEach((opt) => {
 				const chip = C.el('button', {
 					type: 'button',
@@ -220,13 +223,25 @@
 					},
 					onClick: () => {
 						if (facetSort === opt.v) return;
+						const prev = facetSort;
 						facetSort = opt.v;
 						sortRow.querySelectorAll('.ac-filter-chip').forEach((btn) => {
 							const on = btn.getAttribute('data-sort') === opt.v;
 							btn.classList.toggle('ac-filter-chip--active', on);
 							btn.setAttribute('aria-pressed', on ? 'true' : 'false');
 						});
-						reloadList();
+						if (typeof opts.onSortChange === 'function') {
+							Promise.resolve(opts.onSortChange(opt.v)).catch(() => {
+								facetSort = prev;
+								sortRow.querySelectorAll('.ac-filter-chip').forEach((btn) => {
+									const on = btn.getAttribute('data-sort') === prev;
+									btn.classList.toggle('ac-filter-chip--active', on);
+									btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+								});
+							});
+						} else {
+							reloadList();
+						}
 					},
 				});
 				sortRow.appendChild(chip);

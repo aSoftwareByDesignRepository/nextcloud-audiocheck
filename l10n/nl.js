@@ -729,7 +729,18 @@ OC.L10N.register(
 	"{time} left" : "{time} links",
 	"{title}, listened" : "{title}, geluisterd",
 	"← \/ →" : "← \/ →",
-	"↑ \/ ↓" : "↑ \/ ↓"
+	"↑ \/ ↓" : "↑ \/ ↓",
+	"My order" : "Mijn volgorde",
+	"Name A→Z" : "Naam A→Z",
+	"Name Z→A" : "Naam Z→A",
+	"Track 1→9" : "Track 1→9",
+	"Track 9→1" : "Track 9→1",
+	"Sort playlist" : "Afspeellijst sorteren",
+	"Could not sort playlist." : "Afspeellijst kon niet worden gesorteerd.",
+	"Grouping updated." : "Groepering bijgewerkt.",
+	"Grouping updated. Re-scanning to rebuild collections…" : "Groepering bijgewerkt. Opnieuw scannen om collecties op te bouwen…",
+	"Group audiobooks by folder" : "Luisterboeken per map groeperen",
+	"Collects every audio file under each book folder — including CD 1 / CD 2 subfolders — into one collection, even when tags are missing or inconsistent." : "Verzamelt alle audiobestanden onder elke boekmap — inclusief CD 1 / CD 2 submappen — in één collectie, ook als tags ontbreken."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

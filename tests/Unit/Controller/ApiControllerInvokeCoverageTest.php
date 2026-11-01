@@ -147,6 +147,7 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		$this->playlists->method('deletePlaylist')->willReturnCallback(static function (): void {});
 		$this->playlists->method('addItem')->willReturn($playlist);
 		$this->playlists->method('reorderItems')->willReturn($playlist);
+		$this->playlists->method('sortItems')->willReturn($playlist);
 		$this->playlists->method('removeItem')->willReturnCallback(static function (): void {});
 		$this->playlists->method('buildFromCollection')->willReturn($playlist);
 
@@ -287,6 +288,10 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		$this->setJsonBody(['itemIds' => [1, 2]]);
 		$this->assertOk($this->controller->reorderPlaylistItems(7), 'reorderPlaylistItems');
 		$invoked[] = 'reorderPlaylistItems';
+
+		$this->setJsonBody(['mode' => 'name']);
+		$this->assertOk($this->controller->sortPlaylistItems(7), 'sortPlaylistItems');
+		$invoked[] = 'sortPlaylistItems';
 
 		$this->assertOk($this->controller->removePlaylistItem(1), 'removePlaylistItem');
 		$invoked[] = 'removePlaylistItem';

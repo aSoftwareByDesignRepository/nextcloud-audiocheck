@@ -728,7 +728,18 @@
 		"{time} left": "{time} igjen",
 		"{title}, listened": "{title}, lyttet",
 		"← / →": "← / →",
-		"↑ / ↓": "↑ / ↓"
+		"↑ / ↓": "↑ / ↓",
+		"My order": "Min rekkefølge",
+		"Name A→Z": "Navn A→Å",
+		"Name Z→A": "Navn Å→A",
+		"Track 1→9": "Spor 1→9",
+		"Track 9→1": "Spor 9→1",
+		"Sort playlist": "Sorter spilleliste",
+		"Could not sort playlist.": "Kunne ikke sortere spillelisten.",
+		"Grouping updated.": "Gruppering oppdatert.",
+		"Grouping updated. Re-scanning to rebuild collections…": "Gruppering oppdatert. Skanner på nytt for å gjenoppbygge samlinger…",
+		"Group audiobooks by folder": "Grupper lydbøker etter mappe",
+		"Collects every audio file under each book folder — including CD 1 / CD 2 subfolders — into one collection, even when tags are missing or inconsistent.": "Samler alle lydfiler under hver bokmappe — inkludert CD 1 / CD 2 undermapper — i én samling, selv når tagger mangler."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

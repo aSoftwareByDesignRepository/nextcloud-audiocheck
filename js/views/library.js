@@ -137,6 +137,13 @@
 		});
 	}
 
+	function updateLibraryGroupByFolder(lib, groupByFolder, handlers) {
+		return updateLibraryField(lib, { groupByFolder }, handlers, {
+			ok: t('audiocheck', 'Grouping updated.'),
+			rescan: t('audiocheck', 'Grouping updated. Re-scanning to rebuild collections…'),
+		});
+	}
+
 	function pollScanUntilIdle(onUpdate, onDone, alive) {
 		let attempts = 0;
 		const maxAttempts = 90;
@@ -468,6 +475,55 @@
 				return field;
 			}
 
+			function renderGroupByFolderToggle(lib, handlersRef) {
+				const groupId = 'ac-library-group-' + lib.id;
+				const hintId = groupId + '-hint';
+				const field = C.el('div', { className: 'ac-library-card__field ac-library-card__field--group' });
+				const row = C.el('div', { className: 'ac-library-card__check-row' });
+				const input = C.el('input', {
+					type: 'checkbox',
+					id: groupId,
+					className: 'ac-library-card__check',
+					attrs: {
+						checked: lib.groupByFolder === true ? true : undefined,
+						'aria-describedby': hintId,
+					},
+				});
+				let groupBusy = false;
+				input.addEventListener('change', () => {
+					if (groupBusy) {
+						input.checked = lib.groupByFolder === true;
+						return;
+					}
+					const next = !!input.checked;
+					const prev = lib.groupByFolder === true;
+					if (next === prev) return;
+					groupBusy = true;
+					input.disabled = true;
+					updateLibraryGroupByFolder(lib, next, handlersRef).then(() => {
+						lib.groupByFolder = next;
+					}).catch((e) => {
+						input.checked = prev;
+						AudioCheckMessaging.toast(e.message, 'error');
+					}).finally(() => {
+						groupBusy = false;
+						input.disabled = false;
+					});
+				});
+				row.appendChild(input);
+				row.appendChild(C.el('label', {
+					attrs: { for: groupId },
+					text: t('audiocheck', 'Group audiobooks by folder'),
+				}));
+				field.appendChild(row);
+				field.appendChild(C.el('p', {
+					className: 'ac-field__hint',
+					id: hintId,
+					text: t('audiocheck', 'Collects every audio file under each book folder — including CD 1 / CD 2 subfolders — into one collection, even when tags are missing or inconsistent.'),
+				}));
+				return field;
+			}
+
 			function renderLibraryRow(lib) {
 				const kindMod = libraryCardModifier(lib.contentKind);
 				const pathLabel = friendlyFolderPath(lib.folderPath);
@@ -556,6 +612,7 @@
 				});
 				optionsBody.appendChild(renderKindSegment(lib, handlers));
 				optionsBody.appendChild(renderScopeToggle(lib, handlers));
+				optionsBody.appendChild(renderGroupByFolderToggle(lib, handlers));
 				options.appendChild(optionsBody);
 				row.appendChild(options);
 

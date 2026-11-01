@@ -160,7 +160,7 @@ class LibraryService
 	/**
 	 * @return array{library:array<string,mixed>,rescanRecommended:bool}
 	 */
-	public function updateLibrary(string $userId, int $libraryId, ?bool $includeSubfolders, ?string $contentKind): array
+	public function updateLibrary(string $userId, int $libraryId, ?bool $includeSubfolders, ?string $contentKind, ?bool $groupByFolder = null): array
 	{
 		$row = $this->assertLibraryOwned($userId, $libraryId);
 		$rescanRecommended = false;
@@ -187,6 +187,16 @@ class LibraryService
 				if ($normalized === self::CONTENT_KIND_AUTO) {
 					$rescanRecommended = true;
 				}
+			}
+		}
+
+		if ($groupByFolder !== null) {
+			$previousGroup = (int)($row['group_by_folder'] ?? 0) === 1;
+			if ($groupByFolder !== $previousGroup) {
+				$qb->set('group_by_folder', $qb->createNamedParameter($groupByFolder ? 1 : 0, \PDO::PARAM_INT));
+				$changed = true;
+				// Grouping is computed at query time — no rescan needed, but the
+				// caller should refresh collections to show the new grouping.
 			}
 		}
 
@@ -579,17 +589,44 @@ class LibraryService
 			->from('ac_tracks', 't')
 			->innerJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'));
 		$this->applyCollectionTrackFilters($qb, $userId, $decoded);
-		$qb->orderBy('m.disc_no', 'ASC')->addOrderBy('m.track_no', 'ASC')->addOrderBy('t.file_name', 'ASC');
-		if ($limit > 0) {
-			$offset = ($page - 1) * $limit;
-			$qb->setMaxResults($limit)->setFirstResult($offset);
-		}
+		// Fetch the whole collection: the title/file_name arm must order
+		// naturally ("2" before "10"), which SQL cannot express portably.
+		// Collections are bounded (~2k tracks) — sort in PHP, then slice.
 		$result = $qb->executeQuery();
-		$tracks = [];
+		$rows = [];
 		while ($row = $result->fetch()) {
-			$tracks[] = $this->formatTrackForUser($userId, $row);
+			$rows[] = $row;
 		}
 		$result->closeCursor();
+
+		usort($rows, function (array $a, array $b): int {
+			$cmp = ($a['disc_no'] ?? null) <=> ($b['disc_no'] ?? null);
+			if ($cmp !== 0) {
+				return $cmp;
+			}
+			$ta = $a['track_no'] ?? null;
+			$tb = $b['track_no'] ?? null;
+			if ($ta !== null && $tb !== null && $ta !== $tb) {
+				return $ta <=> $tb;
+			}
+			if ($ta !== null xor $tb !== null) {
+				return $ta !== null ? -1 : 1;
+			}
+			$cmp = \OCA\AudioCheck\Util\NaturalSort::compare(
+				(string)($a['title'] ?? '') !== '' ? (string)$a['title'] : (string)($a['file_name'] ?? ''),
+				(string)($b['title'] ?? '') !== '' ? (string)$b['title'] : (string)($b['file_name'] ?? ''),
+			);
+			return $cmp !== 0 ? $cmp : ((int)$a['file_id'] <=> (int)$b['file_id']);
+		});
+
+		if ($limit > 0) {
+			$rows = array_slice($rows, ($page - 1) * $limit, $limit);
+		}
+
+		$tracks = [];
+		foreach ($rows as $row) {
+			$tracks[] = $this->formatTrackForUser($userId, $row);
+		}
 
 		return $tracks;
 	}
@@ -1009,7 +1046,10 @@ class LibraryService
 
 	private function effectiveAlbumSql(): string
 	{
-		return "COALESCE(NULLIF(m.album, ''), NULLIF(m.title, ''), t.file_name)";
+		// Folder-grouped libraries: the scan-derived book folder wins over tags so
+		// files that live in one folder stay one collection even with junk album
+		// metadata. Root-level files ('') fall back to the metadata chain.
+		return "CASE WHEN lib.group_by_folder = 1 AND NULLIF(t.collection_folder, '') IS NOT NULL THEN t.collection_folder ELSE COALESCE(NULLIF(m.album, ''), NULLIF(m.title, ''), t.file_name) END";
 	}
 
 	private function effectiveAlbumArtistSql(): string
@@ -1159,6 +1199,7 @@ class LibraryService
 			'rootFileId' => $row['root_file_id'] !== null ? (int)$row['root_file_id'] : null,
 			'includeSubfolders' => (int)$row['include_subfolders'] === 1,
 			'contentKind' => $this->normalizeContentKind((string)($row['content_kind'] ?? self::CONTENT_KIND_AUTO)),
+			'groupByFolder' => (int)($row['group_by_folder'] ?? 0) === 1,
 			'enabled' => (int)$row['enabled'] === 1,
 			'createdAt' => (int)$row['created_at'],
 			'trackCount' => $this->countTracksForLibrary($userId, $libraryId),

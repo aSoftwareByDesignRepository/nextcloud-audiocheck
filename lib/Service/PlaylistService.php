@@ -167,8 +167,12 @@ class PlaylistService
 		return $this->getPlaylist($userId, $playlistId);
 	}
 
-	/** @param list<int> $itemIds */
-	public function reorderItems(string $userId, int $playlistId, array $itemIds): array
+	/**
+	 * @param list<int> $itemIds
+	 * @param string $uiSort value persisted to ac_playlists.ui_sort inside the
+	 *                       same transaction ('manual' for user-driven reorders).
+	 */
+	public function reorderItems(string $userId, int $playlistId, array $itemIds, string $uiSort = 'manual'): array
 	{
 		$this->assertPlaylistOwned($userId, $playlistId);
 		$existingIds = $this->listItemIdsForPlaylist($playlistId);
@@ -201,6 +205,7 @@ class PlaylistService
 			$uq = $this->db->getQueryBuilder();
 			$uq->update('ac_playlists')
 				->set('updated_at', $uq->createNamedParameter($now, \PDO::PARAM_INT))
+				->set('ui_sort', $uq->createNamedParameter($uiSort))
 				->where($uq->expr()->eq('id', $uq->createNamedParameter($playlistId, \PDO::PARAM_INT)))
 				->andWhere($uq->expr()->eq('user_id', $uq->createNamedParameter($userId)));
 			$uq->executeStatement();
@@ -210,6 +215,97 @@ class PlaylistService
 			throw $e;
 		}
 		return $this->getPlaylist($userId, $playlistId);
+	}
+
+	/** Allowed values for ac_playlists.ui_sort / the items/sort endpoint. */
+	public const SORT_MODES = ['manual', 'name', 'name_desc', 'track', 'track_desc'];
+
+	/**
+	 * Re-sort an existing playlist by a named strategy, persist the resulting
+	 * order via {@see reorderItems} and remember the chosen mode in ui_sort so
+	 * every surface shows one canonical order and the playlist keeps "its"
+	 * order. 'manual' only marks the current order as user-arranged.
+	 *
+	 * @param string $mode one of {@see SORT_MODES}
+	 */
+	public function sortItems(string $userId, int $playlistId, string $mode): array
+	{
+		$this->assertPlaylistOwned($userId, $playlistId);
+		$mode = trim($mode);
+		if (!in_array($mode, self::SORT_MODES, true)) {
+			throw new ValidationException('Invalid sort mode.');
+		}
+		if ($mode === 'manual') {
+			$this->setUiSort($playlistId, 'manual');
+			return $this->getPlaylist($userId, $playlistId);
+		}
+		$items = $this->listItemsWithMeta($playlistId);
+		if (count($items) < 2) {
+			$this->setUiSort($playlistId, $mode);
+			return $this->getPlaylist($userId, $playlistId);
+		}
+		$byTrack = str_starts_with($mode, 'track');
+		$desc = str_ends_with($mode, '_desc');
+		usort($items, static function (array $a, array $b) use ($byTrack, $desc): int {
+			$cmp = 0;
+			if ($byTrack) {
+				$cmp = ($a['disc_no'] ?? null) <=> ($b['disc_no'] ?? null);
+				if ($cmp === 0) {
+					$ta = $a['track_no'] ?? null;
+					$tb = $b['track_no'] ?? null;
+					if ($ta !== null && $tb !== null && $ta !== $tb) {
+						$cmp = $ta <=> $tb;
+					} elseif ($ta !== null xor $tb !== null) {
+						$cmp = $ta !== null ? -1 : 1;
+					}
+				}
+			}
+			if ($cmp === 0) {
+				$cmp = \OCA\AudioCheck\Util\NaturalSort::compare(
+					(string)($a['title'] ?? '') !== '' ? (string)$a['title'] : (string)($a['file_name'] ?? ''),
+					(string)($b['title'] ?? '') !== '' ? (string)$b['title'] : (string)($b['file_name'] ?? ''),
+				);
+				if ($cmp === 0) {
+					$cmp = (int)$a['id'] <=> (int)$b['id'];
+				}
+			}
+			return $desc ? -$cmp : $cmp;
+		});
+		return $this->reorderItems(
+			$userId,
+			$playlistId,
+			array_map(static fn (array $item): int => (int)$item['id'], $items),
+			$mode,
+		);
+	}
+
+	private function setUiSort(int $playlistId, string $mode): void
+	{
+		$uq = $this->db->getQueryBuilder();
+		$uq->update('ac_playlists')
+			->set('ui_sort', $uq->createNamedParameter($mode))
+			->where($uq->expr()->eq('id', $uq->createNamedParameter($playlistId, \PDO::PARAM_INT)));
+		$uq->executeStatement();
+	}
+
+	/** @return list<array<string,mixed>> Items with sort metadata (id, title, file_name, track_no, disc_no). */
+	private function listItemsWithMeta(int $playlistId): array
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('pi.id', 'pi.file_id', 'm.title', 'm.track_no', 'm.disc_no')
+			->selectAlias('t.file_name', 'file_name')
+			->from('ac_playlist_items', 'pi')
+			->innerJoin('pi', 'ac_tracks', 't', $qb->expr()->eq('pi.file_id', 't.file_id'))
+			->leftJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'))
+			->where($qb->expr()->eq('pi.playlist_id', $qb->createNamedParameter($playlistId, \PDO::PARAM_INT)))
+			->orderBy('pi.sort_order', 'ASC');
+		$result = $qb->executeQuery();
+		$items = [];
+		while ($row = $result->fetch()) {
+			$items[] = $row;
+		}
+		$result->closeCursor();
+		return $items;
 	}
 
 	/** @return list<int> */
@@ -354,6 +450,7 @@ class PlaylistService
 			'name' => (string)$row['name'],
 			'kind' => (string)$row['kind'],
 			'isPinned' => (int)$row['is_pinned'] === 1,
+			'sortMode' => isset($row['ui_sort']) ? (string)$row['ui_sort'] : 'manual',
 			'defaultSpeed' => (int)$row['default_speed'],
 			'coverFileId' => $row['cover_file_id'] !== null ? (int)$row['cover_file_id'] : null,
 			'createdAt' => (int)$row['created_at'],

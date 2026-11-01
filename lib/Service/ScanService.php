@@ -768,6 +768,7 @@ class ScanService
 					'file_id' => $qb->createNamedParameter($file->getId(), \PDO::PARAM_INT),
 					'meta_id' => $qb->createNamedParameter($metaId, $metaId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT),
 					'rel_path' => $qb->createNamedParameter($relPath),
+					'collection_folder' => $qb->createNamedParameter(\OCA\AudioCheck\Util\CollectionFolder::fromRelPath($relPath)),
 					'file_name' => $qb->createNamedParameter($file->getName()),
 					'file_name_norm' => $qb->createNamedParameter(SearchTextNormalizer::normalize($file->getName())),
 					'mtime' => $qb->createNamedParameter($file->getMTime(), \PDO::PARAM_INT),
@@ -797,6 +798,7 @@ class ScanService
 		$qb = $this->db->getQueryBuilder();
 		$qb->update('ac_tracks')
 			->set('rel_path', $qb->createNamedParameter($relPath))
+			->set('collection_folder', $qb->createNamedParameter(\OCA\AudioCheck\Util\CollectionFolder::fromRelPath($relPath)))
 			->set('file_name', $qb->createNamedParameter($file->getName()))
 			->set('file_name_norm', $qb->createNamedParameter(SearchTextNormalizer::normalize($file->getName())))
 			->set('mtime', $qb->createNamedParameter($file->getMTime(), \PDO::PARAM_INT))

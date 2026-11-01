@@ -728,7 +728,18 @@
 		"{time} left": "{time} gauche",
 		"{title}, listened": "{title}, écouté",
 		"← / →": "← / →",
-		"↑ / ↓": "↑ / ↓"
+		"↑ / ↓": "↑ / ↓",
+		"My order": "Mon ordre",
+		"Name A→Z": "Nom A→Z",
+		"Name Z→A": "Nom Z→A",
+		"Track 1→9": "Piste 1→9",
+		"Track 9→1": "Piste 9→1",
+		"Sort playlist": "Trier la liste",
+		"Could not sort playlist.": "Impossible de trier la liste.",
+		"Grouping updated.": "Regroupement mis à jour.",
+		"Grouping updated. Re-scanning to rebuild collections…": "Regroupement mis à jour. Nouvelle analyse pour reconstruire les collections…",
+		"Group audiobooks by folder": "Regrouper les livres audio par dossier",
+		"Collects every audio file under each book folder — including CD 1 / CD 2 subfolders — into one collection, even when tags are missing or inconsistent.": "Regroupe tous les fichiers audio de chaque dossier de livre — y compris les sous-dossiers CD 1 / CD 2 — dans une même collection, même si les tags manquent."
 	},
 	"pluralForm": "nplurals=2; plural=(n > 1);"
 }

@@ -18,14 +18,15 @@
 		return g ? g.apiQueryParam(g.getDebouncedQuery()) : '';
 	}
 
-	function sortTracksForGroup(items, groupSort) {
-		const s = groupSort || 'title';
-		return (items || []).slice().sort((a, b) => {
-			if (s === 'artist') return String(a.artist || '').localeCompare(String(b.artist || ''));
-			if (s === 'added') return (b.addedAt || 0) - (a.addedAt || 0);
-			return String(a.title || a.fileName || '').localeCompare(String(b.title || b.fileName || ''));
-		});
-	}
+	const NS = () => window.AudioCheckNaturalSort;
+
+	const PLAYLIST_SORT_OPTIONS = [
+		{ v: 'manual', l: t('audiocheck', 'My order') },
+		{ v: 'name', l: t('audiocheck', 'Name A→Z') },
+		{ v: 'name_desc', l: t('audiocheck', 'Name Z→A') },
+		{ v: 'track', l: t('audiocheck', 'Track 1→9') },
+		{ v: 'track_desc', l: t('audiocheck', 'Track 9→1') },
+	];
 
 	function playlistMatchesSearch(pl, q) {
 		if (!q) return true;
@@ -345,14 +346,26 @@
 			startOpen,
 			groupClassName: 'ac-playlist-group' + (pl.isPinned ? ' ac-playlist-group--pinned' : ''),
 			mountSummaryExtra: (summary, details) => mountPlaylistSummaryActions(summary, pl, reloadPage, details),
-			defaultSort: 'title',
+			defaultSort: pl.sortMode || 'manual',
 			inlineSort: true,
 			inlinePlayActions: true,
+			sortOptions: PLAYLIST_SORT_OPTIONS,
+			sortHeadingLabel: t('audiocheck', 'Sort playlist'),
+			onSortChange: (mode) => AudioCheckApi
+				.put('/apps/audiocheck/api/playlists/{id}/items/sort', { mode }, { params: { id: pl.id } })
+				.then(() => {
+					group.reload();
+					reloadPage();
+				})
+				.catch((e) => {
+					AudioCheckMessaging.toast(e.message || t('audiocheck', 'Could not sort playlist.'), 'error');
+					throw e;
+				}),
 			loadTracks: async (pageNum, groupSort) => {
 				const data = await AudioCheckApi.get('/apps/audiocheck/api/playlists/{id}', null, { params: { id: pl.id } });
 				const playlist = data.playlist || {};
 				currentItems = playlist.items || [];
-				const sorted = sortTracksForGroup(currentItems, groupSort);
+				const sorted = NS().sortPlaylistItems(currentItems, groupSort);
 				const page = pageNum || 1;
 				const start = (page - 1) * PAGE_SIZE;
 				return {

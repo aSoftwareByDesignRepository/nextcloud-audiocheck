@@ -294,6 +294,16 @@ class ApiController extends Controller
 	}
 
 	#[NoAdminRequired]
+	public function sortPlaylistItems(int $id): JSONResponse
+	{
+		return $this->safe(function (string $userId) use ($id): array {
+			$body = $this->getJsonBody();
+			$mode = trim((string)($body['mode'] ?? ''));
+			return ['playlist' => $this->playlists->sortItems($userId, $id, $mode)];
+		});
+	}
+
+	#[NoAdminRequired]
 	public function removePlaylistItem(int $id): JSONResponse
 	{
 		return $this->safe(function (string $userId) use ($id): array {
@@ -358,7 +368,8 @@ class ApiController extends Controller
 			$body = $this->getJsonBody();
 			$includeSubfolders = array_key_exists('includeSubfolders', $body) ? UserPrefsService::coerceBool($body['includeSubfolders']) : null;
 			$contentKind = array_key_exists('contentKind', $body) ? (string)$body['contentKind'] : null;
-			$result = $this->library->updateLibrary($userId, $id, $includeSubfolders, $contentKind);
+			$groupByFolder = array_key_exists('groupByFolder', $body) ? UserPrefsService::coerceBool($body['groupByFolder']) : null;
+			$result = $this->library->updateLibrary($userId, $id, $includeSubfolders, $contentKind, $groupByFolder);
 			if ($result['rescanRecommended']) {
 				$this->scan->queueScan($userId);
 			}
