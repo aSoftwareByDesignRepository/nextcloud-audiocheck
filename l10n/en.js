@@ -740,7 +740,7 @@ OC.L10N.register(
 	"Grouping updated." : "Grouping updated.",
 	"Grouping updated. Re-scanning to rebuild collections…" : "Grouping updated. Re-scanning to rebuild collections…",
 	"Group audiobooks by folder" : "Group audiobooks by folder",
-	"Collects every audio file under each book folder — including CD 1 / CD 2 subfolders — into one collection, even when tags are missing or inconsistent." : "Collects every audio file under each book folder — including CD 1 / CD 2 subfolders — into one collection, even when tags are missing or inconsistent."
+	"Collects every audio file under each book folder — including CD 1 \/ CD 2 subfolders — into one collection, even when tags are missing or inconsistent." : "Collects every audio file under each book folder — including CD 1 \/ CD 2 subfolders — into one collection, even when tags are missing or inconsistent."
 	},
 	"nplurals=2; plural=(n != 1);"
 );

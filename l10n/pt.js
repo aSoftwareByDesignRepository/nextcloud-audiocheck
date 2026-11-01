@@ -740,7 +740,7 @@ OC.L10N.register(
 	"Grouping updated." : "Agrupamento atualizado.",
 	"Grouping updated. Re-scanning to rebuild collections…" : "Agrupamento atualizado. A reexaminar para reconstruir coleções…",
 	"Group audiobooks by folder" : "Agrupar audiolivros por pasta",
-	"Collects every audio file under each book folder — including CD 1 / CD 2 subfolders — into one collection, even when tags are missing or inconsistent." : "Reúne todos os ficheiros de cada pasta de livro — incluindo subpastas CD 1 / CD 2 — numa coleção, mesmo sem etiquetas."
+	"Collects every audio file under each book folder — including CD 1 \/ CD 2 subfolders — into one collection, even when tags are missing or inconsistent." : "Reúne todos os ficheiros de cada pasta de livro — incluindo subpastas CD 1 \/ CD 2 — numa coleção, mesmo sem etiquetas."
 	},
 	"nplurals=2; plural=(n > 1);"
 );
