@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.3.12 - 2026-10-31
+
+### Added
+
+- Playlist sorting: order a playlist by name or track number, ascending or descending, or return to manual order — the choice is remembered per playlist and the resulting order persists (`PUT /api/playlists/{id}/items/sort`, `ac_playlists.ui_sort`)
+- Folder-grouped collections: a per-library toggle groups tracks by the folder they live in — files in one folder stay a single collection even with messy album tags, and disc folders (CD 1, Disc 2, …) roll up to their parent book; switching needs no rescan
+- Natural ordering ("2" before "10") for collection titles and playlist names via a shared PHP/JS implementation
+- Companion app: playlist sort picker + natural sort, splash-screen brand fix, media-resumption hardening
+
+### Fixed
+
+- fail-closed CAS on app-policy saves — missing policyVersion is a 409
+- nav menu labels keep word breaks (overflow-wrap: break-word)
+- wire upgrade-backup shared-lock contract onto background jobs
+
 ## 1.3.11 - 2026-10-25
 
 ### Fixed
