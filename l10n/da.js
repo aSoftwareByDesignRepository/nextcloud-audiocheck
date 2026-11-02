@@ -743,7 +743,7 @@ OC.L10N.register(
 	"{minutes} min" : "{minutes} min.",
 	"{minutes} minutes" : "{minutes} minutter",
 	"{percent}% of duration" : "{percent}%% af varighed",
-	"{time} left" : "{time} venstre",
+	"{time} left" : "{time} tilbage",
 	"{title}, listened" : "{title}, lyttede",
 	"← \/ →" : "← \/ →",
 	"↑ \/ ↓" : "↑ \/ ↓"
