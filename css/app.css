@@ -2408,7 +2408,7 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 	padding: var(--ac-space-2) var(--ac-space-3);
 	border: 2px solid var(--ac-border-strong);
 	border-radius: var(--ac-radius-sm);
-	background: var(--ac-bg-card);
+	background-color: var(--ac-bg-card);
 	color: var(--color-main-text);
 	font: inherit;
 	box-sizing: border-box;
