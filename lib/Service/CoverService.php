@@ -252,8 +252,9 @@ class CoverService
 	{
 		try {
 			$this->appData->getFolder('covers')->delete();
-		} catch (\Throwable) {
-			// folder may not exist
+		} catch (\Throwable $e) {
+			// non-fatal: folder may not exist — cache purge is best-effort.
+			$this->logger->debug('Cover cache purge skipped: ' . $e->getMessage());
 		}
 	}
 }
