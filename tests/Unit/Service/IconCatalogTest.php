@@ -31,4 +31,11 @@ final class IconCatalogTest extends TestCase
 		$svg = IconCatalog::render('does-not-exist');
 		$this->assertStringContainsString('<rect x="3" y="3"', $svg);
 	}
+
+	public function testHasReflectsCatalogMembership(): void
+	{
+		$this->assertTrue(IconCatalog::has('edit'));
+		$this->assertFalse(IconCatalog::has('square-pen'));
+		$this->assertFalse(IconCatalog::has('does-not-exist'));
+	}
 }
