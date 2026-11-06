@@ -7,11 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 1.3.13 - 2026-11-05
+
 ### Added
 
 - Queue sorting on Now playing: order the live queue by name or track number, ascending or descending — the playing track keeps its position in the new order and the result persists through the same session/server queue sync as manual reordering; the active mode is derived from the actual order and clears automatically on manual moves, and sorting is disabled while shuffle is on
 - `trackNo`/`discNo` now ride the shared track payload (queue items, playable, track lists) so track-number ordering works on every surface
 - Companion app: queue sort picker on Now playing with the same four modes and semantics
+
+### Fixed
+
+- Localization: German track-sort labels read "Titel" instead of "Kapitel"; canonical queue/track/scan/playlist terminology, placeholder-leading strings and label-in-name alignment across the shipped catalogs; pt_BR catalog regression restored; German "Hilfe & Support" menu label restored
+- The "Group by folder" library toggle names the content kind — "Group audiobooks by folder" for audiobook libraries, "Group albums by folder" for music libraries, "Group collections by folder" for mixed libraries
+- Select controls paint `background-color` on the matching rules instead of the shorthand, so control borders are no longer reset on themed surfaces
+- Best-effort delete paths log failures instead of swallowing them in empty catch blocks
+- Footer icon candidate guard resolves icons via `IconCatalog::has()` instead of falling back to a generic glyph
+
+### Changed
+
+- Queue writes carry `clientUpdatedAt` — a stale client now gets a stale-write response instead of silently overwriting a newer queue
+- Shared feedback-nav-footer partial synced to the family canonical
+- App Store screenshots refreshed from clean marketing captures
 
 ## 1.3.12 - 2026-10-31
 
@@ -328,30 +344,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Favorites shuffle truncation** — the client paged past the server's 100-per-page clamp instead of silently shuffling only the first 100 favorites; removed a misleading 500-track request limit from facet browsing.
 - **User-facing error messages** — machine codes like `internal_error` are translated to human-readable, localized messages in toasts; network failures get a dedicated "could not reach the server" message; fixed "1 items" pluralization on the Playlists page.
 - **Dark / high-contrast theming** — theme-derived `--ac-*` tokens are re-bound on `body`, `#content[class*="app-audiocheck"]`, and `#app-content.ac-app`; `css/theme-bind.css` loads after Nextcloud theme stylesheets so backgrounds and ink stay paired on every theme (fixes light text on white backgrounds in dark mode). Added `--ac-surface` and corrected `--ac-muted-strong` mixing. Guard script `scripts/check-theme-tokens.sh` enforces token scope in CI.
-
-## [1.3.13] — 2026-11-05
-
-### Added
-
-- + clientUpdatedAt on queue writes
-
-### Fixed
-
-- runs
-- bodies
-- rules, never the shorthand
-- queue/track/scan/playlist terms + placeholder-lead + label-in-name across 8 catalogs
-- "Titel" not "Kapitel"
-- toggle
-- "Hilfe & Support" in de + canonical key order
-- + pt_BR regression restore
-- trackNo/discNo in item payload + parity fixes
-
-### Changed
-
-- canonical
-- Refresh App Store screenshots from clean marketing captures
-- l10n: resume-family wrong-sense residuals across 9 catalogs
 
 ## [1.2.6] — 2026-06-24
 

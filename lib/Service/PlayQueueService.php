@@ -322,6 +322,9 @@ class PlayQueueService
 
 	private function insertQueue(string $userId, int $currentIndex, int $speed, bool $shuffle, string $repeat, int $now): int
 	{
+		// unique-conflict:ok sole caller saveQueue() wraps this in a
+		// DBException::REASON_UNIQUE_CONSTRAINT_VIOLATION catch that rolls back,
+		// re-finds the winner's row and falls back to updateQueue().
 		$qb = $this->db->getQueryBuilder();
 		$qb->insert('ac_queue')->values([
 			'user_id' => $qb->createNamedParameter($userId),
