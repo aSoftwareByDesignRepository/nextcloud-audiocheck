@@ -329,6 +329,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **User-facing error messages** — machine codes like `internal_error` are translated to human-readable, localized messages in toasts; network failures get a dedicated "could not reach the server" message; fixed "1 items" pluralization on the Playlists page.
 - **Dark / high-contrast theming** — theme-derived `--ac-*` tokens are re-bound on `body`, `#content[class*="app-audiocheck"]`, and `#app-content.ac-app`; `css/theme-bind.css` loads after Nextcloud theme stylesheets so backgrounds and ink stay paired on every theme (fixes light text on white backgrounds in dark mode). Added `--ac-surface` and corrected `--ac-muted-strong` mixing. Guard script `scripts/check-theme-tokens.sh` enforces token scope in CI.
 
+## [1.3.13] — 2026-11-05
+
+### Added
+
+- + clientUpdatedAt on queue writes
+
+### Fixed
+
+- runs
+- bodies
+- rules, never the shorthand
+- queue/track/scan/playlist terms + placeholder-lead + label-in-name across 8 catalogs
+- "Titel" not "Kapitel"
+- toggle
+- "Hilfe & Support" in de + canonical key order
+- + pt_BR regression restore
+- trackNo/discNo in item payload + parity fixes
+
+### Changed
+
+- canonical
+- Refresh App Store screenshots from clean marketing captures
+- l10n: resume-family wrong-sense residuals across 9 catalogs
+
 ## [1.2.6] — 2026-06-24
 
 ### Added
