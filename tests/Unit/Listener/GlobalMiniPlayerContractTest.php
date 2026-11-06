@@ -80,7 +80,8 @@ final class GlobalMiniPlayerContractTest extends TestCase
 	{
 		$xml = (string)file_get_contents($this->root . '/appinfo/info.xml');
 		self::assertStringContainsString('max-version="35"', $xml);
-		self::assertStringContainsString('<version>1.3.12</version>', $xml);
+		$ver = trim((string)file_get_contents($this->root . '/appinfo/version'));
+		self::assertStringContainsString('<version>' . $ver . '</version>', $xml);
 		// Store copy must not advertise the global mini-player.
 		self::assertStringNotContainsString('mini-player', $xml);
 		self::assertStringNotContainsString('Mini-Player', $xml);
