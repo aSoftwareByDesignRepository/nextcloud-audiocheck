@@ -10,7 +10,7 @@ declare(strict_types=1);
  * Run: docker exec -u www-data nextcloud-app php /var/www/html/custom_apps/audiocheck/scripts/seed-store-demo.php
  */
 
-if (php_sapi_name() !== 'cli') {
+if (PHP_SAPI !== 'cli') {
 	fwrite(STDERR, "CLI only\n");
 	exit(1);
 }
