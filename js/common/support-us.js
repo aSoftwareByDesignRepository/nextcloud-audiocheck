@@ -104,6 +104,8 @@
 					node.className = attrs[k];
 				} else if (k === 'text') {
 					node.textContent = attrs[k];
+				} else if (k.slice(0, 2) === 'on' && typeof attrs[k] === 'function') {
+					node.addEventListener(k.slice(2).toLowerCase(), attrs[k]);
 				} else if (attrs[k] !== undefined && attrs[k] !== null) {
 					node.setAttribute(k, String(attrs[k]));
 				}

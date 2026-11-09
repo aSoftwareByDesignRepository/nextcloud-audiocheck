@@ -149,6 +149,10 @@
 			const node = document.createElementNS(SVG_NS, spec.tag);
 			Object.entries(spec).forEach(([key, value]) => {
 				if (key === 'tag') return;
+				if (key.slice(0, 2) === 'on' && typeof value === 'function') {
+					node.addEventListener(key.slice(2).toLowerCase(), value);
+					return;
+				}
 				node.setAttribute(key, String(value));
 			});
 			svg.appendChild(node);
