@@ -10,6 +10,9 @@ use PHPUnit\Framework\TestCase;
  * Browser loads l10n/*.js as classic scripts (OC.L10N.register).
  * A broken third argument (e.g. `"pluralForm": "..."`) throws
  * SyntaxError: missing ) after argument list and pollutes every NC page console.
+ * CSP (Nextcloud ≥26): register() must carry only (appId, translations) —
+ * a third pluralString argument is compiled with new Function() by legacy
+ * shims, violating strict script-src without unsafe-eval.
  */
 final class L10nJsSyntaxContractTest extends TestCase
 {
@@ -35,10 +38,15 @@ final class L10nJsSyntaxContractTest extends TestCase
 				$src,
 				$base . ' must not use a pluralForm object key — third register() arg is the plural string',
 			);
-			$this->assertMatchesRegularExpression(
-				'/\},\s*"nplurals=\d+;\s*plural=\([^"]+\)\s*;"\s*\)\s*;\s*$/',
+			$this->assertDoesNotMatchRegularExpression(
+				'/"nplurals=\d+/',
 				$src,
-				$base . ' must end with OC.L10N.register(app, translations, "nplurals=…; plural=(…);");',
+				$base . ' must not carry a plural string third register() arg — CSP unsafe-eval',
+			);
+			$this->assertMatchesRegularExpression(
+				'/\}\s*\)\s*;\s*$/',
+				$src,
+				$base . ' must end with OC.L10N.register(app, translations); two-arg form',
 			);
 			$this->assertTrue(
 				self::jsStringAwareParenBalanceOk($src),

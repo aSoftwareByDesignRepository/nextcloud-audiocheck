@@ -53,25 +53,25 @@ if ($run() !== 0) {
 }
 
 $mutated = preg_replace(
-	'/\},\s*"nplurals=\d+;\s*plural=\([^"]+\)\s*;"\s*\)\s*;\s*$/',
-	'}, "pluralForm" : "nplurals=2; plural=(n != 1);");' . "\n",
+	'/\t\}\n\);\n$/',
+	"\t},\n\t\"nplurals=2; plural=(n != 1);\"\n);\n",
 	$original,
 	1,
 	$count,
 );
 if ($count !== 1 || !is_string($mutated)) {
-	fwrite(STDERR, "Could not apply pluralForm mutation to en.js\n");
+	fwrite(STDERR, "Could not apply third-arg mutation to en.js\n");
 	exit(1);
 }
 
-echo "==> mutant: l10n_js_uses_pluralForm_object_key\n";
+echo "==> mutant: l10n_js_plural_string_third_arg (CSP unsafe-eval)\n";
 file_put_contents($target, $mutated);
 $code = $run();
 file_put_contents($target, $original);
 if ($code === 0) {
-	fwrite(STDERR, "SURVIVED: l10n_js_uses_pluralForm_object_key\n");
+	fwrite(STDERR, "SURVIVED: l10n_js_plural_string_third_arg\n");
 	exit(1);
 }
-echo "killed: l10n_js_uses_pluralForm_object_key\n";
+echo "killed: l10n_js_plural_string_third_arg\n";
 echo "AudioCheck l10n JS mutations: all killed.\n";
 exit(0);
