@@ -19,7 +19,7 @@ namespace OCA\AudioCheck\Tests\Unit\ConfigTransfer;
 
 use OCA\AudioCheck\ConfigTransfer\AbstractTransferManifest;
 use OCA\AudioCheck\ConfigTransfer\TransferManifest;
-use Test\TestCase;
+use PHPUnit\Framework\TestCase;
 
 final class TransferManifestContractTest extends TestCase
 {
