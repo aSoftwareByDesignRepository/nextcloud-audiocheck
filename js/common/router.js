@@ -1,8 +1,19 @@
 (function () {
 	'use strict';
 
-	const SETTINGS_SECTION_RE = 'access|admins|defaults|support';
+	const SETTINGS_SECTION_RE = 'access|admins|defaults|support|transfer';
 	const DEFAULT_SETTINGS_SECTION = 'access';
+
+	/**
+	 * The transfer settings page is a server-rendered island — its markup and
+	 * scripts only ship on a full page load of /app-settings/transfer, so the
+	 * client-side router must never render it: links navigate natively, and
+	 * history entries pointing at it force a reload.
+	 */
+	function isServerRenderedSection(viewId, params) {
+		return viewId === 'app-settings'
+			&& normalizeSettingsSection(params && params.settingsSection) === 'transfer';
+	}
 
 	const routes = {
 		home: { path: '/', view: 'home' },
@@ -193,14 +204,19 @@
 			root = container;
 			window.addEventListener('popstate', () => {
 				const m = matchRoute(location.pathname);
+				if (isServerRenderedSection(m.view, m.params)) {
+					location.reload();
+					return;
+				}
 				render(m.view, m.params);
 			});
 			document.querySelectorAll('.ac-nav__link').forEach((link) => {
 				link.addEventListener('click', (e) => {
 					const href = link.getAttribute('href');
 					if (!href || e.metaKey || e.ctrlKey) return;
-					e.preventDefault();
 					const m = matchRoute(href);
+					if (isServerRenderedSection(m.view, m.params)) return;
+					e.preventDefault();
 					navigate(m.view, m.params);
 				});
 			});

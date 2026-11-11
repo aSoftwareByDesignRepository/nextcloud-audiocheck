@@ -20,8 +20,15 @@ return [
 			'name' => 'page#appSettings',
 			'url' => '/app-settings/{section}',
 			'verb' => 'GET',
-			'requirements' => ['section' => 'access|admins|defaults|support'],
+			'requirements' => ['section' => 'access|admins|defaults|support|transfer'],
 		],
+
+		// ── Config & data transfer (test → production) ──────────────────
+		['name' => 'transfer_api#status', 'url' => '/api/admin/transfer/status', 'verb' => 'GET'],
+		['name' => 'transfer_api#export', 'url' => '/api/admin/transfer/export', 'verb' => 'POST'],
+		['name' => 'transfer_api#preview', 'url' => '/api/admin/transfer/preview', 'verb' => 'POST'],
+		['name' => 'transfer_api#apply', 'url' => '/api/admin/transfer/apply', 'verb' => 'POST'],
+		['name' => 'transfer_api#reconcile', 'url' => '/api/admin/transfer/reconcile', 'verb' => 'POST'],
 
 		['name' => 'api#listTracks', 'url' => '/api/tracks', 'verb' => 'GET'],
 		['name' => 'api#getTrackInfo', 'url' => '/api/tracks/{fileId}', 'verb' => 'GET', 'requirements' => ['fileId' => '\\d+']],

@@ -251,6 +251,60 @@ class Application extends App implements IBootstrap
 			$c->query(ILockingProvider::class),
 			$c->query(\Psr\Log\LoggerInterface::class),
 		));
+
+		// ── Config & data transfer (test → production) ──────────────────
+		$context->registerService(\OCA\AudioCheck\ConfigTransfer\TransferManifest::class, fn () => new \OCA\AudioCheck\ConfigTransfer\TransferManifest());
+		$context->registerService(\OCA\AudioCheck\ConfigTransfer\TransferHooks::class, function ($c): \OCA\AudioCheck\ConfigTransfer\TransferHooks {
+			return new \OCA\AudioCheck\ConfigTransfer\TransferHooks(
+				$c->query(AccessControlService::class),
+				$c->query(UpgradeBackupService::class),
+				$c->query(\OCP\IUserManager::class),
+				$c->query(\OCP\IGroupManager::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
+			);
+		});
+		$context->registerService(\OCA\AudioCheck\ConfigTransfer\TransferPendingStore::class, fn ($c) => new \OCA\AudioCheck\ConfigTransfer\TransferPendingStore($c->query(IRootFolder::class), $c->query(\OCP\IConfig::class), 'audiocheck'));
+		$context->registerService(\OCA\AudioCheck\ConfigTransfer\TransferReceiptStore::class, fn ($c) => new \OCA\AudioCheck\ConfigTransfer\TransferReceiptStore($c->query(\OCP\IConfig::class), 'audiocheck'));
+		$context->registerService(\OCA\AudioCheck\ConfigTransfer\TransferService::class, function ($c): \OCA\AudioCheck\ConfigTransfer\TransferService {
+			return new \OCA\AudioCheck\ConfigTransfer\TransferService(
+				$c->query(\OCP\IDBConnection::class),
+				$c->query(\OCP\IConfig::class),
+				$c->query(\OCP\IUserManager::class),
+				$c->query(\OCP\IGroupManager::class),
+				$c->query(IRootFolder::class),
+				$c->query(IAppManager::class),
+				$c->query(ILockingProvider::class),
+				$c->query(\OCP\IURLGenerator::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
+				$c->query(\OCA\AudioCheck\ConfigTransfer\TransferManifest::class),
+				$c->query(\OCA\AudioCheck\ConfigTransfer\TransferHooks::class),
+				$c->query(\OCA\AudioCheck\ConfigTransfer\TransferPendingStore::class),
+				$c->query(\OCA\AudioCheck\ConfigTransfer\TransferReceiptStore::class),
+				'audiocheck',
+				$c->query(\OCP\IAppConfig::class),
+			);
+		});
+		$context->registerService(\OCA\AudioCheck\BackgroundJob\TransferApplyJob::class, function ($c): \OCA\AudioCheck\BackgroundJob\TransferApplyJob {
+			return new \OCA\AudioCheck\BackgroundJob\TransferApplyJob(
+				$c->query(\OCP\AppFramework\Utility\ITimeFactory::class),
+				$c->query(\OCA\AudioCheck\ConfigTransfer\TransferService::class),
+				$c->query(ILockingProvider::class),
+				$c->query(\OCP\BackgroundJob\IJobList::class),
+				$c->query(\Psr\Log\LoggerInterface::class),
+			);
+		});
+		$context->registerService(\OCA\AudioCheck\Controller\TransferApiController::class, function ($c): \OCA\AudioCheck\Controller\TransferApiController {
+			return new \OCA\AudioCheck\Controller\TransferApiController(
+				'audiocheck',
+				$c->query(\OCP\IRequest::class),
+				$c->query(\OCA\AudioCheck\ConfigTransfer\TransferHooks::class),
+				$c->query(\OCA\AudioCheck\ConfigTransfer\TransferService::class),
+				$c->query(\OCP\BackgroundJob\IJobList::class),
+				$c->query(\OCP\Security\Bruteforce\IThrottler::class),
+				$c->query(\OCP\IGroupManager::class),
+				$c->query(\OCP\IUserSession::class),
+			);
+		});
 	}
 
 	public function boot(IBootContext $context): void

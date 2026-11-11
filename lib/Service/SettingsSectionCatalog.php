@@ -29,6 +29,7 @@ final class SettingsSectionCatalog
 		'admins',
 		'defaults',
 		'support',
+		'transfer',
 	];
 
 	public function isSection(string $section): bool
@@ -48,6 +49,7 @@ final class SettingsSectionCatalog
 			'admins' => $l->t('App administrators'),
 			'defaults' => $l->t('New user defaults'),
 			'support' => $l->t('Support & us'),
+			'transfer' => $l->t('Transfer configuration'),
 			default => $l->t('App settings'),
 		};
 	}
@@ -59,6 +61,7 @@ final class SettingsSectionCatalog
 			'admins' => $l->t('Admins'),
 			'defaults' => $l->t('Defaults'),
 			'support' => $l->t('Support'),
+			'transfer' => $l->t('Transfer'),
 			default => $l->t('App settings'),
 		};
 	}
@@ -70,6 +73,7 @@ final class SettingsSectionCatalog
 			'admins' => $l->t('Delegated admins can change policy here. They still only play their own files.'),
 			'defaults' => $l->t('Suggested library folder and metadata extraction limits for new users.'),
 			'support' => $l->t('How to get help, report bugs, and support AudioCheck development.'),
+			'transfer' => $l->t('Copy all settings and personal library data between a test and a production instance — one encrypted file, dry-run before anything is written.'),
 			default => $l->t('Access policy and defaults for AudioCheck.'),
 		};
 	}

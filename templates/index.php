@@ -16,6 +16,14 @@
 	</div>
 </div>
 
+<?php if (($_['settingsSection'] ?? '') === 'transfer'): ?>
+<?php /* The transfer settings page is a server-rendered island inside the
+	SPA: the router wipes #ac-view-root on every render, so the markup ships
+	inert in a <template> outside it; js/views/app-settings.js clones it
+	into the rendered body for the 'transfer' section. */ ?>
+<template id="ac-transfer-template"><?php include __DIR__ . '/parts/settings/transfer.php'; ?></template>
+<?php endif; ?>
+
 <div id="ac-announcer" class="ac-sr-only" aria-live="polite" aria-atomic="true"></div>
 <div id="ac-toasts" class="ac-toasts" aria-live="polite"></div>
 

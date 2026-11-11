@@ -584,6 +584,9 @@ Melhoramos este app com o uso real. Relatórios de bugs, atritos e ideias ajudam
 	<commands>
 		<command>OCA\AudioCheck\Command\UpgradeBackupCommand</command>
 		<command>OCA\AudioCheck\Command\Scan</command>
+		<command>OCA\AudioCheck\Command\ConfigExportCommand</command>
+		<command>OCA\AudioCheck\Command\ConfigImportCommand</command>
+		<command>OCA\AudioCheck\Command\ConfigReconcileCommand</command>
 	</commands>
 	<background-jobs>
 		<job>OCA\AudioCheck\BackgroundJob\ScanSchedulerJob</job>

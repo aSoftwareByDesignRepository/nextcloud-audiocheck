@@ -6,6 +6,7 @@ namespace OCA\AudioCheck\Tests\Unit\Controller;
 
 use OCA\AudioCheck\Command\Scan;
 use OCA\AudioCheck\Command\UpgradeBackupCommand;
+use OCA\AudioCheck\ConfigTransfer\TransferReceiptStore;
 use OCA\AudioCheck\Controller\CoverController;
 use OCA\AudioCheck\Controller\PageController;
 use OCA\AudioCheck\Controller\StreamController;
@@ -66,6 +67,11 @@ final class EntrypointInvokeCoverageTest extends TestCase
 		$config = $this->createMock(IConfig::class);
 		$config->method('getUserValue')->willReturn('UTC');
 		$config->method('getSystemValueString')->willReturn('UTC');
+		// TransferReceiptStore reads appconfig bookkeeping keys — honour the
+		// $default argument like the real IConfig so the store sees '[]'.
+		$config->method('getAppValue')->willReturnCallback(
+			static fn (string $appName, string $key, string $default = ''): string => $default
+		);
 		$sections = new SettingsSectionCatalog();
 		$mobile = new MobileAppLinks();
 
@@ -78,6 +84,7 @@ final class EntrypointInvokeCoverageTest extends TestCase
 			$config,
 			$sections,
 			$mobile,
+			new TransferReceiptStore($config, 'audiocheck'),
 		);
 
 		$invoked = [];

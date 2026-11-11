@@ -4,7 +4,7 @@
 	const Picker = window.AudioCheckEntityPicker;
 
 	/** Mirrors OCA\AudioCheck\Service\SettingsSectionCatalog::SECTIONS */
-	const SECTION_ORDER = ['access', 'admins', 'defaults', 'support'];
+	const SECTION_ORDER = ['access', 'admins', 'defaults', 'support', 'transfer'];
 	const DEFAULT_SECTION = 'access';
 
 	function chipList(items, onRemove, labelFn) {
@@ -90,6 +90,7 @@
 			{ id: 'admins', label: t('audiocheck', 'Admins') },
 			{ id: 'defaults', label: t('audiocheck', 'Defaults') },
 			{ id: 'support', label: t('audiocheck', 'Support') },
+			{ id: 'transfer', label: t('audiocheck', 'Transfer') },
 		];
 		const list = C.createElement('ul', {
 			class: 'ac-settings-chips',
@@ -114,6 +115,10 @@
 				on: {
 					click: (e) => {
 						if (e.metaKey || e.ctrlKey) return;
+						// The transfer page is a server-rendered island — its
+						// markup/scripts only ship on a full page load, so the
+						// chip must navigate like a plain link.
+						if (section.id === 'transfer') return;
 						e.preventDefault();
 						AudioCheckRouter.navigate('app-settings', { settingsSection: section.id });
 					},
@@ -168,6 +173,25 @@
 				if (window.SbdSupportUs && typeof window.SbdSupportUs.render === 'function') {
 					window.SbdSupportUs.render(supportMount, { appId: 'audiocheck' });
 				}
+				frag.appendChild(body);
+				return frag;
+			}
+
+			if (section === 'transfer') {
+				// Server-rendered island: templates/index.php ships the markup
+				// inert in <template id="ac-transfer-template"> — clone it in.
+				// transfer.js binds its events on DOMContentLoaded.
+				const mount = C.createElement('div', { class: 'ac-transfer-mount' });
+				const tpl = document.getElementById('ac-transfer-template');
+				if (tpl && tpl.content) {
+					mount.appendChild(tpl.content.cloneNode(true));
+				} else {
+					mount.appendChild(C.createElement('p', {
+						class: 'ac-field__hint',
+						text: t('audiocheck', 'Reload the page to open the transfer tool.'),
+					}));
+				}
+				body.appendChild(mount);
 				frag.appendChild(body);
 				return frag;
 			}

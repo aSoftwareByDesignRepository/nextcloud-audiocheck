@@ -34,6 +34,7 @@ class PageController extends Controller
 		private IConfig $config,
 		private SettingsSectionCatalog $settingsSections,
 		private MobileAppLinks $mobileAppLinks,
+		private \OCA\AudioCheck\ConfigTransfer\TransferReceiptStore $transferReceipts,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -162,6 +163,14 @@ class PageController extends Controller
 	{
 		$userId = $this->access->currentUserId();
 		$this->registerFrontEndAssets();
+		// The transfer section is a server-rendered island inside the SPA —
+		// its assets only ship when that page is loaded (client-side
+		// navigation always lands here via a full page load).
+		if (($extra['settingsSection'] ?? '') === 'transfer') {
+			Util::addStyle(Application::APP_ID, 'common/transfer');
+			Util::addScript(Application::APP_ID, 'transfer-bridge');
+			Util::addScript(Application::APP_ID, 'transfer');
+		}
 
 		$timezone = 'UTC';
 		if ($userId !== '') {
@@ -179,6 +188,8 @@ class PageController extends Controller
 			'pageTitle' => $title,
 			'pageHelp' => $help,
 			'isAppAdmin' => $this->access->isAppAdmin($userId),
+			'isSystemAdmin' => $this->access->isSystemAdmin($userId),
+			'transferLastReceipt' => $this->transferReceipts->lastReceipt(),
 			'navigationGroups' => $this->buildNavigationGroups($viewId),
 			'viewMeta' => $this->buildViewMeta(),
 			'appLogoUrl' => $this->urlGenerator->imagePath(Application::APP_ID, 'app.svg'),

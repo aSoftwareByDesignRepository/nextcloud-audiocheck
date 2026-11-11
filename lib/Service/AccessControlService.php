@@ -94,13 +94,88 @@ class AccessControlService
 		return $this->config->getAppValue(Application::APP_ID, self::KEY_ACCESS_RESTRICTION, '0') === '1';
 	}
 
-	public function requireAppAdmin(): string
+	/**
+	 * Asserts the acting user — or, when a uid is passed explicitly, that
+	 * user — holds the door-admin role. The config-transfer engine calls
+	 * this with the uid it authenticated (requireTransferAdmin, AS-02);
+	 * the web controllers keep calling it with no argument (session user).
+	 */
+	public function requireAppAdmin(?string $userId = null): string
 	{
-		$userId = $this->currentUserId();
+		$userId ??= $this->currentUserId();
 		if (!$this->isAppAdmin($userId)) {
 			throw new AccessDeniedException();
 		}
 		return $userId;
+	}
+
+	/**
+	 * Validate + normalise ONE policy appconfig value exactly the way
+	 * {@see saveAppPolicy()} persists it — the shared normaliser the
+	 * config-transfer engine calls (NN-08: import grants no validation
+	 * bypass). Existence/enabled checks stay in saveAppPolicy (and the
+	 * engine's ref resolution); this only enforces the stored shape.
+	 *
+	 * @throws \InvalidArgumentException on unknown keys or malformed values
+	 */
+	public function normalizeForWrite(string $key, string $value): string
+	{
+		return match ($key) {
+			self::KEY_ACCESS_RESTRICTION => in_array($value, ['0', '1'], true)
+				? $value
+				: throw new \InvalidArgumentException('INVALID_ACCESS_RESTRICTION'),
+			self::KEY_APP_ADMINS,
+			self::KEY_ACCESS_ALLOWED_USER_IDS => $this->normalizeIdListValue($value, true),
+			self::KEY_ACCESS_ALLOWED_GROUP_IDS => $this->normalizeIdListValue($value, false),
+			self::KEY_DEFAULT_LIBRARY_FOLDER => $this->normalizeFolderValue($value),
+			self::KEY_MAX_META_TEMP_MB => $this->normalizeMaxMetaTempMbValue($value),
+			default => throw new \InvalidArgumentException('UNKNOWN_SETTING'),
+		};
+	}
+
+	/**
+	 * Same canonical id-list form {@see saveAppPolicy()} stores: a JSON
+	 * array of unique, trimmed, non-empty ids (uid lists additionally drop
+	 * >64-char candidates like the policy writer does).
+	 */
+	private function normalizeIdListValue(string $value, bool $uidList): string
+	{
+		$list = json_decode($value, true, 64, JSON_THROW_ON_ERROR);
+		if (!is_array($list) || !array_is_list($list)) {
+			throw new \InvalidArgumentException('INVALID_ID_LIST');
+		}
+		$clean = [];
+		foreach ($list as $id) {
+			if (!is_string($id)) {
+				continue;
+			}
+			$id = trim($id);
+			if ($id === '' || ($uidList && strlen($id) > 64)) {
+				continue;
+			}
+			$clean[] = $id;
+		}
+		return json_encode(array_values(array_unique($clean)), JSON_THROW_ON_ERROR);
+	}
+
+	/** Same validation as the defaults section of {@see saveAppPolicy()}. */
+	private function normalizeFolderValue(string $value): string
+	{
+		$folder = trim($value);
+		if ($folder === '' || str_contains($folder, '..')) {
+			throw new \InvalidArgumentException('INVALID_DEFAULT_FOLDER');
+		}
+		return $folder;
+	}
+
+	/** Same validation as the defaults section of {@see saveAppPolicy()}. */
+	private function normalizeMaxMetaTempMbValue(string $value): string
+	{
+		$mb = (int)$value;
+		if ($mb < 16 || $mb > 2048) {
+			throw new \InvalidArgumentException('INVALID_MAX_META_TEMP_MB');
+		}
+		return (string)$mb;
 	}
 
 	public function getDefaultLibraryFolder(): string

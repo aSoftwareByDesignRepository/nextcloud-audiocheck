@@ -17,6 +17,7 @@ namespace OCA\AudioCheck\Tests\Unit\BackgroundJob;
 
 use OCA\AudioCheck\BackgroundJob\ScanJob;
 use OCA\AudioCheck\BackgroundJob\ScanSchedulerJob;
+use OCA\AudioCheck\BackgroundJob\TransferApplyJob;
 use OCA\AudioCheck\Service\ScanService;
 use OCA\AudioCheck\Service\UpgradeBackupService;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -32,6 +33,7 @@ final class UpgradeBackupSharedLockTest extends TestCase
 	private const JOB_CLASSES = [
 		ScanJob::class,
 		ScanSchedulerJob::class,
+		TransferApplyJob::class,
 	];
 
 	/**
