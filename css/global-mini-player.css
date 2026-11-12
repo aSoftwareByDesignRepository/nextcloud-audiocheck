@@ -410,6 +410,16 @@ body.ac-global-mini-player-host {
 	height: 1.25rem;
 }
 
+/* Overlay control armor (overlay_toast_button_armor_gap): on foreign pages
+ * this stylesheet is the only app CSS, so the shared
+ * `.ac-mini-player button.ac-btn` (0,2,1) margin:0 only ties core's
+ * :not(.app-navigation-entry-button) margin repaint (0,2,1) and survives
+ * solely on load order. Pin the close control's margin outright. */
+#ac-mini-player button.ac-mini-player__close,
+.ac-mini-player button.ac-mini-player__close {
+	margin: 0 !important;
+}
+
 /* Author display rules must never defeat [hidden] (covers Files/Photos chrome). */
 #ac-mini-player[hidden],
 .ac-mini-player[hidden],

@@ -1687,6 +1687,63 @@ dialog .ac-btn--ghost:active,
 	color: var(--color-main-text) !important;
 }
 
+/* ── Overlay control armor (overlay_toast_button_armor_gap) ──────────────
+ * <button class="ac-toast__close"> renders inside the body-mounted toast
+ * stack (#ac-toasts, outside .ac-app) and <button class="ac-modal__close">
+ * inside the top-layer native dialog — the variant scope list cannot reach
+ * either, and their bare 0-1-0 / overlay-scoped rules leave width, padding
+ * and margin to core's button repaint (width:130px / pale fill / border /
+ * padding at 0-1-1, margin-inline-start:0 at 0-2-1). Pin every repainted
+ * property !important on overlay-scoped selectors; keep >=44px targets.
+ * Donor shape: whistlecheck #wc-toasts button.wc-toast__close. */
+#ac-toasts button.ac-toast__close,
+.ac-toasts button.ac-toast__close,
+.ac-toast button.ac-toast__close {
+	width: auto !important;
+	margin: 0 !important;
+	margin-inline-start: auto !important;
+	padding: var(--ac-space-2) !important;
+	background: transparent !important;
+	border: 0 !important;
+	min-width: var(--ac-touch);
+	min-height: var(--ac-touch);
+}
+dialog.ac-native-dialog button.ac-modal__close,
+.ac-native-dialog button.ac-modal__close,
+.ac-modal button.ac-modal__close,
+.ac-modal__dialog button.ac-modal__close {
+	width: auto !important;
+	margin: 0 !important;
+	margin-inline-start: auto !important;
+	padding: var(--ac-space-2) !important;
+	background: transparent !important;
+	border: 1px solid transparent !important;
+	border-radius: var(--ac-radius-sm);
+	min-width: var(--ac-touch);
+	min-height: var(--ac-touch);
+}
+dialog.ac-native-dialog button.ac-modal__close:hover,
+.ac-native-dialog button.ac-modal__close:hover,
+.ac-modal button.ac-modal__close:hover,
+.ac-modal__dialog button.ac-modal__close:hover {
+	background: var(--ac-bg-soft) !important;
+}
+dialog.ac-native-dialog button.ac-modal__close:focus-visible,
+.ac-native-dialog button.ac-modal__close:focus-visible,
+.ac-modal button.ac-modal__close:focus-visible,
+.ac-modal__dialog button.ac-modal__close:focus-visible {
+	background: var(--ac-bg-soft) !important;
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 2px;
+}
+/* The global mini player re-mounts outside .ac-app on foreign pages — its
+ * close control rides the shared `.ac-mini-player button.ac-btn` (0,2,1)
+ * rule that only ties core's margin repaint; pin it outright. */
+#ac-mini-player button.ac-mini-player__close,
+.ac-mini-player button.ac-mini-player__close {
+	margin: 0 !important;
+}
+
 /* Empty states: canonical rules in common/page-patterns.css (no card chrome). */
 .ac-empty__app-logo {
 	display: block;
