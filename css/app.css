@@ -1584,6 +1584,109 @@ dialog.ac-native-dialog button.ac-btn--danger:not(:disabled):focus-visible,
 	color: var(--ac-danger-on-fill);
 }
 
+/* ── Variant armor (button_variant_specificity_collapse) ─────────────────
+ * NC core inputs.scss repaints every button:not(.button-vue) at 0-1-1 with
+ * the pale --color-primary-element-light fill. The synced config-transfer
+ * pack emits class="ac-btn ac-btn--{secondary,ghost}" — variants the app
+ * taxonomy did not declare, so a ghost Show/Hide button would paint solid.
+ * Pin both variants under every app + body-mounted overlay scope with
+ * !important, incl. :hover/:focus-visible/:active. Secondary keeps the
+ * armored-base outline look (bg-card + strong border); ghost is chromeless
+ * until hovered. */
+#app-content.ac-app .ac-btn--secondary,
+.ac-app .ac-btn--secondary,
+.ac-modal .ac-btn--secondary,
+.ac-dialog .ac-btn--secondary,
+dialog .ac-btn--secondary,
+[role="dialog"] .ac-btn--secondary,
+[role="alertdialog"] .ac-btn--secondary {
+	background: var(--ac-bg-card) !important;
+	border-color: var(--ac-border-strong) !important;
+	color: var(--color-main-text) !important;
+}
+#app-content.ac-app .ac-btn--secondary:hover,
+.ac-app .ac-btn--secondary:hover,
+.ac-modal .ac-btn--secondary:hover,
+.ac-dialog .ac-btn--secondary:hover,
+dialog .ac-btn--secondary:hover,
+[role="dialog"] .ac-btn--secondary:hover,
+[role="alertdialog"] .ac-btn--secondary:hover {
+	background: var(--color-background-hover) !important;
+	border-color: var(--ac-border-strong) !important;
+	color: var(--color-main-text) !important;
+}
+#app-content.ac-app .ac-btn--secondary:focus-visible,
+.ac-app .ac-btn--secondary:focus-visible,
+.ac-modal .ac-btn--secondary:focus-visible,
+.ac-dialog .ac-btn--secondary:focus-visible,
+dialog .ac-btn--secondary:focus-visible,
+[role="dialog"] .ac-btn--secondary:focus-visible,
+[role="alertdialog"] .ac-btn--secondary:focus-visible {
+	background: var(--color-background-hover) !important;
+	border-color: var(--ac-border-strong) !important;
+	color: var(--color-main-text) !important;
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 2px;
+}
+#app-content.ac-app .ac-btn--secondary:active,
+.ac-app .ac-btn--secondary:active,
+.ac-modal .ac-btn--secondary:active,
+.ac-dialog .ac-btn--secondary:active,
+dialog .ac-btn--secondary:active,
+[role="dialog"] .ac-btn--secondary:active,
+[role="alertdialog"] .ac-btn--secondary:active {
+	background: var(--color-background-dark) !important;
+	border-color: var(--ac-border-strong) !important;
+	color: var(--color-main-text) !important;
+}
+
+#app-content.ac-app .ac-btn--ghost,
+.ac-app .ac-btn--ghost,
+.ac-modal .ac-btn--ghost,
+.ac-dialog .ac-btn--ghost,
+dialog .ac-btn--ghost,
+[role="dialog"] .ac-btn--ghost,
+[role="alertdialog"] .ac-btn--ghost {
+	background: transparent !important;
+	border-color: transparent !important;
+	color: var(--color-main-text) !important;
+}
+#app-content.ac-app .ac-btn--ghost:hover,
+.ac-app .ac-btn--ghost:hover,
+.ac-modal .ac-btn--ghost:hover,
+.ac-dialog .ac-btn--ghost:hover,
+dialog .ac-btn--ghost:hover,
+[role="dialog"] .ac-btn--ghost:hover,
+[role="alertdialog"] .ac-btn--ghost:hover {
+	background: var(--color-background-hover) !important;
+	border-color: transparent !important;
+	color: var(--color-main-text) !important;
+}
+#app-content.ac-app .ac-btn--ghost:focus-visible,
+.ac-app .ac-btn--ghost:focus-visible,
+.ac-modal .ac-btn--ghost:focus-visible,
+.ac-dialog .ac-btn--ghost:focus-visible,
+dialog .ac-btn--ghost:focus-visible,
+[role="dialog"] .ac-btn--ghost:focus-visible,
+[role="alertdialog"] .ac-btn--ghost:focus-visible {
+	background: var(--color-background-hover) !important;
+	border-color: transparent !important;
+	color: var(--color-main-text) !important;
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: 2px;
+}
+#app-content.ac-app .ac-btn--ghost:active,
+.ac-app .ac-btn--ghost:active,
+.ac-modal .ac-btn--ghost:active,
+.ac-dialog .ac-btn--ghost:active,
+dialog .ac-btn--ghost:active,
+[role="dialog"] .ac-btn--ghost:active,
+[role="alertdialog"] .ac-btn--ghost:active {
+	background: var(--color-background-dark) !important;
+	border-color: transparent !important;
+	color: var(--color-main-text) !important;
+}
+
 /* Empty states: canonical rules in common/page-patterns.css (no card chrome). */
 .ac-empty__app-logo {
 	display: block;

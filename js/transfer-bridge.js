@@ -57,14 +57,21 @@
 	api.url = function (path) {
 		return OC.generateUrl('/apps/audiocheck' + path);
 	};
+	// The synced transfer.js speaks in app-relative paths
+	// ('/api/admin/transfer/…'), while the inner api layer wants the full
+	// '/apps/audiocheck/…' route for OC.generateUrl — translate here so
+	// apply/status land on the app, not on a bare (and 404ing) core path.
+	function appPath(path) {
+		return path.startsWith('/apps/') ? path : '/apps/audiocheck' + path;
+	}
 	if (innerGet) {
 		api.get = function (path, params, options) {
-			return innerGet(path, params, options).then(unwrap, enrich);
+			return innerGet(appPath(path), params, options).then(unwrap, enrich);
 		};
 	}
 	if (innerPost) {
 		api.post = function (path, body, options) {
-			return innerPost(path, body, options).then(unwrap, enrich);
+			return innerPost(appPath(path), body, options).then(unwrap, enrich);
 		};
 	}
 	api.upload = function (path, file, extra) {
