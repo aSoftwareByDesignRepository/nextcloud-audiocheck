@@ -22,6 +22,10 @@
  *    never the stored 'merge' wire value (en + zh_TW legs)
  *  - raw_placeholder_rendered: verdict/file lines carry interpolated values,
  *    never %d/%s/%1$s/{0} residue
+ *  - native_dialog_margin_reset_uncentered: ≥481px pack dialogs centered
+ *    both axes over the backdrop (pack margin:auto survives the NC core
+ *    'html,body,…,dialog,…{margin:0}' reset); ≤480px keeps the margin:0
+ *    full-bleed sheet (donor dialog.ac-dialog element qualifier)
  *
  * Session note: SessionCsrfMiddleware demands the session requesttoken on
  * every non-GET — API calls go through the page's own authenticated request
@@ -66,6 +70,34 @@ async function authedGet(page, url) {
 	return page.context().request.get(url, { headers: { 'OCS-APIRequest': 'true' } });
 }
 
+/** native_dialog_margin_reset_uncentered: NC core's html,body,…,dialog
+ * reset zeroes the UA 'margin:auto' that centers a top-layer <dialog> —
+ * a pack dialog without a margin re-declaration anchors to the viewport
+ * top-left. mode 'centered' proves the pack margin:auto restored both-axis
+ * centering over the dimmed backdrop; mode 'fullbleed' proves the ≤480px
+ * media query margin:0 sheet still wins at narrow widths. */
+async function assertDialogTopLayerGeometry(dialog, mode, where) {
+	const m = await dialog.evaluate((d) => {
+		const r = d.getBoundingClientRect();
+		return { l: r.left, t: r.top, w: r.width, h: r.height, vpW: window.innerWidth, vpH: window.innerHeight };
+	});
+	if (mode === 'centered') {
+		const expL = Math.max(0, (m.vpW - m.w) / 2);
+		const expT = Math.max(0, (m.vpH - m.h) / 2);
+		expect(Math.abs(m.l - expL),
+			`${where}: dialog left ${Math.round(m.l)} ≠ centered ${Math.round(expL)} — margin:auto did not survive the NC reset`)
+			.toBeLessThanOrEqual(2);
+		expect(Math.abs(m.t - expT),
+			`${where}: dialog top ${Math.round(m.t)} ≠ centered ${Math.round(expT)}`)
+			.toBeLessThanOrEqual(2);
+		expect(m.l, `${where}: flush-left top-left anchor regression`).toBeGreaterThan(1);
+	} else {
+		expect(Math.abs(m.l), `${where}: ≤480 full-bleed sheet must pin to the left edge`).toBeLessThanOrEqual(1);
+		expect(m.w, `${where}: ≤480 full-bleed sheet must span viewport width`).toBeGreaterThanOrEqual(m.vpW - 1);
+		expect(m.t, `${where}: ≤480 full-bleed sheet must pin to the top edge`).toBeLessThanOrEqual(1);
+	}
+}
+
 test.describe('craft transfer', () => {
 	const creds = resolveE2eCreds('ADMIN');
 
@@ -105,6 +137,7 @@ test.describe('craft transfer', () => {
 		await expect(page.locator('#ac-transfer-report-verdict')).toContainText(/\d/);
 		const fileLine = await page.locator('#ac-transfer-report-file').textContent();
 		expect(fileLine || '').not.toMatch(/\{\d+\}|%\d+\$s|%d(?!\w)/);
+		await assertDialogTopLayerGeometry(report, 'centered', 'report 1280');
 		await shot(page, 'ac-admin-transfer-report-dialog-light-1280');
 
 		// apply → progress dialog opens while the job is queued
@@ -118,6 +151,7 @@ test.describe('craft transfer', () => {
 		const progress = page.locator('#ac-transfer-progress');
 		await expect(progress).toBeVisible({ timeout: 10000 });
 		await expect(page.locator('#ac-transfer-progress-text')).not.toBeEmpty();
+		await assertDialogTopLayerGeometry(progress, 'centered', 'progress 1280');
 		await shot(page, 'ac-admin-transfer-progress-light-1280');
 
 		// app-namespaced class id — other apps' TransferApplyJob rows never match
@@ -244,11 +278,18 @@ test.describe('craft transfer', () => {
 				.toBeLessThanOrEqual(1);
 		};
 		await assertDialogFooterPainted('1280');
+		await assertDialogTopLayerGeometry(report, 'centered', 'replace-confirm 1280');
 		await shot(page, 'ac-admin-transfer-replace-confirm-light-1280');
 		await page.setViewportSize({ width: 375, height: 812 });
 		await page.waitForTimeout(300);
 		await assertDialogFooterPainted('375');
+		await assertDialogTopLayerGeometry(report, 'fullbleed', 'replace-confirm 375');
 		await shot(page, 'ac-admin-transfer-replace-confirm-light-375');
+		await page.setViewportSize({ width: 320, height: 700 });
+		await page.waitForTimeout(300);
+		await assertDialogFooterPainted('320');
+		await assertDialogTopLayerGeometry(report, 'fullbleed', 'replace-confirm 320');
+		await shot(page, 'ac-admin-transfer-replace-confirm-light-320');
 		// Never apply — replace is destructive; close the dialog instead.
 		await page.keyboard.press('Escape');
 		await expect(report).toBeHidden();
