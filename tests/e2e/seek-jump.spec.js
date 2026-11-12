@@ -393,10 +393,15 @@ test.describe('AudioCheck seek jump (±30s)', () => {
 		const loaded = await loadPlayableTrack(page);
 		test.skip(!loaded, 'No playable tracks in library — seed audio before seeking e2e');
 
+		// Wait for metadata too — while readyState<1 the pending restore
+		// position is still armed, and a jump landing before it is a real
+		// user-seek race (pendingRestoreSeekMs is cleared by player seeks,
+		// but asserting mid-race is nondeterministic).
 		await page.waitForFunction(() => {
 			const a = document.getElementById('ac-audio');
 			const back = document.getElementById('ac-mini-jump-back');
-			return !!(a && back && !back.disabled && Number.isFinite(a.currentTime)
+			return !!(a && back && !back.disabled && a.readyState >= 1
+				&& a.currentTime >= 1
 				&& window.getComputedStyle(back).display !== 'none');
 		}, null, { timeout: 25_000 });
 

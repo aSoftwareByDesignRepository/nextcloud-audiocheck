@@ -37,6 +37,7 @@ const SURFACES = [
 	['/apps/audiocheck/app-settings/admins', 'app-settings-admins'],
 	['/apps/audiocheck/app-settings/defaults', 'app-settings-defaults'],
 	['/apps/audiocheck/app-settings/support', 'app-settings-support'],
+	['/apps/audiocheck/app-settings/transfer', 'app-settings-transfer'],
 ];
 
 const CONTRACT_OPTS = {
