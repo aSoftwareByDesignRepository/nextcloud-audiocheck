@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.3.14 - 2026-11-13
+
+### Fixed
+
+- re-sync pack — dialog.ac-dialog element qualifier on ≤480px full-bleed rule
+- margin:auto on pack dialog — NC core reset uncenters top-layer dialogs
+- overlay close-control armor — pin repainted props on toast/modal/mini-player close
+- re-sync transfer.css — file-input rule escapes shell specificity tie (2-3-1)
+- dead Apply button (bridge path prefix) + pack resync + button armor
+- sync config-transfer pack — positional t() interpolation
+- sync zh_CN catalog order + CSP 2-arg register() tooling
+- pin PHP_SAPI constant guard on NC-bootstrapping seed script
+
+### Added
+
+- config & data transfer — encrypted test→prod pack
+
+### Changed
+
+- transfer dialog top-layer geometry legs — centered ≥481, full-bleed ≤480
+- craft-transfer spec, transfer surface contract row, seek-jump race fix
+- l10n: catalogue + translate 87 missing runtime strings across all 15 catalogs
+- pack re-sync — replace-confirm token width (cramped_form_controls)
+- l10n: zh-Hant/zh_TW catalog + locale wiring
+- l10n: add zh_CN catalog
+- l10n: complete translations across the app language set
+- parity script + icons/support-us sync
+- derive info.xml version pin from appinfo/version
+- repair v1.3.13 section — placement, convention, real bullets
+
 ## Unreleased
 
 ## 1.3.13 - 2026-11-05
