@@ -84,7 +84,6 @@ final class LibraryServiceFavoritesTest extends TestCase
 	private function invokeLoadFavoriteFileIds(LibraryService $service): array
 	{
 		$method = (new ReflectionClass($service))->getMethod('loadFavoriteFileIds');
-		$method->setAccessible(true);
 		/** @var list<int> $ids */
 		$ids = $method->invoke($service);
 		return $ids;
