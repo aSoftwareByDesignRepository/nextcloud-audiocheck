@@ -832,7 +832,9 @@
 		"removed from the list": "rimosso dall’elenco",
 		"set it on this instance": "impostalo su questa istanza",
 		"undo via snapshot": "annulla tramite snapshot",
-		"will be skipped": "verrà saltato"
+		"will be skipped": "verrà saltato",
+		"Reload the page to open the transfer tool.": "Ricarica la pagina per aprire lo strumento di trasferimento.",
+		"Star tracks in Now playing or Browse.": "Contrassegna con una stella le tracce in In riproduzione o Sfoglia."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

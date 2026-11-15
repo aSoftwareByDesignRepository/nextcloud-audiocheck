@@ -833,6 +833,8 @@
     "removed from the list": "已從列表移除",
     "set it on this instance": "在此執行個體上設定",
     "undo via snapshot": "透過快照撤銷",
-    "will be skipped": "將被跳過"
+    "will be skipped": "將被跳過",
+    "Reload the page to open the transfer tool.": "請重新整理頁面以開啟傳輸工具。",
+    "Star tracks in Now playing or Browse.": "在“正在播放”或“瀏覽”中收藏曲目。"
   }
 }

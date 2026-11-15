@@ -833,6 +833,8 @@ OC.L10N.register(
 	"removed from the list" : "listeden kaldırıldı",
 	"set it on this instance" : "bu ortamda ayarla",
 	"undo via snapshot" : "anlık görüntüyle geri al",
-	"will be skipped" : "atlanacak"
+	"will be skipped" : "atlanacak",
+	"Reload the page to open the transfer tool." : "Aktarma aracını açmak için sayfayı yenileyin.",
+	"Star tracks in Now playing or Browse." : "Şimdi çalan veya Gözat'ta parçaları yıldızlayın."
 	}
 );

@@ -833,6 +833,8 @@ OC.L10N.register(
 	"removed from the list" : "van de lijst verwijderd",
 	"set it on this instance" : "het op deze instantie instellen",
 	"undo via snapshot" : "ongedaan maken via momentopname",
-	"will be skipped" : "wordt overgeslagen"
+	"will be skipped" : "wordt overgeslagen",
+	"Reload the page to open the transfer tool." : "Herlaad de pagina om de overdrachttool te openen.",
+	"Star tracks in Now playing or Browse." : "Markeer nummers met een ster in Nu aan het afspelen of Bladeren."
 	}
 );

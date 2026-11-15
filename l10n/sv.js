@@ -833,6 +833,8 @@ OC.L10N.register(
 	"removed from the list" : "borttagen från listan",
 	"set it on this instance" : "sätt det på den här instansen",
 	"undo via snapshot" : "ångra via ögonblicksbild",
-	"will be skipped" : "kommer att hoppas över"
+	"will be skipped" : "kommer att hoppas över",
+	"Reload the page to open the transfer tool." : "Ladda om sidan för att öppna överföringsverktyget.",
+	"Star tracks in Now playing or Browse." : "Stjärnmarkera spår i Nu spelas eller Bläddra."
 	}
 );

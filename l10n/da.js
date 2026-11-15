@@ -833,6 +833,8 @@ OC.L10N.register(
 	"removed from the list" : "fjernet fra listen",
 	"set it on this instance" : "sæt det på denne instans",
 	"undo via snapshot" : "fortryd via snapshot",
-	"will be skipped" : "springes over"
+	"will be skipped" : "springes over",
+	"Reload the page to open the transfer tool." : "Genindlæs siden for at åbne overførselsværktøjet.",
+	"Star tracks in Now playing or Browse." : "Markér spor med stjerne under Afspilles nu eller Gennemse."
 	}
 );

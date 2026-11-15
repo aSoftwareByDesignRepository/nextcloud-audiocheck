@@ -833,6 +833,8 @@ OC.L10N.register(
 	"removed from the list" : "usunięto z listy",
 	"set it on this instance" : "ustaw je na tej instancji",
 	"undo via snapshot" : "cofnij za pomocą migawki",
-	"will be skipped" : "zostanie pominięte"
+	"will be skipped" : "zostanie pominięte",
+	"Reload the page to open the transfer tool." : "Odśwież stronę, aby otworzyć narzędzie transferu.",
+	"Star tracks in Now playing or Browse." : "Oznacz gwiazdką utwory w Teraz odtwarzane lub Przeglądaj."
 	}
 );

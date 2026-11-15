@@ -832,7 +832,9 @@
 		"removed from the list": "usunięto z listy",
 		"set it on this instance": "ustaw je na tej instancji",
 		"undo via snapshot": "cofnij za pomocą migawki",
-		"will be skipped": "zostanie pominięte"
+		"will be skipped": "zostanie pominięte",
+		"Reload the page to open the transfer tool.": "Odśwież stronę, aby otworzyć narzędzie transferu.",
+		"Star tracks in Now playing or Browse.": "Oznacz gwiazdką utwory w Teraz odtwarzane lub Przeglądaj."
 	},
 	"pluralForm": "nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);"
 }
