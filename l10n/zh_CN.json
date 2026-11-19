@@ -14,35 +14,27 @@
 		"1 track in queue": "队列中 1 首",
 		"[ / ]": "[ / ]",
 		"_(1 env-bound value emptied)_::_(%n env-bound values emptied)_": [
-			"（已清空 1 个实例绑定值）",
 			"（已清空 %n 个实例绑定值）"
 		],
 		"_(1 filtered)_::_(%n filtered)_": [
-			"（已过滤 1 项）",
 			"（已过滤 %n 项）"
 		],
 		"_(1 secret redacted)_::_(%n secrets redacted)_": [
-			"（已遮蔽 1 个机密）",
 			"（已遮蔽 %n 个机密）"
 		],
 		"_(1 unresolved ref)_::_(%n unresolved refs)_": [
-			"（1 个引用未解析）",
 			"（%n 个引用未解析）"
 		],
 		"_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._": [
-			"1 个引用未能解析——请查看下方分组。",
 			"%n 个引用未能解析——请查看下方分组。"
 		],
 		"_1 row needs a value on this instance_::_%n rows need a value on this instance_": [
-			"1 行需要在此实例上填写值",
 			"%n 行需要在此实例上填写值"
 		],
 		"_1 row skipped._::_%n rows skipped._": [
-			"已跳过 1 行。",
 			"已跳过 %n 行。"
 		],
 		"_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
-			"警告：1 行将被永久删除，然后加载文件数据。",
 			"警告：%n 行将被永久删除，然后加载文件数据。"
 		],
 		"A pre-flight check failed — see the report for details.": "预检失败——详见报告。",
