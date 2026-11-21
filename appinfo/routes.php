@@ -31,6 +31,7 @@ return [
 		['name' => 'transfer_api#reconcile', 'url' => '/api/admin/transfer/reconcile', 'verb' => 'POST'],
 
 		['name' => 'api#listTracks', 'url' => '/api/tracks', 'verb' => 'GET'],
+		['name' => 'api#listTrackIds', 'url' => '/api/tracks/ids', 'verb' => 'GET'],
 		['name' => 'api#getTrackInfo', 'url' => '/api/tracks/{fileId}', 'verb' => 'GET', 'requirements' => ['fileId' => '\\d+']],
 		['name' => 'api#getPlayableTrack', 'url' => '/api/playable/{fileId}', 'verb' => 'GET', 'requirements' => ['fileId' => '\\d+']],
 		['name' => 'api#listFolderTracks', 'url' => '/api/folders/{folderId}/tracks', 'verb' => 'GET', 'requirements' => ['folderId' => '\\d+']],

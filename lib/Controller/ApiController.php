@@ -71,6 +71,32 @@ class ApiController extends Controller
 		});
 	}
 
+	/**
+	 * Full member file-ID set for a filtered track list — the mobile
+	 * "X of Y saved" counter needs every member, not one page.
+	 */
+	#[NoAdminRequired]
+	#[NoCSRFRequired]
+	public function listTrackIds(): JSONResponse
+	{
+		return $this->safe(function (string $userId): array {
+			$params = $this->request->getParams();
+			$tagId = isset($params['tagId']) ? (int)$params['tagId'] : null;
+			return $this->library->listTrackFileIds(
+				$userId,
+				isset($params['kind']) ? (string)$params['kind'] : null,
+				isset($params['q']) ? (string)$params['q'] : null,
+				isset($params['favorite']) && ($params['favorite'] === '1' || $params['favorite'] === 'true'),
+				$tagId !== null && $tagId > 0 ? $tagId : null,
+				isset($params['genre']) ? (string)$params['genre'] : null,
+				isset($params['artist']) ? (string)$params['artist'] : null,
+				isset($params['series']) ? (string)$params['series'] : null,
+				isset($params['folder']) ? (string)$params['folder'] : null,
+				isset($params['hideListened']) && ($params['hideListened'] === '1' || $params['hideListened'] === 'true'),
+			);
+		});
+	}
+
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	public function getTrackInfo(int $fileId): JSONResponse

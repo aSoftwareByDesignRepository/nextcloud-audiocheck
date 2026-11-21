@@ -1,6 +1,8 @@
 OC.L10N.register(
 	"audiocheck",
 	{
+	"%n rows" : "%n rows",
+	"%n settings" : "%n settings",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice — or official mobile licenses — choose an option below:" : "%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice — or official mobile licenses — choose an option below:",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice, choose an option below:" : "%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice, choose an option below:",
 	"%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, commissioned work — or the official mobile app:" : "%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, commissioned work — or the official mobile app:",
@@ -9,6 +11,8 @@ OC.L10N.register(
 	"(unknown — skipped)" : "(unknown — skipped)",
 	"1 folder" : "1 folder",
 	"1 item" : "1 item",
+	"1 row" : "1 row",
+	"1 setting" : "1 setting",
 	"1 track" : "1 track",
 	"1 track added to queue." : "1 track added to queue.",
 	"1 track in queue" : "1 track in queue",
@@ -20,6 +24,8 @@ OC.L10N.register(
 	"_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._" : ["1 reference unresolved — see the groups below.","%n references unresolved — see the groups below."],
 	"_1 row needs a value on this instance_::_%n rows need a value on this instance_" : ["1 row needs a value on this instance","%n rows need a value on this instance"],
 	"_1 row skipped._::_%n rows skipped._" : ["1 row skipped.","%n rows skipped."],
+	"_1 row_::_%n rows_" : ["1 row","%n rows"],
+	"_1 setting_::_%n settings_" : ["1 setting","%n settings"],
 	"_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._" : ["Warning: 1 row will be permanently deleted, then the file data is loaded.","Warning: %n rows will be permanently deleted, then the file data is loaded."],
 	"A pre-flight check failed — see the report for details." : "A pre-flight check failed — see the report for details.",
 	"A scoped change with acceptance criteria and a delivery date — billed as project work." : "A scoped change with acceptance criteria and a delivery date — billed as project work.",
@@ -310,6 +316,7 @@ OC.L10N.register(
 	"How to get help, report bugs, and support AudioCheck development." : "How to get help, report bugs, and support AudioCheck development.",
 	"How to play this list" : "How to play this list",
 	"Idle" : "Idle",
+	"Import applied. %1$s and %2$s written." : "Import applied. %1$s and %2$s written.",
 	"Import applied. %d settings and %d rows written." : "Import applied. %d settings and %d rows written.",
 	"Import configuration" : "Import configuration",
 	"Import failed — nothing was changed." : "Import failed — nothing was changed.",
@@ -731,6 +738,7 @@ OC.L10N.register(
 	"This playlist is empty." : "This playlist is empty.",
 	"This server uses AJAX background jobs instead of system cron. Scans continue while you use AudioCheck; for faster indexing, ask an administrator to enable system cron in Nextcloud settings." : "This server uses AJAX background jobs instead of system cron. Scans continue while you use AudioCheck; for faster indexing, ask an administrator to enable system cron in Nextcloud settings.",
 	"This track continues at your saved position." : "This track continues at your saved position.",
+	"This will update %1$s and %2$s — nothing is deleted." : "This will update %1$s and %2$s — nothing is deleted.",
 	"This will update %d settings and %d rows — nothing is deleted." : "This will update %d settings and %d rows — nothing is deleted.",
 	"Tip: Author \/ Book \/ chapter folders work best. Nested scanning stays on by default." : "Tip: Author \/ Book \/ chapter folders work best. Nested scanning stays on by default.",
 	"Tip: use separate roots for music and audiobooks. Avoid nested folders that overlap (for example \/Music and \/Music\/Albums)." : "Tip: use separate roots for music and audiobooks. Avoid nested folders that overlap (for example \/Music and \/Music\/Albums).",
@@ -836,14 +844,6 @@ OC.L10N.register(
 	"{time} left" : "{time} left",
 	"{title}, listened" : "{title}, listened",
 	"← \/ →" : "← \/ →",
-	"↑ \/ ↓" : "↑ \/ ↓",
-	"1 setting" : "1 setting",
-	"%n settings" : "%n settings",
-	"1 row" : "1 row",
-	"%n rows" : "%n rows",
-	"_1 row_::_%n rows_" : ["1 row","%n rows"],
-	"_1 setting_::_%n settings_" : ["1 setting","%n settings"],
-	"This will update %1$s and %2$s — nothing is deleted." : "This will update %1$s and %2$s — nothing is deleted.",
-	"Import applied. %1$s and %2$s written." : "Import applied. %1$s and %2$s written."
+	"↑ \/ ↓" : "↑ \/ ↓"
 	}
 );

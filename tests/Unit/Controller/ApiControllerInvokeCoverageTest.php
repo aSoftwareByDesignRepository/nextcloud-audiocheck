@@ -101,6 +101,7 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 
 		$this->library = $this->createMock(LibraryService::class);
 		$this->library->method('listTracks')->willReturn(['items' => [$track], 'total' => 1]);
+		$this->library->method('listTrackFileIds')->willReturn(['fileIds' => [42], 'total' => 1]);
 		$this->library->method('getTrackInfo')->willReturn($track);
 		$this->library->method('getPlayableTrack')->willReturn($track);
 		$this->library->method('listFolderTracks')->willReturn(['items' => [$track]]);
@@ -217,6 +218,9 @@ final class ApiControllerInvokeCoverageTest extends TestCase
 		$this->params = [];
 		$this->assertOk($this->controller->listTracks(), 'listTracks');
 		$invoked[] = 'listTracks';
+
+		$this->assertOk($this->controller->listTrackIds(), 'listTrackIds');
+		$invoked[] = 'listTrackIds';
 
 		$this->assertOk($this->controller->getTrackInfo(42), 'getTrackInfo');
 		$invoked[] = 'getTrackInfo';

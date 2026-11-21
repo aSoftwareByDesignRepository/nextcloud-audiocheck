@@ -1,6 +1,8 @@
 OC.L10N.register(
 	"audiocheck",
 	{
+	"%n rows" : "%n Zeilen",
+	"%n settings" : "%n Einstellungen",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice — or official mobile licenses — choose an option below:" : "%s ist auf Ihrer Nextcloud kostenlos (AGPL). Fehler und Ideen über GitHub bleiben willkommen — das gehört zur kostenlosen Open-Source-Pflege. Wenn Ihre Organisation planbare Hilfe mit Rechnung braucht — oder offizielle Mobile-Lizenzen — wählen Sie unten eine Option:",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice, choose an option below:" : "%s ist auf Ihrer Nextcloud kostenlos (AGPL). Fehler und Ideen über GitHub bleiben willkommen — das gehört zur kostenlosen Open-Source-Pflege. Wenn Ihre Organisation planbare Hilfe mit Rechnung braucht, wählen Sie unten eine Option:",
 	"%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, commissioned work — or the official mobile app:" : "%s ist auf Ihrer Nextcloud kostenlos (AGPL). GitHub-Issues für Fehler und Ideen bleiben willkommen. Wenn Sie planbare Unterstützung mit Rechnung möchten — Einrichtung, Stundenkontingent, Auftragsentwicklung — oder die offizielle Mobile-App:",
@@ -9,6 +11,8 @@ OC.L10N.register(
 	"(unknown — skipped)" : "(unbekannt — übersprungen)",
 	"1 folder" : "1 Ordner",
 	"1 item" : "1 Eintrag",
+	"1 row" : "1 Zeile",
+	"1 setting" : "1 Einstellung",
 	"1 track" : "1 Titel",
 	"1 track added to queue." : "1 Titel zur Warteschlange hinzugefügt.",
 	"1 track in queue" : "1 Titel in der Warteschlange",
@@ -20,6 +24,8 @@ OC.L10N.register(
 	"_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._" : ["1 Verweis unaufgelöst — siehe die Gruppen unten.","%n Verweise unaufgelöst — siehe die Gruppen unten."],
 	"_1 row needs a value on this instance_::_%n rows need a value on this instance_" : ["1 Zeile benötigt einen Wert auf dieser Instanz","%n Zeilen benötigen einen Wert auf dieser Instanz"],
 	"_1 row skipped._::_%n rows skipped._" : ["1 Zeile übersprungen.","%n Zeilen übersprungen."],
+	"_1 row_::_%n rows_" : ["1 Zeile","%n Zeilen"],
+	"_1 setting_::_%n settings_" : ["1 Einstellung","%n Einstellungen"],
 	"_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._" : ["Warnung: 1 Zeile wird endgültig gelöscht, danach werden die Dateidaten geladen.","Warnung: %n Zeilen werden endgültig gelöscht, danach werden die Dateidaten geladen."],
 	"A pre-flight check failed — see the report for details." : "Eine Vorab-Prüfung ist fehlgeschlagen — Details siehe Bericht.",
 	"A scoped change with acceptance criteria and a delivery date — billed as project work." : "Eine abgegrenzte Änderung mit Abnahmekriterien und Liefertermin — als Auftrag abrechenbar.",
@@ -310,6 +316,7 @@ OC.L10N.register(
 	"How to get help, report bugs, and support AudioCheck development." : "Hilfe holen, Fehler melden und AudioCheck unterstützen.",
 	"How to play this list" : "Wie diese Liste abgespielt wird",
 	"Idle" : "Bereit",
+	"Import applied. %1$s and %2$s written." : "Import angewendet. %1$s und %2$s geschrieben.",
 	"Import applied. %d settings and %d rows written." : "Import angewendet. %d Einstellungen und %d Zeilen geschrieben.",
 	"Import configuration" : "Konfiguration importieren",
 	"Import failed — nothing was changed." : "Import fehlgeschlagen — es wurde nichts geändert.",
@@ -731,6 +738,7 @@ OC.L10N.register(
 	"This playlist is empty." : "Diese Playlist ist leer.",
 	"This server uses AJAX background jobs instead of system cron. Scans continue while you use AudioCheck; for faster indexing, ask an administrator to enable system cron in Nextcloud settings." : "Dieser Server nutzt AJAX-Hintergrundjobs statt System-Cron. Scans laufen weiter, solange Sie AudioCheck verwenden; für schnellere Indizierung kann eine Administration System-Cron in den Nextcloud-Einstellungen aktivieren.",
 	"This track continues at your saved position." : "Dieser Titel wird an der gespeicherten Position fortgesetzt.",
+	"This will update %1$s and %2$s — nothing is deleted." : "Dies aktualisiert %1$s und %2$s — nichts wird gelöscht.",
 	"This will update %d settings and %d rows — nothing is deleted." : "Dies aktualisiert %d Einstellungen und %d Zeilen — nichts wird gelöscht.",
 	"Tip: Author \/ Book \/ chapter folders work best. Nested scanning stays on by default." : "Tipp: Autor \/ Buch \/ Kapitel-Ordner funktionieren am besten. Verschachteltes Scannen bleibt standardmäßig aktiv.",
 	"Tip: use separate roots for music and audiobooks. Avoid nested folders that overlap (for example \/Music and \/Music\/Albums)." : "Tipp: separate Wurzelordner für Musik und Hörbücher. Vermeiden Sie überlappende Unterordner (z. B. \/Music und \/Music\/Alben).",
@@ -836,14 +844,6 @@ OC.L10N.register(
 	"{time} left" : "Noch {time}",
 	"{title}, listened" : "{title}, gehoert",
 	"← \/ →" : "← \/ →",
-	"↑ \/ ↓" : "↑ \/ ↓",
-	"1 setting" : "1 Einstellung",
-	"%n settings" : "%n Einstellungen",
-	"1 row" : "1 Zeile",
-	"%n rows" : "%n Zeilen",
-	"_1 row_::_%n rows_" : ["1 Zeile","%n Zeilen"],
-	"_1 setting_::_%n settings_" : ["1 Einstellung","%n Einstellungen"],
-	"This will update %1$s and %2$s — nothing is deleted." : "Dies aktualisiert %1$s und %2$s — nichts wird gelöscht.",
-	"Import applied. %1$s and %2$s written." : "Import angewendet. %1$s und %2$s geschrieben."
+	"↑ \/ ↓" : "↑ \/ ↓"
 	}
 );

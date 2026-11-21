@@ -242,60 +242,9 @@ class LibraryService
 		$limit = min(100, max(1, $limit));
 		$offset = ($page - 1) * $limit;
 
-		$qb = $this->db->getQueryBuilder();
-		// Select columns only after the count clone below — NC QueryBuilder::clone is shallow
-		// and select() on the clone would otherwise replace this query's column list too.
-		$qb->from('ac_tracks', 't')
-			->leftJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'))
-			->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)));
-		$this->joinLibraryForEffectiveKind($qb);
-		$this->applyEffectiveKindFilter($qb, $kind);
-		$this->applySearchFilter($qb, ['m.title_norm', 'm.artist_norm', 'm.album_norm', 't.file_name_norm'], $q);
-		if ($genre !== null && trim($genre) !== '') {
-			$qb->andWhere($qb->expr()->eq('m.genre', $qb->createNamedParameter(trim($genre))));
-		}
-		if ($artist !== null && trim($artist) !== '') {
-			$qb->andWhere($qb->expr()->eq('m.artist', $qb->createNamedParameter(trim($artist))));
-		}
-		if ($series !== null && trim($series) !== '') {
-			$qb->andWhere($qb->expr()->eq('m.series', $qb->createNamedParameter(trim($series))));
-		}
-		if ($folder !== null && trim($folder) !== '') {
-			$folderPath = rtrim(trim($folder), '/');
-			$like = $this->db->escapeLikeParameter($folderPath) . '/%';
-			$qb->andWhere($qb->expr()->like('t.rel_path', $qb->createNamedParameter($like)));
-		}
-		if ($favoritesOnly) {
-			$favoriteIds = $this->loadFavoriteFileIds();
-			if ($favoriteIds === []) {
-				return ['items' => [], 'total' => 0, 'page' => $page, 'limit' => $limit];
-			}
-			$qb->andWhere($qb->expr()->in('t.file_id', $qb->createNamedParameter($favoriteIds, IQueryBuilder::PARAM_INT_ARRAY)));
-		}
-		if ($tagId !== null && $tagId > 0) {
-			try {
-				$mapped = $this->systemTagObjectMapper->getObjectIdsForTags([$tagId], 'files');
-			} catch (TagNotFoundException) {
-				return ['items' => [], 'total' => 0, 'page' => $page, 'limit' => $limit];
-			}
-			$tagFileIds = array_values(array_filter(
-				array_map('intval', $mapped),
-				fn (int $id): bool => $this->fileAccess->isFileAccessible($userId, $id),
-			));
-			if ($tagFileIds === []) {
-				return ['items' => [], 'total' => 0, 'page' => $page, 'limit' => $limit];
-			}
-			$qb->andWhere($qb->expr()->in('t.file_id', $qb->createNamedParameter($tagFileIds, IQueryBuilder::PARAM_INT_ARRAY)));
-		}
-		if ($hideListened) {
-			$qb->leftJoin('t', 'ac_play_state', 'ps_hl', $qb->expr()->andX(
-				$qb->expr()->eq('ps_hl.user_id', $qb->createNamedParameter($userId)),
-				$qb->expr()->eq('ps_hl.file_id', 't.file_id'),
-			));
-			$qb->andWhere($qb->expr()->orX(
-				$qb->expr()->isNull('ps_hl.file_id'),
-				$qb->expr()->eq('ps_hl.listened', $qb->createNamedParameter(0, \PDO::PARAM_INT)),
-			));
+		$qb = $this->buildFilteredTracksQuery($userId, $kind, $q, $favoritesOnly, $tagId, $genre, $artist, $series, $folder, $hideListened);
+		if ($qb === null) {
+			return ['items' => [], 'total' => 0, 'page' => $page, 'limit' => $limit];
 		}
 
 		if ($sort === self::SORT_PLAYED) {
@@ -305,6 +254,8 @@ class LibraryService
 			));
 		}
 
+		// Select columns only after the count clone — NC QueryBuilder::clone is shallow
+		// and select() on the clone would otherwise replace this query's column list too.
 		$countQb = clone $qb;
 		$countQb->select($countQb->func()->count('t.id', 'c'));
 		$countResult = $countQb->executeQuery();
@@ -328,6 +279,95 @@ class LibraryService
 		$this->applyFavoriteFlags($items);
 
 		return ['items' => $items, 'total' => $total, 'page' => $page, 'limit' => $limit];
+	}
+
+	/**
+	 * Every file_id matching the /api/tracks filters — unpaginated and cheap
+	 * (no metadata, no sort). The mobile "X of Y saved" counters need the full
+	 * member set: paging capped them at one page even when everything was saved.
+	 *
+	 * @return array{fileIds:list<int>,total:int}
+	 */
+	public function listTrackFileIds(string $userId, ?string $kind, ?string $q, bool $favoritesOnly = false, ?int $tagId = null, ?string $genre = null, ?string $artist = null, ?string $series = null, ?string $folder = null, bool $hideListened = false): array
+	{
+		$qb = $this->buildFilteredTracksQuery($userId, $kind, $q, $favoritesOnly, $tagId, $genre, $artist, $series, $folder, $hideListened);
+		if ($qb === null) {
+			return ['fileIds' => [], 'total' => 0];
+		}
+
+		$qb->selectDistinct('t.file_id');
+		$result = $qb->executeQuery();
+		$fileIds = [];
+		while ($row = $result->fetch()) {
+			$fileIds[] = (int)$row['file_id'];
+		}
+		$result->closeCursor();
+
+		return ['fileIds' => $fileIds, 'total' => count($fileIds)];
+	}
+
+	/**
+	 * Shared WHERE builder for the /api/tracks surface. Returns null when the
+	 * filters already prove an empty result (empty favorites or tag-mapped ids)
+	 * so callers can short-circuit without running a doomed query.
+	 */
+	private function buildFilteredTracksQuery(string $userId, ?string $kind, ?string $q, bool $favoritesOnly, ?int $tagId, ?string $genre, ?string $artist, ?string $series, ?string $folder, bool $hideListened): ?IQueryBuilder
+	{
+		$qb = $this->db->getQueryBuilder();
+		$qb->from('ac_tracks', 't')
+			->leftJoin('t', 'ac_file_meta', 'm', $qb->expr()->eq('t.meta_id', 'm.id'))
+			->where($qb->expr()->eq('t.user_id', $qb->createNamedParameter($userId)));
+		$this->joinLibraryForEffectiveKind($qb);
+		$this->applyEffectiveKindFilter($qb, $kind);
+		$this->applySearchFilter($qb, ['m.title_norm', 'm.artist_norm', 'm.album_norm', 't.file_name_norm'], $q);
+		if ($genre !== null && trim($genre) !== '') {
+			$qb->andWhere($qb->expr()->eq('m.genre', $qb->createNamedParameter(trim($genre))));
+		}
+		if ($artist !== null && trim($artist) !== '') {
+			$qb->andWhere($qb->expr()->eq('m.artist', $qb->createNamedParameter(trim($artist))));
+		}
+		if ($series !== null && trim($series) !== '') {
+			$qb->andWhere($qb->expr()->eq('m.series', $qb->createNamedParameter(trim($series))));
+		}
+		if ($folder !== null && trim($folder) !== '') {
+			$folderPath = rtrim(trim($folder), '/');
+			$like = $this->db->escapeLikeParameter($folderPath) . '/%';
+			$qb->andWhere($qb->expr()->like('t.rel_path', $qb->createNamedParameter($like)));
+		}
+		if ($favoritesOnly) {
+			$favoriteIds = $this->loadFavoriteFileIds();
+			if ($favoriteIds === []) {
+				return null;
+			}
+			$qb->andWhere($qb->expr()->in('t.file_id', $qb->createNamedParameter($favoriteIds, IQueryBuilder::PARAM_INT_ARRAY)));
+		}
+		if ($tagId !== null && $tagId > 0) {
+			try {
+				$mapped = $this->systemTagObjectMapper->getObjectIdsForTags([$tagId], 'files');
+			} catch (TagNotFoundException) {
+				return null;
+			}
+			$tagFileIds = array_values(array_filter(
+				array_map('intval', $mapped),
+				fn (int $id): bool => $this->fileAccess->isFileAccessible($userId, $id),
+			));
+			if ($tagFileIds === []) {
+				return null;
+			}
+			$qb->andWhere($qb->expr()->in('t.file_id', $qb->createNamedParameter($tagFileIds, IQueryBuilder::PARAM_INT_ARRAY)));
+		}
+		if ($hideListened) {
+			$qb->leftJoin('t', 'ac_play_state', 'ps_hl', $qb->expr()->andX(
+				$qb->expr()->eq('ps_hl.user_id', $qb->createNamedParameter($userId)),
+				$qb->expr()->eq('ps_hl.file_id', 't.file_id'),
+			));
+			$qb->andWhere($qb->expr()->orX(
+				$qb->expr()->isNull('ps_hl.file_id'),
+				$qb->expr()->eq('ps_hl.listened', $qb->createNamedParameter(0, \PDO::PARAM_INT)),
+			));
+		}
+
+		return $qb;
 	}
 
 	public function getTrackInfo(string $userId, int $fileId): array
