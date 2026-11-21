@@ -86,6 +86,8 @@ body,
 	--ac-surface: var(--color-main-background);
 	--ac-text: var(--color-main-text);
 	--ac-muted: var(--color-text-maxcontrast, color-mix(in srgb, var(--color-main-text) 62%, transparent));
+	--ac-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', 'Liberation Mono', Menlo, Consolas, monospace;
+	--ac-muted-on-tint: color-mix(in srgb, var(--color-text-maxcontrast) 55%, var(--color-main-text));
 	--ac-muted-strong: color-mix(in srgb, var(--color-main-text) 82%, var(--color-text-maxcontrast, transparent));
 	/* Design-system borders: 12% / 24% ink mix (not 24%/50%) */
 	--ac-border: color-mix(in srgb, var(--color-main-text) 12%, transparent);
