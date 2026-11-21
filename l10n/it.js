@@ -840,7 +840,7 @@ OC.L10N.register(
 	"{listened} of {total} tracks listened" : "{listened} di {total} tracce ascoltate",
 	"{minutes} min" : "{minutes} min.",
 	"{minutes} minutes" : "{minutes} minuti",
-	"{percent}% of duration" : "{percent}%% della durata",
+	"{percent}% of duration" : "{percent}% della durata",
 	"{time} left" : "{time} rimanenti",
 	"{title}, listened" : "{title}, ascoltato",
 	"← \/ →" : "← \/ →",

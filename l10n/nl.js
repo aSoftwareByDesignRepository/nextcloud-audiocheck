@@ -840,7 +840,7 @@ OC.L10N.register(
 	"{listened} of {total} tracks listened" : "{listened} van {total} nummers geluisterd",
 	"{minutes} min" : "{minutes} min.",
 	"{minutes} minutes" : "{minutes} minuten",
-	"{percent}% of duration" : "{percent}%% van de duur",
+	"{percent}% of duration" : "{percent}% van de duur",
 	"{time} left" : "{time} over",
 	"{title}, listened" : "{title}, geluisterd",
 	"← \/ →" : "← \/ →",

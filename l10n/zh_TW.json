@@ -860,7 +860,7 @@
 		"{listened} of {total} tracks listened": "已聽完 {listened} / {total} 首",
 		"{minutes} min": "{minutes} 分鐘",
 		"{minutes} minutes": "{minutes} 分鐘",
-		"{percent}% of duration": "{percent}%% 的時長",
+		"{percent}% of duration": "{percent}% 的時長",
 		"{time} left": "剩餘 {time}",
 		"{title}, listened": "{title}，已聽完",
 		"← / →": "← / →",

@@ -840,7 +840,7 @@ OC.L10N.register(
 	"{listened} of {total} tracks listened" : "已听完 {listened} \/ {total} 首",
 	"{minutes} min" : "{minutes} 分钟",
 	"{minutes} minutes" : "{minutes} 分钟",
-	"{percent}% of duration" : "{percent}%% 的时长",
+	"{percent}% of duration" : "{percent}% 的时长",
 	"{time} left" : "剩余 {time}",
 	"{title}, listened" : "{title}，已听完",
 	"← \/ →" : "← \/ →",
