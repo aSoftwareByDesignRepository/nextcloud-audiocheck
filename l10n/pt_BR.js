@@ -1,6 +1,8 @@
 OC.L10N.register(
 	"audiocheck",
 	{
+	"%n rows" : "%n linhas",
+	"%n settings" : "%n configurações",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice — or official mobile licenses — choose an option below:" : "%s permanece grátis (AGPL) no seu Nextcloud. Relatórios de bugs e ideias sobre GitHub são bem-vindos - isso é atendimento gratuito de código aberto. Se sua organização precisar de ajuda reservável em uma fatura — ou licenças móveis oficiais — escolha uma opção abaixo:",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice, choose an option below:" : "%s permanece grátis (AGPL) no seu Nextcloud. Relatórios de bugs e ideias sobre GitHub são bem-vindos - isso é atendimento gratuito de código aberto. Se sua organização precisar de ajuda reservável em uma fatura, escolha uma opção abaixo:",
 	"%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, commissioned work — or the official mobile app:" : "%s permanece grátis (AGPL) no seu Nextcloud. Problemas do GitHub para bugs e ideias continuam bem-vindos. Para ajuda reservável em uma fatura – configuração, pacotes de horas, trabalho comissionado – ou no aplicativo móvel oficial:",
@@ -9,6 +11,8 @@ OC.L10N.register(
 	"(unknown — skipped)" : "(desconhecido — ignorado)",
 	"1 folder" : "1 pasta",
 	"1 item" : "1 item",
+	"1 row" : "1 linha",
+	"1 setting" : "1 configuração",
 	"1 track" : "1 faixa",
 	"1 track added to queue." : "1 faixa adicionada à fila.",
 	"1 track in queue" : "1 faixa na fila",
@@ -20,6 +24,8 @@ OC.L10N.register(
 	"_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._" : ["1 referência não resolvida — veja os grupos abaixo.","%n referências não resolvidas — veja os grupos abaixo."],
 	"_1 row needs a value on this instance_::_%n rows need a value on this instance_" : ["1 linha precisa de um valor nesta instância","%n linhas precisam de um valor nesta instância"],
 	"_1 row skipped._::_%n rows skipped._" : ["1 linha ignorada.","%n linhas ignoradas."],
+	"_1 row_::_%n rows_" : ["1 linha","%n linhas"],
+	"_1 setting_::_%n settings_" : ["1 configuração","%n configurações"],
 	"_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._" : ["Aviso: 1 linha será excluída permanentemente e, em seguida, os dados do arquivo serão carregados.","Aviso: %n linhas serão excluídas permanentemente e, em seguida, os dados do arquivo serão carregados."],
 	"A pre-flight check failed — see the report for details." : "Uma verificação prévia falhou — consulte o relatório para detalhes.",
 	"A scoped change with acceptance criteria and a delivery date — billed as project work." : "Uma mudança com escopo com critérios de aceitação e data de entrega – faturada como trabalho de projeto.",
@@ -310,6 +316,7 @@ OC.L10N.register(
 	"How to get help, report bugs, and support AudioCheck development." : "Como obter ajuda, relatar erros e suportar o desenvolvimento do AudioCheck.",
 	"How to play this list" : "Como reproduzir esta lista",
 	"Idle" : "Inactivo",
+	"Import applied. %1$s and %2$s written." : "Importação aplicada. %1$s e %2$s gravadas.",
 	"Import applied. %d settings and %d rows written." : "Importação aplicada. %d configurações e %d linhas gravadas.",
 	"Import configuration" : "Importar configuração",
 	"Import failed — nothing was changed." : "A importação falhou — nada foi alterado.",
@@ -657,7 +664,7 @@ OC.L10N.register(
 	"Showing {shown} of {total} tracks" : "A mostrar o {shown} das faixas do {total}",
 	"Shuffle" : "Embaralhar",
 	"Shuffle a playlist" : "Embaralhar uma lista de reprodução",
-	"Shuffle off" : "Embaralhar",
+	"Shuffle off" : "Embaralhar desligado",
 	"Shuffle on" : "Embaralhar",
 	"Shuffle play" : "Reprodução aleatória",
 	"Shuffling: {name}" : "Embaralhamento: {name}",
@@ -731,6 +738,7 @@ OC.L10N.register(
 	"This playlist is empty." : "Esta lista está vazia.",
 	"This server uses AJAX background jobs instead of system cron. Scans continue while you use AudioCheck; for faster indexing, ask an administrator to enable system cron in Nextcloud settings." : "Este servidor usa tarefas em segundo plano AJAX em vez de cron do sistema. As análises continuam durante o uso do AudioCheck; para indexação mais rápida, peça a um administrador para ativar o cron do sistema nas configurações do Nextcloud.",
 	"This track continues at your saved position." : "Esta faixa continua na sua posição salva.",
+	"This will update %1$s and %2$s — nothing is deleted." : "Isso atualizará %1$s e %2$s — nada será excluído.",
 	"This will update %d settings and %d rows — nothing is deleted." : "Isso atualizará %d configurações e %d linhas — nada será excluído.",
 	"Tip: Author \/ Book \/ chapter folders work best. Nested scanning stays on by default." : "Dica: as pastas Autor \/ Livro \/ capítulo funcionam melhor. A análise de subpastas permanece ativada por padrão.",
 	"Tip: use separate roots for music and audiobooks. Avoid nested folders that overlap (for example \/Music and \/Music\/Albums)." : "Dica: use raízes separadas para música e audiolivros. Evite pastas aninhadas que se sobreponham (por exemplo \/Música e \/Música\/Álbuns).",
@@ -836,14 +844,6 @@ OC.L10N.register(
 	"{time} left" : "{time} restantes",
 	"{title}, listened" : "{title}, escutado",
 	"← \/ →" : "← \/ →",
-	"↑ \/ ↓" : "↑ \/ ↓",
-	"1 setting" : "1 configuração",
-	"%n settings" : "%n configurações",
-	"1 row" : "1 linha",
-	"%n rows" : "%n linhas",
-	"_1 row_::_%n rows_" : ["1 linha","%n linhas"],
-	"_1 setting_::_%n settings_" : ["1 configuração","%n configurações"],
-	"This will update %1$s and %2$s — nothing is deleted." : "Isso atualizará %1$s e %2$s — nada será excluído.",
-	"Import applied. %1$s and %2$s written." : "Importação aplicada. %1$s e %2$s gravadas."
+	"↑ \/ ↓" : "↑ \/ ↓"
 	}
 );

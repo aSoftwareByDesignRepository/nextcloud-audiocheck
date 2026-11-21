@@ -1,6 +1,8 @@
 OC.L10N.register(
 	"audiocheck",
 	{
+	"%n rows" : "%n lignes",
+	"%n settings" : "%n paramètres",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice — or official mobile licenses — choose an option below:" : "%s reste gratuit (AGPL) sur votre Nextcloud. Les rapports de bogues et les idées sur GitHub restent les bienvenus — c’est le suivi open source gratuit. Si votre organisation a besoin d’aide réservable sur facture — ou de licences mobiles officielles — choisissez une option ci-dessous :",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice, choose an option below:" : "%s reste gratuit (AGPL) sur votre Nextcloud. Les rapports de bogues et les idées sur GitHub restent les bienvenus — c’est le suivi open source gratuit. Si votre organisation a besoin d’aide réservable sur facture, choisissez une option ci-dessous :",
 	"%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, commissioned work — or the official mobile app:" : "%s reste gratuit (AGPL) sur votre Nextcloud. Les issues GitHub pour bogues et idées restent les bienvenues. Pour une aide réservable sur facture — installation, packs d’heures, travail sur commande — ou l’application mobile officielle :",
@@ -9,6 +11,8 @@ OC.L10N.register(
 	"(unknown — skipped)" : "(inconnu — ignoré)",
 	"1 folder" : "1 dossier",
 	"1 item" : "1 élément",
+	"1 row" : "1 ligne",
+	"1 setting" : "1 paramètre",
 	"1 track" : "1 titre",
 	"1 track added to queue." : "1 titre ajouté à la file d'attente.",
 	"1 track in queue" : "1 titre dans la file d'attente",
@@ -20,6 +24,8 @@ OC.L10N.register(
 	"_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._" : ["1 référence non résolue — voir les groupes ci-dessous.","%n références non résolues — voir les groupes ci-dessous."],
 	"_1 row needs a value on this instance_::_%n rows need a value on this instance_" : ["1 ligne nécessite une valeur sur cette instance","%n lignes nécessitent une valeur sur cette instance"],
 	"_1 row skipped._::_%n rows skipped._" : ["1 ligne ignorée.","%n lignes ignorées."],
+	"_1 row_::_%n rows_" : ["1 ligne","%n lignes"],
+	"_1 setting_::_%n settings_" : ["1 paramètre","%n paramètres"],
 	"_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._" : ["Avertissement : 1 ligne sera définitivement supprimée, puis les données du fichier seront chargées.","Avertissement : %n lignes seront définitivement supprimées, puis les données du fichier seront chargées."],
 	"A pre-flight check failed — see the report for details." : "Une vérification préalable a échoué — voir le rapport pour les détails.",
 	"A scoped change with acceptance criteria and a delivery date — billed as project work." : "Une modification délimitée avec critères d’acceptation et date de livraison — facturée comme travail de projet.",
@@ -310,6 +316,7 @@ OC.L10N.register(
 	"How to get help, report bugs, and support AudioCheck development." : "Comment obtenir de l'aide, signaler des bogues et soutenir le développement de AudioCheck.",
 	"How to play this list" : "Comment lire cette liste",
 	"Idle" : "Idée",
+	"Import applied. %1$s and %2$s written." : "Import appliqué. %1$s et %2$s écrits.",
 	"Import applied. %d settings and %d rows written." : "Import appliqué. %d paramètres et %d lignes écrits.",
 	"Import configuration" : "Importer la configuration",
 	"Import failed — nothing was changed." : "Échec de l’import — rien n’a été modifié.",
@@ -568,7 +575,7 @@ OC.L10N.register(
 	"Rename playlist" : "Renommer la liste de lecture",
 	"Repeat" : "Répéter",
 	"Repeat all" : "Répéter tout",
-	"Repeat off" : "Répéter",
+	"Repeat off" : "Répétition désactivée",
 	"Repeat one" : "Répéter une",
 	"Replace" : "Remplacer",
 	"Replace is available to Nextcloud system administrators only." : "Le remplacement est réservé aux administrateurs système Nextcloud.",
@@ -731,6 +738,7 @@ OC.L10N.register(
 	"This playlist is empty." : "Cette liste de lecture est vide.",
 	"This server uses AJAX background jobs instead of system cron. Scans continue while you use AudioCheck; for faster indexing, ask an administrator to enable system cron in Nextcloud settings." : "Ce serveur utilise des tâches de fond AJAX au lieu de cron système. Les analyses continuent pendant que vous utilisez AudioCheck ; pour une indexation plus rapide, demandez à un administrateur d’activer le cron système dans les paramètres Nextcloud.",
 	"This track continues at your saved position." : "Ce titre continue à votre position enregistrée.",
+	"This will update %1$s and %2$s — nothing is deleted." : "Cette opération mettra à jour %1$s et %2$s — rien ne sera supprimé.",
 	"This will update %d settings and %d rows — nothing is deleted." : "Cette opération mettra à jour %d paramètres et %d lignes — rien ne sera supprimé.",
 	"Tip: Author \/ Book \/ chapter folders work best. Nested scanning stays on by default." : "Astuce : les dossiers Auteur \/ Livre \/ chapitre fonctionnent le mieux. L’analyse des sous-dossiers reste activée par défaut.",
 	"Tip: use separate roots for music and audiobooks. Avoid nested folders that overlap (for example \/Music and \/Music\/Albums)." : "Conseil : utiliser des racines séparées pour la musique et les livres audio. Évitez les dossiers imbriqués qui se chevauchent (par exemple \/Musique et \/Musique\/Albums).",
@@ -836,14 +844,6 @@ OC.L10N.register(
 	"{time} left" : "{time} restantes",
 	"{title}, listened" : "{title}, écouté",
 	"← \/ →" : "← \/ →",
-	"↑ \/ ↓" : "↑ \/ ↓",
-	"1 setting" : "1 paramètre",
-	"%n settings" : "%n paramètres",
-	"1 row" : "1 ligne",
-	"%n rows" : "%n lignes",
-	"_1 row_::_%n rows_" : ["1 ligne","%n lignes"],
-	"_1 setting_::_%n settings_" : ["1 paramètre","%n paramètres"],
-	"This will update %1$s and %2$s — nothing is deleted." : "Cette opération mettra à jour %1$s et %2$s — rien ne sera supprimé.",
-	"Import applied. %1$s and %2$s written." : "Import appliqué. %1$s et %2$s écrits."
+	"↑ \/ ↓" : "↑ \/ ↓"
 	}
 );

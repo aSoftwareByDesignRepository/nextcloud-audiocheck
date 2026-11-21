@@ -1,5 +1,7 @@
 {
 	"translations": {
+		"%n rows": "%n righe",
+		"%n settings": "%n impostazioni",
 		"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice — or official mobile licenses — choose an option below:": "%s rimane gratuito (AGPL) sul Suo Nextcloud. Segnalazioni di bug e idee su GitHub restano benvenute — è la cura open source gratuita. Se la Sua organizzazione ha bisogno di assistenza prenotabile con fattura — o delle licenze mobili ufficiali — scelga un’opzione qui sotto:",
 		"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice, choose an option below:": "%s rimane gratuito (AGPL) sul Suo Nextcloud. Segnalazioni di bug e idee su GitHub restano benvenute — è la cura open source gratuita. Se la Sua organizzazione ha bisogno di assistenza prenotabile con fattura, scelga un’opzione qui sotto:",
 		"%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, commissioned work — or the official mobile app:": "%s rimane gratuito (AGPL) sul Suo Nextcloud. Le issue GitHub per bug e idee restano benvenute. Per assistenza prenotabile con fattura — configurazione, pacchetti ore, lavoro su commissione — o l’app mobile ufficiale:",
@@ -8,6 +10,8 @@
 		"(unknown — skipped)": "(sconosciuto — saltato)",
 		"1 folder": "1 cartella",
 		"1 item": "1 elemento",
+		"1 row": "1 riga",
+		"1 setting": "1 impostazione",
 		"1 track": "1 traccia",
 		"1 track added to queue.": "1 traccia aggiunta alla coda.",
 		"1 track in queue": "1 traccia in coda",
@@ -39,6 +43,14 @@
 		"_1 row skipped._::_%n rows skipped._": [
 			"1 riga saltata.",
 			"%n righe saltate."
+		],
+		"_1 row_::_%n rows_": [
+			"1 riga",
+			"%n righe"
+		],
+		"_1 setting_::_%n settings_": [
+			"1 impostazione",
+			"%n impostazioni"
 		],
 		"_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._": [
 			"Attenzione: 1 riga verrà eliminata definitivamente, quindi verranno caricati i dati del file.",
@@ -333,6 +345,7 @@
 		"How to get help, report bugs, and support AudioCheck development.": "Come ottenere aiuto, segnalare bug e supportare lo sviluppo AudioCheck.",
 		"How to play this list": "Come riprodurre questa lista",
 		"Idle": "Inattivo",
+		"Import applied. %1$s and %2$s written.": "Importazione applicata. %1$s e %2$s scritte.",
 		"Import applied. %d settings and %d rows written.": "Importazione applicata. %d impostazioni e %d righe scritte.",
 		"Import configuration": "Importa configurazione",
 		"Import failed — nothing was changed.": "Importazione non riuscita — niente è stato modificato.",
@@ -585,13 +598,13 @@
 		"Remove from favorites": "Rimuovi dai preferiti",
 		"Remove from playlist": "Rimuovi dalla playlist",
 		"Remove from queue": "Rimuovi dalla coda",
-		"Removed from Favorites.": "Rimuovi dai Preferiti.",
+		"Removed from Favorites.": "Rimosso dai Preferiti.",
 		"removed from the list": "rimosso dall’elenco",
 		"Rename": "Rinomina",
 		"Rename playlist": "Rinominare la playlist",
 		"Repeat": "Ripeti",
 		"Repeat all": "Ripeti tutto",
-		"Repeat off": "Ripetere",
+		"Repeat off": "Ripetizione disattivata",
 		"Repeat one": "Ripetere uno",
 		"Replace": "Sostituisci",
 		"Replace is available to Nextcloud system administrators only.": "La sostituzione è disponibile solo per gli amministratori di sistema Nextcloud.",
@@ -754,6 +767,7 @@
 		"This playlist is empty.": "Questa playlist è vuota.",
 		"This server uses AJAX background jobs instead of system cron. Scans continue while you use AudioCheck; for faster indexing, ask an administrator to enable system cron in Nextcloud settings.": "Questo server utilizza i lavori di sfondo AJAX invece di system cron. Le scansioni continuano mentre si utilizza AudioCheck; per l'indicizzazione più rapida, chiedere a un amministratore di abilitare il cron di sistema nelle impostazioni Nextcloud.",
 		"This track continues at your saved position.": "Questa traccia continua nella posizione salvata.",
+		"This will update %1$s and %2$s — nothing is deleted.": "Verranno aggiornate %1$s e %2$s — non verrà eliminato nulla.",
 		"This will update %d settings and %d rows — nothing is deleted.": "Verranno aggiornate %d impostazioni e %d righe — non verrà eliminato nulla.",
 		"Tip: Author / Book / chapter folders work best. Nested scanning stays on by default.": "Suggerimento: Autore / libro / cartelle capitolo funzionano meglio. La scansione Nested rimane attiva per impostazione predefinita.",
 		"Tip: use separate roots for music and audiobooks. Avoid nested folders that overlap (for example /Music and /Music/Albums).": "Suggerimento: usare radici separate per musica e audiolibri. Evitare cartelle annidate che si sovrappongono (ad esempio /Musica e /Musica/Album).",
@@ -859,21 +873,7 @@
 		"{time} left": "{time} rimanenti",
 		"{title}, listened": "{title}, ascoltato",
 		"← / →": "← / →",
-		"↑ / ↓": "↑ / ↓",
-		"1 setting": "1 impostazione",
-		"%n settings": "%n impostazioni",
-		"1 row": "1 riga",
-		"%n rows": "%n righe",
-		"_1 row_::_%n rows_": [
-			"1 riga",
-			"%n righe"
-		],
-		"_1 setting_::_%n settings_": [
-			"1 impostazione",
-			"%n impostazioni"
-		],
-		"This will update %1$s and %2$s — nothing is deleted.": "Verranno aggiornate %1$s e %2$s — non verrà eliminato nulla.",
-		"Import applied. %1$s and %2$s written.": "Importazione applicata. %1$s e %2$s scritte."
+		"↑ / ↓": "↑ / ↓"
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

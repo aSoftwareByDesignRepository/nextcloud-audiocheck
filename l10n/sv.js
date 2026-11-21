@@ -1,6 +1,8 @@
 OC.L10N.register(
 	"audiocheck",
 	{
+	"%n rows" : "%n rader",
+	"%n settings" : "%n inställningar",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice — or official mobile licenses — choose an option below:" : "%s förblir gratis (AGPL) på er Nextcloud. Felrapporter och idéer på GitHub är fortsatt välkomna — det är gratis open source-vård. Om er organisation behöver bokningsbar hjälp på faktura — eller officiella mobillicenser — välj ett alternativ nedan:",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice, choose an option below:" : "%s förblir gratis (AGPL) på er Nextcloud. Felrapporter och idéer på GitHub är fortsatt välkomna — det är gratis open source-vård. Om er organisation behöver bokningsbar hjälp på faktura, välj ett alternativ nedan:",
 	"%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, commissioned work — or the official mobile app:" : "%s förblir gratis (AGPL) på er Nextcloud. GitHub-ärenden för fel och idéer är fortsatt välkomna. För bokningsbar hjälp på faktura — installation, timpaket, beställt arbete — eller den officiella mobilappen:",
@@ -9,6 +11,8 @@ OC.L10N.register(
 	"(unknown — skipped)" : "(okänd — hoppades över)",
 	"1 folder" : "1 mapp",
 	"1 item" : "1 objekt",
+	"1 row" : "1 rad",
+	"1 setting" : "1 inställning",
 	"1 track" : "1 spår",
 	"1 track added to queue." : "1 spår läggs till i kö.",
 	"1 track in queue" : "1 spår i kö",
@@ -20,6 +24,8 @@ OC.L10N.register(
 	"_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._" : ["1 referens är olöst — se grupperna nedan.","%n referenser är olösta — se grupperna nedan."],
 	"_1 row needs a value on this instance_::_%n rows need a value on this instance_" : ["1 rad behöver ett värde på den här instansen","%n rader behöver ett värde på den här instansen"],
 	"_1 row skipped._::_%n rows skipped._" : ["1 rad hoppades över.","%n rader hoppades över."],
+	"_1 row_::_%n rows_" : ["1 rad","%n rader"],
+	"_1 setting_::_%n settings_" : ["1 inställning","%n inställningar"],
 	"_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._" : ["Varning: 1 rad raderas permanent, sedan läses filens data in.","Varning: %n rader raderas permanent, sedan läses filens data in."],
 	"A pre-flight check failed — see the report for details." : "En förkontroll misslyckades — se rapporten för detaljer.",
 	"A scoped change with acceptance criteria and a delivery date — billed as project work." : "En avgränsad ändring med acceptanskriterier och leveransdatum — faktureras som projektarbete.",
@@ -310,6 +316,7 @@ OC.L10N.register(
 	"How to get help, report bugs, and support AudioCheck development." : "Hur man får hjälp, rapportera buggar och stödja AudioCheck utveckling.",
 	"How to play this list" : "Så spelar du upp den här listan",
 	"Idle" : "Inaktiv",
+	"Import applied. %1$s and %2$s written." : "Importen har tillämpats. %1$s och %2$s skrivna.",
 	"Import applied. %d settings and %d rows written." : "Importen har tillämpats. %d inställningar och %d rader skrivna.",
 	"Import configuration" : "Importera konfiguration",
 	"Import failed — nothing was changed." : "Importen misslyckades — inget ändrades.",
@@ -731,6 +738,7 @@ OC.L10N.register(
 	"This playlist is empty." : "Denna spellista är tom.",
 	"This server uses AJAX background jobs instead of system cron. Scans continue while you use AudioCheck; for faster indexing, ask an administrator to enable system cron in Nextcloud settings." : "Servern använder AJAX-bakgrundsjobb i stället för system-cron. Skanning fortsätter under användning av AudioCheck; för snabbare indexering kan en administratör aktivera system-cron i Nextcloud-inställningarna.",
 	"This track continues at your saved position." : "Detta spår fortsätter från sparad position.",
+	"This will update %1$s and %2$s — nothing is deleted." : "Detta uppdaterar %1$s och %2$s — inget raderas.",
 	"This will update %d settings and %d rows — nothing is deleted." : "Detta uppdaterar %d inställningar och %d rader — inget raderas.",
 	"Tip: Author \/ Book \/ chapter folders work best. Nested scanning stays on by default." : "Tips: Författare \/ Bok \/ kapitel mappar fungerar bäst. Nested scanning stannar på som standard.",
 	"Tip: use separate roots for music and audiobooks. Avoid nested folders that overlap (for example \/Music and \/Music\/Albums)." : "Tips: använd separata rötter för musik och ljudböcker. Undvik nästlade mappar som överlappar (till exempel \/Musik och \/Musik\/Album).",
@@ -836,14 +844,6 @@ OC.L10N.register(
 	"{time} left" : "{time} kvar",
 	"{title}, listened" : "{title}, lyssnade",
 	"← \/ →" : "← \/ →",
-	"↑ \/ ↓" : "↑ \/ ↓",
-	"1 setting" : "1 inställning",
-	"%n settings" : "%n inställningar",
-	"1 row" : "1 rad",
-	"%n rows" : "%n rader",
-	"_1 row_::_%n rows_" : ["1 rad","%n rader"],
-	"_1 setting_::_%n settings_" : ["1 inställning","%n inställningar"],
-	"This will update %1$s and %2$s — nothing is deleted." : "Detta uppdaterar %1$s och %2$s — inget raderas.",
-	"Import applied. %1$s and %2$s written." : "Importen har tillämpats. %1$s och %2$s skrivna."
+	"↑ \/ ↓" : "↑ \/ ↓"
 	}
 );

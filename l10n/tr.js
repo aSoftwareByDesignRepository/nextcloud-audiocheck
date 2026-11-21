@@ -1,6 +1,8 @@
 OC.L10N.register(
 	"audiocheck",
 	{
+	"%n rows" : "%n satır",
+	"%n settings" : "%n ayar",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice — or official mobile licenses — choose an option below:" : "%s, Nextcloud'unuzda ücretsiz (AGPL) kalır. Hata bildirimleri ve fikirler GitHub'da her zaman memnuniyetle karşılanır — bu, ücretsiz açık kaynak desteğidir. Kurumunuzun faturalı, rezerve edilebilir desteğe — veya resmi mobil lisanslara — ihtiyacı varsa aşağıdaki seçeneklerden birini seçin:",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice, choose an option below:" : "%s, Nextcloud'unuzda ücretsiz (AGPL) kalır. Hata bildirimleri ve fikirler GitHub'da her zaman memnuniyetle karşılanır — bu, ücretsiz açık kaynak desteğidir. Kurumunuzun faturalı, rezerve edilebilir desteğe ihtiyacı varsa aşağıdaki seçeneklerden birini seçin:",
 	"%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, commissioned work — or the official mobile app:" : "%s, Nextcloud'unuzda ücretsiz (AGPL) kalır. Hatalar ve fikirler için GitHub Issues her zaman açık. Faturalı, rezerve edilebilir destek için — kurulum, saat paketleri, özel geliştirme — veya resmi mobil uygulama için:",
@@ -9,6 +11,8 @@ OC.L10N.register(
 	"(unknown — skipped)" : "(bilinmiyor — atlandı)",
 	"1 folder" : "1 klasör",
 	"1 item" : "1 öğe",
+	"1 row" : "1 satır",
+	"1 setting" : "1 ayar",
 	"1 track" : "1 parça",
 	"1 track added to queue." : "1 parça kuyruğa eklendi.",
 	"1 track in queue" : "Kuyrukta 1 parça",
@@ -20,6 +24,8 @@ OC.L10N.register(
 	"_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._" : ["%n başvuru çözümlenemedi — aşağıdaki gruplara bakın."],
 	"_1 row needs a value on this instance_::_%n rows need a value on this instance_" : ["%n satırın bu örnekte bir değere ihtiyacı var"],
 	"_1 row skipped._::_%n rows skipped._" : ["%n satır atlandı."],
+	"_1 row_::_%n rows_" : ["%n satır"],
+	"_1 setting_::_%n settings_" : ["%n ayar"],
 	"_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._" : ["Uyarı: %n satır kalıcı olarak silinecek, ardından dosya verileri yüklenecek."],
 	"A pre-flight check failed — see the report for details." : "Ön kontrol başarısız oldu — ayrıntılar için rapora bakın.",
 	"A scoped change with acceptance criteria and a delivery date — billed as project work." : "Kabul kriterleri ve teslim tarihi olan kapsamlı bir değişiklik — proje işi olarak faturalandırılır.",
@@ -310,6 +316,7 @@ OC.L10N.register(
 	"How to get help, report bugs, and support AudioCheck development." : "Nasıl yardım alınır, hata bildirilir ve AudioCheck geliştirmesi desteklenir.",
 	"How to play this list" : "Bu liste nasıl çalınır",
 	"Idle" : "Boşta",
+	"Import applied. %1$s and %2$s written." : "İçe aktarma uygulandı. %1$s ve %2$s yazıldı.",
 	"Import applied. %d settings and %d rows written." : "İçe aktarma uygulandı. %d ayar ve %d satır yazıldı.",
 	"Import configuration" : "Yapılandırmayı içe aktar",
 	"Import failed — nothing was changed." : "İçe aktarma başarısız — hiçbir şey değiştirilmedi.",
@@ -731,6 +738,7 @@ OC.L10N.register(
 	"This playlist is empty." : "Bu çalma listesi boş.",
 	"This server uses AJAX background jobs instead of system cron. Scans continue while you use AudioCheck; for faster indexing, ask an administrator to enable system cron in Nextcloud settings." : "Bu sunucu, sistem cron yerine AJAX arka plan işlerini kullanır. AudioCheck'i kullanırken taramalar sürer; daha hızlı dizine ekleme için bir yöneticiden Nextcloud ayarlarında sistem cron'unu etkinleştirmesini isteyin.",
 	"This track continues at your saved position." : "Bu parça kaydedilen konumunuzdan devam eder.",
+	"This will update %1$s and %2$s — nothing is deleted." : "Bu işlem %1$s ve %2$s güncelleyecek — hiçbir şey silinmeyecek.",
 	"This will update %d settings and %d rows — nothing is deleted." : "Bu işlem %d ayarı ve %d satırı güncelleyecek — hiçbir şey silinmeyecek.",
 	"Tip: Author \/ Book \/ chapter folders work best. Nested scanning stays on by default." : "İpucu: Yazar \/ Kitap \/ bölüm klasörleri en iyi sonucu verir. İç içe tarama varsayılan olarak açık kalır.",
 	"Tip: use separate roots for music and audiobooks. Avoid nested folders that overlap (for example \/Music and \/Music\/Albums)." : "İpucu: müzik ve sesli kitaplar için ayrı kökler kullanın. Çakışan iç içe klasörlerden kaçının (örneğin \/Müzik ve \/Müzik\/Albümler).",
@@ -836,14 +844,6 @@ OC.L10N.register(
 	"{time} left" : "{time} kaldı",
 	"{title}, listened" : "{title}, dinlendi",
 	"← \/ →" : "← \/ →",
-	"↑ \/ ↓" : "↑ \/ ↓",
-	"1 setting" : "1 ayar",
-	"%n settings" : "%n ayar",
-	"1 row" : "1 satır",
-	"%n rows" : "%n satır",
-	"_1 row_::_%n rows_" : ["%n satır"],
-	"_1 setting_::_%n settings_" : ["%n ayar"],
-	"This will update %1$s and %2$s — nothing is deleted." : "Bu işlem %1$s ve %2$s güncelleyecek — hiçbir şey silinmeyecek.",
-	"Import applied. %1$s and %2$s written." : "İçe aktarma uygulandı. %1$s ve %2$s yazıldı."
+	"↑ \/ ↓" : "↑ \/ ↓"
 	}
 );

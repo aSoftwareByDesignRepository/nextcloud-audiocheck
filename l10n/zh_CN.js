@@ -1,6 +1,8 @@
 OC.L10N.register(
 	"audiocheck",
 	{
+	"%n rows" : "%n 行",
+	"%n settings" : "%n 项设置",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice — or official mobile licenses — choose an option below:" : "%s 在您的 Nextcloud 上保持免费（AGPL）。欢迎在 GitHub 提交缺陷报告和建议——这是自由开源的关怀。如果您的组织需要可开票的帮助或官方移动端许可证，请选择下方选项：",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice, choose an option below:" : "%s 在您的 Nextcloud 上保持免费（AGPL）。欢迎在 GitHub 提交缺陷报告和建议——这是自由开源的关怀。如果您的组织需要可开票的帮助，请选择下方选项：",
 	"%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, commissioned work — or the official mobile app:" : "%s 在您的 Nextcloud 上保持免费（AGPL）。欢迎在 GitHub 提交缺陷和建议。需要可开票的帮助——部署、工时包或委托开发——或官方移动应用：",
@@ -9,6 +11,8 @@ OC.L10N.register(
 	"(unknown — skipped)" : "（未知——已跳过）",
 	"1 folder" : "1 个文件夹",
 	"1 item" : "1 项",
+	"1 row" : "1 行",
+	"1 setting" : "1 项设置",
 	"1 track" : "1 首",
 	"1 track added to queue." : "1 首已加入队列。",
 	"1 track in queue" : "队列中 1 首",
@@ -20,6 +24,8 @@ OC.L10N.register(
 	"_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._" : ["%n 个引用未能解析——请查看下方分组。"],
 	"_1 row needs a value on this instance_::_%n rows need a value on this instance_" : ["%n 行需要在此实例上填写值"],
 	"_1 row skipped._::_%n rows skipped._" : ["已跳过 %n 行。"],
+	"_1 row_::_%n rows_" : ["%n 行"],
+	"_1 setting_::_%n settings_" : ["%n 项设置"],
 	"_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._" : ["警告：%n 行将被永久删除，然后加载文件数据。"],
 	"A pre-flight check failed — see the report for details." : "预检失败——详见报告。",
 	"A scoped change with acceptance criteria and a delivery date — billed as project work." : "带验收标准和交付日期的范围变更——按项目工作计费。",
@@ -310,6 +316,7 @@ OC.L10N.register(
 	"How to get help, report bugs, and support AudioCheck development." : "如何获取帮助、报告缺陷和支持 AudioCheck 开发。",
 	"How to play this list" : "如何播放此列表",
 	"Idle" : "空闲",
+	"Import applied. %1$s and %2$s written." : "导入已应用。已写入 %1$s 和 %2$s。",
 	"Import applied. %d settings and %d rows written." : "导入已应用。已写入 %d 项设置和 %d 行。",
 	"Import configuration" : "导入配置",
 	"Import failed — nothing was changed." : "导入失败——未做任何更改。",
@@ -731,6 +738,7 @@ OC.L10N.register(
 	"This playlist is empty." : "此播放列表为空。",
 	"This server uses AJAX background jobs instead of system cron. Scans continue while you use AudioCheck; for faster indexing, ask an administrator to enable system cron in Nextcloud settings." : "此服务器使用 AJAX 后台任务而非系统定时任务。使用 AudioCheck 时扫描会继续；如需更快索引，请让管理员在 Nextcloud 设置中启用系统定时任务。",
 	"This track continues at your saved position." : "此曲目从你保存的位置继续。",
+	"This will update %1$s and %2$s — nothing is deleted." : "这将更新 %1$s 和 %2$s——不会删除任何内容。",
 	"This will update %d settings and %d rows — nothing is deleted." : "这将更新 %d 项设置和 %d 行数据——不会删除任何内容。",
 	"Tip: Author \/ Book \/ chapter folders work best. Nested scanning stays on by default." : "提示：作者\/书名\/章节文件夹结构效果最佳。嵌套扫描默认开启。",
 	"Tip: use separate roots for music and audiobooks. Avoid nested folders that overlap (for example \/Music and \/Music\/Albums)." : "提示：音乐和有声书用不同的根目录。避免重叠的嵌套文件夹（例如 \/Music 和 \/Music\/Albums）。",
@@ -836,14 +844,6 @@ OC.L10N.register(
 	"{time} left" : "剩余 {time}",
 	"{title}, listened" : "{title}，已听完",
 	"← \/ →" : "← \/ →",
-	"↑ \/ ↓" : "↑ \/ ↓",
-	"1 setting" : "1 项设置",
-	"%n settings" : "%n 项设置",
-	"1 row" : "1 行",
-	"%n rows" : "%n 行",
-	"_1 row_::_%n rows_" : ["%n 行"],
-	"_1 setting_::_%n settings_" : ["%n 项设置"],
-	"This will update %1$s and %2$s — nothing is deleted." : "这将更新 %1$s 和 %2$s——不会删除任何内容。",
-	"Import applied. %1$s and %2$s written." : "导入已应用。已写入 %1$s 和 %2$s。"
+	"↑ \/ ↓" : "↑ \/ ↓"
 	}
 );

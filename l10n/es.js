@@ -1,6 +1,8 @@
 OC.L10N.register(
 	"audiocheck",
 	{
+	"%n rows" : "%n filas",
+	"%n settings" : "%n ajustes",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice — or official mobile licenses — choose an option below:" : "%s permanece gratuito (AGPL) en su Nextcloud. Los informes de errores e ideas en GitHub siguen siendo bienvenidos: eso es el cuidado gratuito del código abierto. Si su organización necesita ayuda reservable con factura — o licencias móviles oficiales — elija una opción a continuación:",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice, choose an option below:" : "%s permanece gratuito (AGPL) en su Nextcloud. Los informes de errores e ideas en GitHub siguen siendo bienvenidos: eso es el cuidado gratuito del código abierto. Si su organización necesita ayuda reservable con factura, elija una opción a continuación:",
 	"%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, commissioned work — or the official mobile app:" : "%s permanece gratuito (AGPL) en su Nextcloud. Los issues de GitHub sobre errores e ideas siguen siendo bienvenidos. Para ayuda reservable con factura — configuración, paquetes de horas, trabajo por encargo — o la aplicación móvil oficial:",
@@ -9,6 +11,8 @@ OC.L10N.register(
 	"(unknown — skipped)" : "(desconocido — omitido)",
 	"1 folder" : "1 carpeta",
 	"1 item" : "1 elemento",
+	"1 row" : "1 fila",
+	"1 setting" : "1 ajuste",
 	"1 track" : "1 pista",
 	"1 track added to queue." : "1 pista agregada a cola.",
 	"1 track in queue" : "1 pista en cola",
@@ -20,6 +24,8 @@ OC.L10N.register(
 	"_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._" : ["1 referencia sin resolver — consulta los grupos siguientes.","%n referencias sin resolver — consulta los grupos siguientes."],
 	"_1 row needs a value on this instance_::_%n rows need a value on this instance_" : ["1 fila necesita un valor en esta instancia","%n filas necesitan un valor en esta instancia"],
 	"_1 row skipped._::_%n rows skipped._" : ["1 fila omitida.","%n filas omitidas."],
+	"_1 row_::_%n rows_" : ["1 fila","%n filas"],
+	"_1 setting_::_%n settings_" : ["1 ajuste","%n ajustes"],
 	"_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._" : ["Advertencia: 1 fila se eliminará permanentemente y después se cargarán los datos del archivo.","Advertencia: %n filas se eliminarán permanentemente y después se cargarán los datos del archivo."],
 	"A pre-flight check failed — see the report for details." : "Una comprobación previa falló — consulte el informe para más detalles.",
 	"A scoped change with acceptance criteria and a delivery date — billed as project work." : "Un cambio delimitado con criterios de aceptación y fecha de entrega — facturado como trabajo de proyecto.",
@@ -310,6 +316,7 @@ OC.L10N.register(
 	"How to get help, report bugs, and support AudioCheck development." : "Cómo obtener ayuda, reportar errores y apoyar el desarrollo AudioCheck.",
 	"How to play this list" : "Cómo reproducir esta lista",
 	"Idle" : "En espera",
+	"Import applied. %1$s and %2$s written." : "Importación aplicada. %1$s y %2$s escritos.",
 	"Import applied. %d settings and %d rows written." : "Importación aplicada. %d ajustes y %d filas escritos.",
 	"Import configuration" : "Importar configuración",
 	"Import failed — nothing was changed." : "Error de importación — no se cambió nada.",
@@ -568,7 +575,7 @@ OC.L10N.register(
 	"Rename playlist" : "Renombrar la lista de reproducción",
 	"Repeat" : "Repetir",
 	"Repeat all" : "Repita todo",
-	"Repeat off" : "Repito.",
+	"Repeat off" : "Repetición desactivada",
 	"Repeat one" : "Repita uno",
 	"Replace" : "Reemplazar",
 	"Replace is available to Nextcloud system administrators only." : "Reemplazar solo está disponible para administradores de sistema de Nextcloud.",
@@ -731,6 +738,7 @@ OC.L10N.register(
 	"This playlist is empty." : "Esta lista de reproducción está vacía.",
 	"This server uses AJAX background jobs instead of system cron. Scans continue while you use AudioCheck; for faster indexing, ask an administrator to enable system cron in Nextcloud settings." : "Este servidor utiliza trabajos de fondo AJAX en lugar de cron del sistema. Los escáneres continúan mientras utiliza AudioCheck; para una indexación más rápida, pida a un administrador que active el cron del sistema en configuraciones Nextcloud.",
 	"This track continues at your saved position." : "Esta pista continúa en la posición guardada.",
+	"This will update %1$s and %2$s — nothing is deleted." : "Esto actualizará %1$s y %2$s — no se eliminará nada.",
 	"This will update %d settings and %d rows — nothing is deleted." : "Esto actualizará %d ajustes y %d filas — no se eliminará nada.",
 	"Tip: Author \/ Book \/ chapter folders work best. Nested scanning stays on by default." : "Consejo: Autor \/ Libro \/ carpetas capítulo funcionan mejor. El escaneo anidado se mantiene por defecto.",
 	"Tip: use separate roots for music and audiobooks. Avoid nested folders that overlap (for example \/Music and \/Music\/Albums)." : "Consejo: use raíces separadas para la música y los audiolibros. Evite carpetas anidadas que se solapan (por ejemplo \/Música y \/Música\/Álbumes).",
@@ -836,14 +844,6 @@ OC.L10N.register(
 	"{time} left" : "{time} restantes",
 	"{title}, listened" : "{title}, escuchada",
 	"← \/ →" : "← \/ →",
-	"↑ \/ ↓" : "↑ \/ ↓",
-	"1 setting" : "1 ajuste",
-	"%n settings" : "%n ajustes",
-	"1 row" : "1 fila",
-	"%n rows" : "%n filas",
-	"_1 row_::_%n rows_" : ["1 fila","%n filas"],
-	"_1 setting_::_%n settings_" : ["1 ajuste","%n ajustes"],
-	"This will update %1$s and %2$s — nothing is deleted." : "Esto actualizará %1$s y %2$s — no se eliminará nada.",
-	"Import applied. %1$s and %2$s written." : "Importación aplicada. %1$s y %2$s escritos."
+	"↑ \/ ↓" : "↑ \/ ↓"
 	}
 );

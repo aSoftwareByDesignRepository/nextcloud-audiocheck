@@ -1,6 +1,8 @@
 OC.L10N.register(
 	"audiocheck",
 	{
+	"%n rows" : "%n 列",
+	"%n settings" : "%n 項設定",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice — or official mobile licenses — choose an option below:" : "%s 在您的 Nextcloud 上保持免費（AGPL）。歡迎在 GitHub 提交缺陷報告和建議——這是自由開源的關懷。如果您的組織需要可開票的幫助或官方行動端授權，請選擇下方選項：",
 	"%s stays free (AGPL) on your Nextcloud. Bug reports and ideas on GitHub stay welcome — that is free open-source care. If your organisation needs bookable help on an invoice, choose an option below:" : "%s 在您的 Nextcloud 上保持免費（AGPL）。歡迎在 GitHub 提交缺陷報告和建議——這是自由開源的關懷。如果您的組織需要可開票的幫助，請選擇下方選項：",
 	"%s stays free (AGPL) on your Nextcloud. GitHub issues for bugs and ideas remain welcome. For bookable help on an invoice — setup, hour packs, commissioned work — or the official mobile app:" : "%s 在您的 Nextcloud 上保持免費（AGPL）。歡迎在 GitHub 提交缺陷和建議。需要可開票的幫助——部署、工時包或委託開發——或官方行動應用：",
@@ -9,6 +11,8 @@ OC.L10N.register(
 	"(unknown — skipped)" : "（未知——已跳過）",
 	"1 folder" : "1 個資料夾",
 	"1 item" : "1 項",
+	"1 row" : "1 列",
+	"1 setting" : "1 項設定",
 	"1 track" : "1 首",
 	"1 track added to queue." : "1 首已加入佇列。",
 	"1 track in queue" : "佇列中 1 首",
@@ -20,6 +24,8 @@ OC.L10N.register(
 	"_1 reference unresolved — see the groups below._::_%n references unresolved — see the groups below._" : ["%n 個參照未能解析——請查看下方群組。"],
 	"_1 row needs a value on this instance_::_%n rows need a value on this instance_" : ["%n 列需要在此實例上填寫值"],
 	"_1 row skipped._::_%n rows skipped._" : ["已略過 %n 列。"],
+	"_1 row_::_%n rows_" : ["%n 列"],
+	"_1 setting_::_%n settings_" : ["%n 項設定"],
 	"_Warning: 1 row will be permanently deleted, then the file data is loaded._::_Warning: %n rows will be permanently deleted, then the file data is loaded._" : ["警告：%n 列將被永久刪除，然後載入檔案資料。"],
 	"A pre-flight check failed — see the report for details." : "預檢失敗——詳見報告。",
 	"A scoped change with acceptance criteria and a delivery date — billed as project work." : "帶驗收標準和交付日期的範圍變更——按專案工作計費。",
@@ -310,6 +316,7 @@ OC.L10N.register(
 	"How to get help, report bugs, and support AudioCheck development." : "如何獲取幫助、報告缺陷和支援 AudioCheck 開發。",
 	"How to play this list" : "如何播放此列表",
 	"Idle" : "空閒",
+	"Import applied. %1$s and %2$s written." : "匯入已套用。已寫入 %1$s 與 %2$s。",
 	"Import applied. %d settings and %d rows written." : "匯入已套用。已寫入 %d 項設定與 %d 列。",
 	"Import configuration" : "匯入配置",
 	"Import failed — nothing was changed." : "匯入失敗——未做任何更改。",
@@ -731,6 +738,7 @@ OC.L10N.register(
 	"This playlist is empty." : "此播放列表為空。",
 	"This server uses AJAX background jobs instead of system cron. Scans continue while you use AudioCheck; for faster indexing, ask an administrator to enable system cron in Nextcloud settings." : "此伺服器使用 AJAX 背景任務而非系統定時任務。使用 AudioCheck 時掃描會繼續；如需更快索引，請讓管理員在 Nextcloud 設定中啟用系統定時任務。",
 	"This track continues at your saved position." : "此曲目從你儲存的位置繼續。",
+	"This will update %1$s and %2$s — nothing is deleted." : "這將更新 %1$s 與 %2$s——不會刪除任何內容。",
 	"This will update %d settings and %d rows — nothing is deleted." : "這將更新 %d 項設定與 %d 列資料——不會刪除任何內容。",
 	"Tip: Author \/ Book \/ chapter folders work best. Nested scanning stays on by default." : "提示：作者\/書名\/章節資料夾結構效果最佳。巢狀掃描預設開啟。",
 	"Tip: use separate roots for music and audiobooks. Avoid nested folders that overlap (for example \/Music and \/Music\/Albums)." : "提示：音樂和有聲書用不同的根目錄。避免重疊的巢狀資料夾（例如 \/Music 和 \/Music\/Albums）。",
@@ -836,14 +844,6 @@ OC.L10N.register(
 	"{time} left" : "剩餘 {time}",
 	"{title}, listened" : "{title}，已聽完",
 	"← \/ →" : "← \/ →",
-	"↑ \/ ↓" : "↑ \/ ↓",
-	"1 setting" : "1 項設定",
-	"%n settings" : "%n 項設定",
-	"1 row" : "1 列",
-	"%n rows" : "%n 列",
-	"_1 row_::_%n rows_" : ["%n 列"],
-	"_1 setting_::_%n settings_" : ["%n 項設定"],
-	"This will update %1$s and %2$s — nothing is deleted." : "這將更新 %1$s 與 %2$s——不會刪除任何內容。",
-	"Import applied. %1$s and %2$s written." : "匯入已套用。已寫入 %1$s 與 %2$s。"
+	"↑ \/ ↓" : "↑ \/ ↓"
 	}
 );
