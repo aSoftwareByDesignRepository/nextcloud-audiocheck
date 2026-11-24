@@ -2412,7 +2412,7 @@ dialog.ac-native-dialog button.ac-modal__close:focus-visible,
 	color: var(--color-success-text, var(--color-success));
 }
 
-/* Mobile card-list layout for library track rows (MobilityCheck-style) */
+/* Mobile card-list layout for library track rows (the mobility app-style) */
 @media (max-width: 768.98px) {
 	.ac-track-list:not(.ac-track-list--compact):not(.ac-now-queue):not(.ac-track-list--collection) {
 		display: grid;

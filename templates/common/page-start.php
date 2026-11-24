@@ -1,6 +1,6 @@
 <?php
 /**
- * AudioCheck persistent shell — sidebar + content chrome (BudgetCheck / MobilityCheck parity).
+ * AudioCheck persistent shell — sidebar + content chrome (BudgetCheck / the mobility app parity).
  *
  * @var array $_
  * @var \OCP\IL10N $l

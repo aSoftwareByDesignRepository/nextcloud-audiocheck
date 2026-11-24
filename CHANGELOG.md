@@ -386,7 +386,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **App shell** — persistent page chrome (breadcrumb, icon header, scope strip, grouped nav hints) aligned with BudgetCheck and MobilityCheck across all routes.
+- **App shell** — persistent page chrome (breadcrumb, icon header, scope strip, grouped nav hints) aligned with BudgetCheck and the mobility app across all routes.
 - **Section cards** — Settings, App settings, Library, Browse, Music/Audiobooks, Playlists, and collection detail use shared `sectionCard` / `collapsibleSectionCard` layout.
 - **Track lists (mobile)** — library browse rows render as bordered cards at ≤767px; collection detail tracks match the same pattern.
 - **Playlist detail actions** — secondary header actions collapse into a **More actions** menu on narrow viewports; **Play** stays visible.
