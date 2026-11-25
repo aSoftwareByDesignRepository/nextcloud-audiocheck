@@ -1323,6 +1323,12 @@ body[data-theme-dark-highcontrast] .ac-toast-fallback {
 	margin-inline: auto;
 }
 
+/* <p> action row inside .ac-empty-state keeps browser margin and breaks the
+ * flex gap rhythm — siblings __title/__text already reset margin (pack rules). */
+#app-content.ac-app .ac-empty-state__actions {
+	margin: 0;
+}
+
 .ac-grid {
 	display: grid;
 	grid-template-columns: 1fr;
@@ -2978,6 +2984,7 @@ dialog.ac-native-dialog button.ac-modal__close:focus-visible,
 	border-top: 1px solid var(--ac-border);
 }
 .ac-collection-detail__more .ac-btn { gap: var(--ac-space-2); flex: 1 1 100%; }
+.ac-collection-detail__load-more { padding-top: var(--ac-space-3); }
 /* ≥480px: collection hero cover and action buttons on one row */
 @media (min-width: 480px) {
 	.ac-collection-detail__cover-wrap {
@@ -3138,6 +3145,7 @@ dialog.ac-native-dialog button.ac-modal__close:focus-visible,
 .ac-entity-suggest__line { font-weight: 600; }
 .ac-entity-suggest__id { font-size: var(--ac-fs-xs); color: var(--ac-muted); }
 .ac-entity-picker__noresult { margin: 0; padding: var(--ac-space-3); color: var(--ac-muted); }
+.ac-entity-picker__noresult--err { color: var(--ac-danger-ink); }
 
 .ac-now-card {
 	display: grid;
@@ -3927,6 +3935,16 @@ dialog.ac-native-dialog button.ac-modal__close:focus-visible,
 .ac-now-sleep-banner {
 	margin-bottom: 0;
 }
+
+/* Queue sort label + chip row pair — same flex-column gap recipe as
+ * .ac-facet-group__controls so the label keeps breathing room off the chips.
+ * Author display beats UA [hidden], so the hidden toggle needs an explicit rule. */
+.ac-now-queue__sortwrap {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ac-space-3);
+}
+.ac-now-queue__sortwrap[hidden] { display: none; }
 
 .ac-now-queue__hint {
 	margin: 0;
