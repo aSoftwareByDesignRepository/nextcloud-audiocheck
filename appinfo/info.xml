@@ -6,19 +6,19 @@
 <info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
 	<id>audiocheck</id>
 	<name>AudioCheck</name>
-	<summary>Play audiobooks and music from your Nextcloud Files — resume, queues, chapters, playlists</summary>
-	<summary lang="de">Hörbücher und Musik aus Ihren Nextcloud-Dateien — Fortsetzen, Warteschlange, Kapitel, Playlists</summary>
-	<summary lang="fr">Livres audio et musique depuis vos fichiers Nextcloud — reprise, files, chapitres, playlists</summary>
-	<summary lang="es">Audiolibros y música desde sus archivos Nextcloud — reanudación, colas, capítulos, listas</summary>
-	<summary lang="da">Lydbøger og musik fra dine Nextcloud-filer — genoptag, køer, kapitler, playlister</summary>
-	<summary lang="nl">Luisterboeken en muziek uit uw Nextcloud-bestanden — hervatten, wachtrijen, hoofdstukken, playlists</summary>
-	<summary lang="it">Audiolibri e musica dai file Nextcloud — ripresa, code, capitoli, playlist</summary>
-	<summary lang="pl">Audiobooki i muzyka z plików Nextcloud — wznawianie, kolejki, rozdziały, playlisty</summary>
-	<summary lang="sv">Ljudböcker och musik från dina Nextcloud-filer — återuppta, köer, kapitel, spellistor</summary>
-	<summary lang="nb">Lydbøker og musikk fra Nextcloud-filene — gjenoppta, køer, kapitler, spillelister</summary>
-	<summary lang="pt">Audiolivros e música dos seus ficheiros Nextcloud — retomar, filas, capítulos, playlists</summary>
+	<summary>Play audiobooks and music from your Nextcloud Files: resume, queues, chapters, playlists</summary>
+	<summary lang="de">Hörbücher und Musik aus Ihren Nextcloud-Dateien: Fortsetzen, Warteschlange, Kapitel, Playlists</summary>
+	<summary lang="fr">Livres audio et musique depuis vos fichiers Nextcloud: reprise, files, chapitres, playlists</summary>
+	<summary lang="es">Audiolibros y música desde sus archivos Nextcloud: reanudación, colas, capítulos, listas</summary>
+	<summary lang="da">Lydbøger og musik fra dine Nextcloud-filer: genoptag, køer, kapitler, playlister</summary>
+	<summary lang="nl">Luisterboeken en muziek uit uw Nextcloud-bestanden: hervatten, wachtrijen, hoofdstukken, playlists</summary>
+	<summary lang="it">Audiolibri e musica dai file Nextcloud: ripresa, code, capitoli, playlist</summary>
+	<summary lang="pl">Audiobooki i muzyka z plików Nextcloud: wznawianie, kolejki, rozdziały, playlisty</summary>
+	<summary lang="sv">Ljudböcker och musik från dina Nextcloud-filer: återuppta, köer, kapitel, spellistor</summary>
+	<summary lang="nb">Lydbøker og musikk fra Nextcloud-filene: gjenoppta, køer, kapitler, spillelister</summary>
+	<summary lang="pt">Audiolivros e música dos seus ficheiros Nextcloud: retomar, filas, capítulos, playlists</summary>
 	<description><![CDATA[
-# AudioCheck — your audio library inside Nextcloud
+# AudioCheck: your audio library inside Nextcloud
 
 Your audio files already live in Files. AudioCheck indexes the folders you choose and streams them with live permission checks.
 
@@ -58,7 +58,7 @@ The app is **free** under AGPL-3.0-or-later. There is no seat license for this w
 
 ## Feedback welcome
 
-We improve this app with real-world use. Bug reports, rough edges, and ideas help — open a GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) or write to info@software-by-design.de. Your feedback directly shapes what we build next.
+We improve this app with real-world use. Bug reports, rough edges, and ideas help. Open a GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) or write to info@software-by-design.de. Your feedback directly shapes what we build next.
 
 ## Requirements
 
@@ -67,7 +67,7 @@ We improve this app with real-world use. Bug reports, rough edges, and ideas hel
 - MySQL or PostgreSQL
 	]]></description>
 	<description lang="de"><![CDATA[
-# AudioCheck — Ihre Audiothek in Nextcloud
+# AudioCheck: Ihre Audiothek in Nextcloud
 
 Ihre Audiodateien liegen bereits in Dateien. AudioCheck indexiert die von Ihnen gewählten Ordner und streamt sie mit Live-Berechtigungsprüfung.
 
@@ -107,7 +107,7 @@ Die App ist unter AGPL-3.0-or-later **kostenfrei**. Für diese Web-App ist im au
 
 ## Feedback willkommen
 
-Wir verbessern diese App mit Rückmeldungen aus der Praxis. Fehlerberichte, Stolpersteine und Ideen helfen — öffnen Sie ein GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) oder schreiben Sie an info@software-by-design.de. Ihr Feedback prägt direkt, was wir als Nächstes bauen.
+Wir verbessern diese App mit Rückmeldungen aus der Praxis. Fehlerberichte, Stolpersteine und Ideen helfen. Öffnen Sie ein GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) oder schreiben Sie an info@software-by-design.de. Ihr Feedback prägt direkt, was wir als Nächstes bauen.
 
 ## Voraussetzungen
 
@@ -116,7 +116,7 @@ Wir verbessern diese App mit Rückmeldungen aus der Praxis. Fehlerberichte, Stol
 - MySQL oder PostgreSQL
 	]]></description>
 	<description lang="fr"><![CDATA[
-# AudioCheck — votre médiathèque audio dans Nextcloud
+# AudioCheck: votre médiathèque audio dans Nextcloud
 
 Vos fichiers audio sont déjà dans Files. AudioCheck indexe les dossiers que vous choisissez et les diffuse en streaming avec des contrôles d’autorisations en temps réel.
 
@@ -156,7 +156,7 @@ L’application est **gratuite** sous AGPL-3.0-or-later. Il n’y a pas de licen
 
 ## Retours bienvenus
 
-Nous améliorons cette app grâce à votre usage réel. Bugs, frottements et idées aident — ouvrez une GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) ou écrivez à info@software-by-design.de. Vos retours façonnent directement la suite.
+Nous améliorons cette app grâce à votre usage réel. Bugs, frottements et idées aident. Ouvrez une GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) ou écrivez à info@software-by-design.de. Vos retours façonnent directement la suite.
 
 ## Exigences
 
@@ -165,7 +165,7 @@ Nous améliorons cette app grâce à votre usage réel. Bugs, frottements et id�
 - MySQL ou PostgreSQL
 	]]></description>
 	<description lang="es"><![CDATA[
-# AudioCheck — su biblioteca de audio dentro de Nextcloud
+# AudioCheck: su biblioteca de audio dentro de Nextcloud
 
 Sus archivos de audio ya están en Files. AudioCheck indexa las carpetas que elija y hace streaming con comprobaciones de permisos en tiempo real.
 
@@ -205,7 +205,7 @@ La aplicación es **gratuita** con AGPL-3.0-or-later. En el paquete entregado no
 
 ## Comentarios bienvenidos
 
-Mejoramos esta app con el uso real. Informes de errores, fricciones e ideas ayudan — abra un GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) o escriba a info@software-by-design.de. Su feedback da forma directa a lo que construimos después.
+Mejoramos esta app con el uso real. Informes de errores, fricciones e ideas ayudan. Abra un GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) o escriba a info@software-by-design.de. Su feedback da forma directa a lo que construimos después.
 
 ## Requisitos
 
@@ -214,7 +214,7 @@ Mejoramos esta app con el uso real. Informes de errores, fricciones e ideas ayud
 - MySQL o PostgreSQL
 	]]></description>
 	<description lang="da"><![CDATA[
-# AudioCheck — dit lydbibliotek i Nextcloud
+# AudioCheck: dit lydbibliotek i Nextcloud
 
 Dine lydfiler ligger allerede i Files. AudioCheck indekserer de mapper, du vælger, og streamer dem med live-permissionkontroller.
 
@@ -254,7 +254,7 @@ Appen er **gratis** under AGPL-3.0-or-later. Der findes ingen seat-licens til de
 
 ## Feedback er velkommen
 
-Vi forbedrer denne app med brug i praksis. Fejlrapporter, friktioner og idéer hjælper — åbn et GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) eller skriv til info@software-by-design.de. Jeres feedback former direkte det, vi bygger næste gang.
+Vi forbedrer denne app med brug i praksis. Fejlrapporter, friktioner og idéer hjælper. Åbn et GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) eller skriv til info@software-by-design.de. Jeres feedback former direkte det, vi bygger næste gang.
 
 ## Krav
 
@@ -263,7 +263,7 @@ Vi forbedrer denne app med brug i praksis. Fejlrapporter, friktioner og idéer h
 - MySQL eller PostgreSQL
 	]]></description>
 	<description lang="nl"><![CDATA[
-# AudioCheck — uw audiobibliotheek in Nextcloud
+# AudioCheck: uw audiobibliotheek in Nextcloud
 
 Uw audiobestanden staan al in Files. AudioCheck indexeert de door u gekozen mappen en streamt ze met live-permissiecontroles.
 
@@ -303,7 +303,7 @@ De app is **gratis** onder AGPL-3.0-or-later. Er is in het meegeleverde pakket g
 
 ## Feedback welkom
 
-We verbeteren deze app met gebruik in de praktijk. Bugmeldingen, struikelblokken en ideeën helpen — open een GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) of mail naar info@software-by-design.de. Uw feedback bepaalt mede wat we als volgende bouwen.
+We verbeteren deze app met gebruik in de praktijk. Bugmeldingen, struikelblokken en ideeën helpen. Open een GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) of mail naar info@software-by-design.de. Uw feedback bepaalt mede wat we als volgende bouwen.
 
 ## Vereisten
 
@@ -312,7 +312,7 @@ We verbeteren deze app met gebruik in de praktijk. Bugmeldingen, struikelblokken
 - MySQL of PostgreSQL
 	]]></description>
 	<description lang="it"><![CDATA[
-# AudioCheck — la vostra libreria audio dentro Nextcloud
+# AudioCheck. La vostra libreria audio dentro Nextcloud
 
 I vostri file audio sono già in Files. AudioCheck indicizza le cartelle che scegliete e le riproduce in streaming con controlli dei permessi in tempo reale.
 
@@ -352,7 +352,7 @@ L’app è **gratuita** con AGPL-3.0-or-later. Nel pacchetto distribuito non è 
 
 ## Feedback benvenuto
 
-Miglioriamo questa app con l’uso reale. Segnalazioni di bug, punti deboli e idee aiutano — aprite una GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) o scrivete a info@software-by-design.de. Il vostro feedback guida direttamente ciò che costruiamo dopo.
+Miglioriamo questa app con l’uso reale. Segnalazioni di bug, punti deboli e idee aiutano. Aprite una GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) o scrivete a info@software-by-design.de. Il vostro feedback guida direttamente ciò che costruiamo dopo.
 
 ## Requisiti
 
@@ -361,7 +361,7 @@ Miglioriamo questa app con l’uso reale. Segnalazioni di bug, punti deboli e id
 - MySQL o PostgreSQL
 	]]></description>
 	<description lang="pl"><![CDATA[
-# AudioCheck — Twoja biblioteka audio w Nextcloud
+# AudioCheck: Twoja biblioteka audio w Nextcloud
 
 Państwa pliki audio znajdują się już w Files. AudioCheck indeksuje foldery, które Państwo wybiorą, i przesyła je strumieniowo z bieżącą weryfikacją uprawnień.
 
@@ -401,7 +401,7 @@ Prowadzona przez aplikację jest **bezpłatna** na warunkach AGPL-3.0-or-later. 
 
 ## Feedback mile widziany
 
-Ulepszamy tę aplikację dzięki realnemu użyciu. Zgłoszenia błędów, tarcia i pomysły pomagają — otwórz GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) lub napisz na info@software-by-design.de. Wasza opinia bezpośrednio kształtuje to, co budujemy dalej.
+Ulepszamy tę aplikację dzięki realnemu użyciu. Zgłoszenia błędów, tarcia i pomysły pomagają. Otwórz GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) lub napisz na info@software-by-design.de. Wasza opinia bezpośrednio kształtuje to, co budujemy dalej.
 
 ## Wymagania
 
@@ -410,7 +410,7 @@ Ulepszamy tę aplikację dzięki realnemu użyciu. Zgłoszenia błędów, tarcia
 - MySQL lub PostgreSQL
 	]]></description>
 	<description lang="sv"><![CDATA[
-# AudioCheck — ert ljudbibliotek i Nextcloud
+# AudioCheck: ert ljudbibliotek i Nextcloud
 
 Era ljudfiler finns redan i Files. AudioCheck indexerar mapparna ni väljer och streamar dem med kontroller av behörigheter i realtid.
 
@@ -450,7 +450,7 @@ Appen är **gratis** under AGPL-3.0-or-later. Det finns ingen seat-licens för d
 
 ## Feedback välkomnas
 
-Vi förbättrar den här appen med verklig användning. Felrapporter, friktioner och idéer hjälper — öppna en GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) eller skriv till info@software-by-design.de. Er feedback formar direkt det vi bygger härnäst.
+Vi förbättrar den här appen med verklig användning. Felrapporter, friktioner och idéer hjälper. Öppna en GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) eller skriv till info@software-by-design.de. Er feedback formar direkt det vi bygger härnäst.
 
 ## Krav
 
@@ -459,7 +459,7 @@ Vi förbättrar den här appen med verklig användning. Felrapporter, friktioner
 - MySQL eller PostgreSQL
 	]]></description>
 	<description lang="nb"><![CDATA[
-# AudioCheck — ditt lydbibliotek i Nextcloud
+# AudioCheck: ditt lydbibliotek i Nextcloud
 
 Lydfilene dine ligger allerede i Files. AudioCheck indekserer mappene du velger og streamer dem med live sjekk av tillatelser.
 
@@ -499,7 +499,7 @@ Appen er **gratis** under AGPL-3.0-or-later. Det finnes ingen seat-lisens for de
 
 ## Feedback er velkommen
 
-Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer hjelper — åpne en GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) eller skriv til info@software-by-design.de. Tilbakemeldingen deres former direkte det vi bygger videre.
+Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer hjelper. Åpne en GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) eller skriv til info@software-by-design.de. Tilbakemeldingen deres former direkte det vi bygger videre.
 
 ## Krav
 
@@ -508,7 +508,7 @@ Vi forbedrer denne appen med bruk i praksis. Feilrapporter, friksjon og idéer h
 - MySQL eller PostgreSQL
 	]]></description>
 	<description lang="pt"><![CDATA[
-# AudioCheck — a sua biblioteca de áudio no Nextcloud
+# AudioCheck, a sua biblioteca de áudio no Nextcloud
 
 Os seus ficheiros de áudio já estão em Ficheiros. O AudioCheck indexa as pastas que escolher e transmite-as com verificação de permissões em tempo real.
 
@@ -548,7 +548,7 @@ A aplicação é **gratuita** sob AGPL-3.0-or-later. Não há licença por posto
 
 ## Feedback bem-vindo
 
-Melhoramos este app com o uso real. Relatórios de bugs, atritos e ideias ajudam — abra um GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) ou escreva para info@software-by-design.de. O seu feedback molda diretamente o que construímos a seguir.
+Melhoramos este app com o uso real. Relatórios de bugs, atritos e ideias ajudam. Abra um GitHub Issue (https://github.com/aSoftwareByDesignRepository/nextcloud-audiocheck/issues) ou escreva para info@software-by-design.de. O seu feedback molda diretamente o que construímos a seguir.
 
 ## Requisitos
 
