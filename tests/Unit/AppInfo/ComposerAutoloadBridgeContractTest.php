@@ -39,7 +39,47 @@ final class ComposerAutoloadBridgeContractTest extends TestCase
 			$this->markTestSkipped('vendor/ not installed in this checkout');
 		}
 		require_once $bridge;
-		self::assertTrue(class_exists(\getID3::class), 'getID3 must load through composer/autoload.php');
+		self::assertTrue(class_exists(\AudioCheck_getID3::class), 'getID3 must load through composer/autoload.php');
+		self::assertFalse(
+			class_exists('getID3'),
+			'global getID3 must NOT be declared — another app (e.g. music) vendoring the same library fatals "Cannot redeclare class" (GH issue #14)'
+		);
+	}
+
+	public function testPrefixedGetId3AnalyzesRealAudioEndToEnd(): void
+	{
+		$bridge = $this->root . '/composer/autoload.php';
+		if (!is_file($this->root . '/vendor-prefixed/autoload.php')) {
+			$this->markTestSkipped('vendor-prefixed/ not generated in this checkout');
+		}
+		require_once $bridge;
+
+		// 100 ms of 8 kHz mono 16-bit PCM silence — enough for getID3 to parse
+		// a real RIFF/WAVE header and exercise the dynamic module loader
+		// ('AudioCheck_getid3_' . $module instantiation, which Strauss does
+		// not rewrite on its own).
+		$wav = $this->makeWav(8000, 1600);
+		$tmp = (string)tempnam(sys_get_temp_dir(), 'acwav') . '.wav';
+		file_put_contents($tmp, $wav);
+		try {
+			$getid3 = new \AudioCheck_getID3();
+			$info = $getid3->analyze($tmp);
+		} finally {
+			@unlink($tmp);
+		}
+		self::assertSame('wav', $info['fileformat'] ?? null, json_encode($info['error'] ?? []));
+		self::assertGreaterThan(0, $info['playtime_seconds'] ?? 0);
+		self::assertSame(8000, $info['audio']['sample_rate'] ?? null);
+	}
+
+	private function makeWav(int $sampleRate, int $samples): string
+	{
+		$data = str_repeat("\x00\x00", $samples);
+		$byteRate = $sampleRate * 2;
+		return 'RIFF' . pack('V', 36 + strlen($data)) . 'WAVE'
+			. 'fmt ' . pack('V', 16) . pack('v', 1) . pack('v', 1) . pack('V', $sampleRate)
+			. pack('V', $byteRate) . pack('v', 2) . pack('v', 16)
+			. 'data' . pack('V', strlen($data)) . $data;
 	}
 
 	public function testMakefileReleaseRequiresComposerProdAndBridge(): void

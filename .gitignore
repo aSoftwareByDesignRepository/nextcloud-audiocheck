@@ -1,5 +1,6 @@
 # Dependencies
 /vendor/
+/vendor-prefixed/
 node_modules/
 
 # PHPUnit / frontend checks

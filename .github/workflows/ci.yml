@@ -30,10 +30,11 @@ jobs:
           test -f composer/autoload.php
           grep -q "vendor/autoload.php" composer/autoload.php
           grep -q 'register(false)' composer/autoload.php
+      - run: composer install --no-interaction --optimize-autoloader
       - run: composer install --no-dev --no-interaction --optimize-autoloader
-      - name: Assert getID3 loads via composer/autoload.php
+      - name: Assert prefixed getID3 loads via composer/autoload.php
         run: |
-          php -r 'require "composer/autoload.php"; if (!class_exists("getID3")) { fwrite(STDERR, "getID3 missing\n"); exit(1); } echo "getID3 OK\n";'
+          php -r 'require "composer/autoload.php"; if (!class_exists("AudioCheck_getID3")) { fwrite(STDERR, "AudioCheck_getID3 missing\n"); exit(1); } if (class_exists("getID3")) { fwrite(STDERR, "global getID3 must NOT be declared\n"); exit(1); } echo "getID3 OK\n";'
       - run: find lib tests templates -name '*.php' -print0 | xargs -0 -n1 -P4 php -l
       - name: Assert store copy does not overclaim without global player
         run: |

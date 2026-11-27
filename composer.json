@@ -8,6 +8,7 @@
 		"james-heinrich/getid3": "^1.9"
 	},
 	"require-dev": {
+		"brianhenryie/strauss": "^0.28.0",
 		"nextcloud/ocp": "^32.0 || ^33.0 || ^34.0 || ^35.0",
 		"phpunit/phpunit": "^9.6"
 	},
@@ -24,7 +25,16 @@
 		}
 	},
 	"scripts": {
+		"post-autoload-dump": "@php composer/strauss-if-dev.php",
 		"test": "phpunit"
+	},
+	"extra": {
+		"strauss": {
+			"namespace_prefix": "OCA\\AudioCheck\\Vendor\\",
+			"classmap_prefix": "AudioCheck_",
+			"constants_prefix": "AudioCheck_",
+			"target_directory": "vendor-prefixed"
+		}
 	},
 	"config": {
 		"optimize-autoloader": true,

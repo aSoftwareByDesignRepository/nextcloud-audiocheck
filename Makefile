@@ -14,10 +14,12 @@ ready2publish_sign = ../../ready2publish/scripts/sign-nextcloud-appstore-archive
 .PHONY: release verify-release verify-signature-manifest sign-release release-signed sign-tarball clean test test-ui test-docker composer-prod
 
 composer-prod:
+	composer install --no-interaction --optimize-autoloader
 	composer install --no-dev --no-interaction --optimize-autoloader
 	@test -f composer/autoload.php || (echo "Error: composer/autoload.php missing (Nextcloud will not load vendor/)"; exit 1)
-	@php -r 'require "composer/autoload.php"; exit(class_exists("getID3") ? 0 : 1);' \
-		|| (echo "Error: getID3 not autoloadable via composer/autoload.php"; exit 1)
+	@test -f vendor-prefixed/autoload.php || (echo "Error: vendor-prefixed/ missing — Strauss did not run"; exit 1)
+	@php -r 'require "composer/autoload.php"; exit(class_exists("AudioCheck_getID3") && !class_exists("getID3", false) ? 0 : 1);' \
+		|| (echo "Error: prefixed AudioCheck_getID3 not autoloadable via composer/autoload.php"; exit 1)
 
 release: composer-prod
 	@echo "Building $(app_name) v$(version)..."
@@ -29,11 +31,12 @@ release: composer-prod
 			--exclude='test-results' --exclude='scripts' --exclude='release/*.tar.gz' --exclude='release/*.asc' \
 			--exclude='appinfo/signature.json' \
 			--exclude='phpunit.xml' --exclude='playwright.config.js' --exclude='playwright-report' \
-			--exclude='e2e' --exclude='.auth' \
+			--exclude='e2e' --exclude='.auth' --exclude='vendor/james-heinrich' \
 			./ "$$staging/$(app_name)/" && \
 		test -f "$$staging/$(app_name)/composer/autoload.php" || (echo "Error: staging missing composer/autoload.php"; rm -rf "$$staging"; exit 1) && \
-		test -d "$$staging/$(app_name)/vendor/james-heinrich/getid3" || (echo "Error: staging missing getID3"; rm -rf "$$staging"; exit 1) && \
-		if find "$$staging/$(app_name)/vendor" -maxdepth 2 -type d \( -name phpunit -o -name nextcloud -o -name myclabs -o -name sebastian -o -name phar-io -o -name theseer \) | grep -q .; then \
+		test -d "$$staging/$(app_name)/vendor-prefixed/james-heinrich/getid3" || (echo "Error: staging missing prefixed getID3"; rm -rf "$$staging"; exit 1) && \
+		test ! -e "$$staging/$(app_name)/vendor/composer/autoload_alias.php" -a ! -e "$$staging/$(app_name)/vendor/composer/autoload_aliases.php" || (echo "Error: staging contains Strauss alias autoloader — global getID3 must stay undeclared"; rm -rf "$$staging"; exit 1) && \
+		if find "$$staging/$(app_name)/vendor" -maxdepth 2 -type d \( -name phpunit -o -name nextcloud -o -name myclabs -o -name sebastian -o -name phar-io -o -name theseer -o -name brianhenryie \) | grep -q .; then \
 			echo "Error: staging vendor still contains require-dev packages — run composer install --no-dev"; \
 			rm -rf "$$staging"; \
 			exit 1; \
@@ -44,9 +47,13 @@ release: composer-prod
 
 verify-release:
 	@test -f $(archive_path) || (echo "Error: Run 'make release' first"; exit 1)
-	@if tar -tzf $(archive_path) | grep -Eq '/(\.git/|node_modules/|build/|tests/|test-results/|scripts/|phpunit\.xml|vendor/(phpunit|nextcloud)/)'; then \
+	@tar -tzf $(archive_path) | grep -q 'vendor-prefixed/james-heinrich/getid3/getid3/getid3.php' \
+		|| (echo "Error: release archive missing prefixed getID3"; exit 1)
+	@tar -tzf $(archive_path) | grep -q 'audiocheck/vendor/james-heinrich/' \
+		&& (echo "Error: release archive ships unprefixed getID3 (global-class collision, GH#14)"; exit 1) || true
+	@if tar -tzf $(archive_path) | grep -Eq '/(\.git/|node_modules/|build/|tests/|test-results/|scripts/|phpunit\.xml|vendor/(phpunit|nextcloud|brianhenryie)/|vendor/composer/autoload_alias)'; then \
 		echo "Error: release archive contains forbidden development paths"; \
-		tar -tzf $(archive_path) | grep -E '/(\.git/|node_modules/|build/|tests/|test-results/|scripts/|phpunit\.xml|vendor/(phpunit|nextcloud)/)' || true; \
+		tar -tzf $(archive_path) | grep -E '/(\.git/|node_modules/|build/|tests/|test-results/|scripts/|phpunit\.xml|vendor/(phpunit|nextcloud|brianhenryie)/|vendor/composer/autoload_alias)' || true; \
 		exit 1; \
 	fi
 	@tmpdir=$$(mktemp -d) && \

@@ -87,8 +87,8 @@ class CoverService
 		$tempPath = null;
 		try {
 			$path = $this->resolveTempPath($file, $tempPath);
-			if ($path === null || !class_exists(\getID3::class)) {
-				if ($path !== null && !class_exists(\getID3::class)) {
+			if ($path === null || !class_exists(\AudioCheck_getID3::class)) {
+				if ($path !== null && !class_exists(\AudioCheck_getID3::class)) {
 					$this->logger->warning(
 						'AudioCheck: getID3 missing; embedded cover extraction skipped. Check composer/autoload.php bridge.',
 						['app' => Application::APP_ID, 'fileId' => $file->getId()],
@@ -96,7 +96,7 @@ class CoverService
 				}
 				return null;
 			}
-			$getID3 = new \getID3();
+			$getID3 = new \AudioCheck_getID3();
 			$info = $getID3->analyze($path);
 			$picture = $info['comments']['picture'][0] ?? $info['attached_picture'][0] ?? null;
 			if (!is_array($picture) || empty($picture['data'])) {

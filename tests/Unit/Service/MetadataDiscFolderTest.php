@@ -131,7 +131,7 @@ final class MetadataDiscFolderTest extends TestCase
 
 	public function testTaggedAlbumAndDiscNumberWinOverFolderInference(): void
 	{
-		if (!class_exists(\getID3::class)) {
+		if (!class_exists(\AudioCheck_getID3::class)) {
 			$this->markTestSkipped('getID3 is not installed.');
 		}
 

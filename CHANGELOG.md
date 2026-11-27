@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.3.15 - 2026-11-28
+
+### Fixed
+
+- Fatal "Cannot redeclare class getID3" breaking mp3 uploads (incl. desktop
+  client) when another app vendoring getID3 is installed — e.g. Music
+  (GH issue #14). getID3 now ships prefix-scoped as `AudioCheck_*`
+  (classes, constants and dynamically-built class names) via Strauss, so
+  both copies coexist regardless of load order.
+- Composer bridge loads the prefixed autoloader explicitly and keeps app
+  dependencies appended so server OCP/OC classes always win.
+- Release build refuses to ship a stale or missing `vendor-prefixed/`
+  tree (fails loudly when it disagrees with composer.lock).
+
 ## 1.3.14 - 2026-11-13
 
 ### Fixed

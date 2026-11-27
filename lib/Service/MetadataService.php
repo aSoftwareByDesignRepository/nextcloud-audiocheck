@@ -103,7 +103,7 @@ class MetadataService
 				return $defaults;
 			}
 
-			if (!class_exists(\getID3::class)) {
+			if (!class_exists(\AudioCheck_getID3::class)) {
 				if (!self::$getId3MissingLogged) {
 					self::$getId3MissingLogged = true;
 					$this->logger->error(
@@ -115,7 +115,7 @@ class MetadataService
 				return $defaults;
 			}
 
-			$getID3 = new \getID3();
+			$getID3 = new \AudioCheck_getID3();
 			$getID3->option_tag_id3v2 = true;
 			$getID3->option_tag_apetag = true;
 			$getID3->option_extra_info = false;
