@@ -159,7 +159,7 @@ OC.L10N.register(
 	"Chapter {n}" : "Kapittel {n}",
 	"Chapter: {title}" : "Kapittel: {title}",
 	"Chapters" : "Kapittel",
-	"Check Partner" : "Check Partner",
+	"Check Partner" : "Se partner",
 	"Choose a folder" : "Velg en mappe",
 	"Choose a folder from your files to index audio. Use Add folder above to get started." : "Velg en mappe fra Filer for å indeksere lyd. Bruk Legg til mappe ovenfor for å komme i gang.",
 	"Choose a passphrase of at least 12 characters." : "Velg en passordfrase på minst 12 tegn.",

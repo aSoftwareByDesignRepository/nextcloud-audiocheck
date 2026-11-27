@@ -159,7 +159,7 @@ OC.L10N.register(
 	"Chapter {n}" : "Capítulo {n}",
 	"Chapter: {title}" : "Capítulo: {title}",
 	"Chapters" : "Capítulos",
-	"Check Partner" : "Check Partner",
+	"Check Partner" : "Comprobar socio",
 	"Choose a folder" : "Elija una carpeta",
 	"Choose a folder from your files to index audio. Use Add folder above to get started." : "Elija una carpeta de sus archivos para indexar el audio. Use Añadir carpeta arriba para empezar.",
 	"Choose a passphrase of at least 12 characters." : "Elija una frase de contraseña de al menos 12 caracteres.",
