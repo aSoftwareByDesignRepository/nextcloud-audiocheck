@@ -167,7 +167,7 @@ OC.L10N.register(
 	"Choose audio from Home or Browse to start listening." : "Kies audio uit Start of Bladeren om te beginnen met luisteren.",
 	"Choose folder in Files" : "Map in bestanden kiezen",
 	"Choose folders to scan, then index your audio." : "Kies mappen om te scannen en indexeer vervolgens uw audio.",
-	"Choose Open for everyone, or Restricted to pick people and groups." : "Kies Open voor iedereen, of Beperkt om mensen en groepen te kiezen.",
+	"Choose Open for everyone, or Restricted to pick people and groups." : "Kies Openen voor iedereen, of Beperkt om mensen en groepen te kiezen.",
 	"Choose whether each folder is music, audiobooks, or auto-detect. Your files stay in Files — nothing is copied." : "Bepaal per map of het muziek, audioboeken of automatische detectie is. Bestanden blijven in Bestanden — er wordt niets gekopieerd.",
 	"Clear queue" : "Wis de wachtrij",
 	"Clear queue?" : "Wachtrij vrij?",

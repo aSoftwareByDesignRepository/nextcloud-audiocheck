@@ -307,7 +307,7 @@ OC.L10N.register(
 	"Grouped by book title when your files include album tags. No tags? Use Titles instead." : "Raggruppati per titolo di libro quando i file includono tag di album. Nessun tag? Usa Titoli invece.",
 	"Grouping updated." : "Raggruppamento aggiornato.",
 	"Grouping updated. Re-scanning to rebuild collections…" : "Raggruppamento aggiornato. Nuova scansione per ricostruire le collezioni…",
-	"Help" : "Guida",
+	"Help" : "Aiuto",
 	"Hide" : "Nascondi",
 	"Hide listened" : "Nascondi ascoltato",
 	"Home" : "Inizio",
