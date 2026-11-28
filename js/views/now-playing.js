@@ -166,6 +166,7 @@
 			let renderedListenedKey = '';
 			let lastQueueSig = '';
 			let seekDragging = false;
+			let seekScrub = null;
 			let idleMode = '';
 
 			function buildOptionsSection() {
@@ -693,16 +694,20 @@
 			}
 
 			function paintSeek() {
-				if (seekDragging) return;
+				if (seekScrub ? seekScrub.dragging() : seekDragging) return;
 				const a = document.getElementById('ac-audio');
 				if (!a || !seekInput) return;
+				const heldMs = (window.AudioCheckPlayer && typeof window.AudioCheckPlayer.scrubPaintMs === 'function')
+					? window.AudioCheckPlayer.scrubPaintMs(a.currentTime)
+					: null;
+				const paintMs = heldMs != null ? heldMs : Math.floor(a.currentTime * 1000);
 				if (a.duration && Number.isFinite(a.duration)) {
 					seekInput.max = String(Math.floor(a.duration * 1000));
-					seekInput.value = String(Math.floor(a.currentTime * 1000));
-					if (posEl) posEl.textContent = AudioCheckTime.formatMs(a.currentTime * 1000);
+					seekInput.value = String(paintMs);
+					if (posEl) posEl.textContent = AudioCheckTime.formatMs(paintMs);
 					if (durEl) durEl.textContent = AudioCheckTime.formatMs(a.duration * 1000);
 					seekInput.setAttribute('aria-valuetext',
-						AudioCheckTime.formatMs(a.currentTime * 1000) + ' ' + t('audiocheck', 'of') + ' ' + AudioCheckTime.formatMs(a.duration * 1000));
+						AudioCheckTime.formatMs(paintMs) + ' ' + t('audiocheck', 'of') + ' ' + AudioCheckTime.formatMs(a.duration * 1000));
 				}
 			}
 
@@ -946,20 +951,47 @@
 					className: 'ac-seek',
 					attrs: { min: '0', max: '1000', value: '0', 'aria-label': t('audiocheck', 'Seek') },
 				});
-				seekInput.addEventListener('pointerdown', () => { seekDragging = true; });
-				seekInput.addEventListener('pointerup', () => { seekDragging = false; });
-				seekInput.addEventListener('pointercancel', () => { seekDragging = false; });
-				seekInput.addEventListener('input', (e) => {
-					const a = document.getElementById('ac-audio');
-					const ms = parseInt(e.target.value, 10);
-					if (window.AudioCheckPlayer && typeof window.AudioCheckPlayer.clearSeekJumpPending === 'function') {
-						window.AudioCheckPlayer.clearSeekJumpPending();
-					}
-					if (a && a.duration) a.currentTime = ms / 1000;
-					const posText = AudioCheckTime.formatMs(ms);
-					if (posEl) posEl.textContent = posText;
-					e.target.setAttribute('aria-valuetext', posText);
-				});
+				// Preview on `input` (labels only — never currentTime); commit once
+				// on `change` (one seek + one progress save per gesture). The drag
+				// latch holds until `change` so no stale repaint slips between
+				// pointerup and commit.
+				if (window.AudioCheckSeekJump && typeof AudioCheckSeekJump.bindScrubSlider === 'function') {
+					seekScrub = AudioCheckSeekJump.bindScrubSlider(seekInput, {
+						userIntent() {
+							if (window.AudioCheckPlayer && typeof window.AudioCheckPlayer.clearSeekJumpPending === 'function') {
+								window.AudioCheckPlayer.clearSeekJumpPending();
+							}
+						},
+						preview(ms) {
+							const posText = AudioCheckTime.formatMs(ms);
+							if (posEl) posEl.textContent = posText;
+							seekInput.setAttribute('aria-valuetext', posText);
+						},
+						commit(ms) {
+							if (window.AudioCheckPlayer && typeof window.AudioCheckPlayer.commitScrubMs === 'function') {
+								window.AudioCheckPlayer.commitScrubMs(ms);
+							}
+						},
+					});
+				} else {
+					seekInput.addEventListener('pointerdown', () => { seekDragging = true; });
+					seekInput.addEventListener('pointercancel', () => { seekDragging = false; });
+					seekInput.addEventListener('input', (e) => {
+						const ms = parseInt(e.target.value, 10);
+						if (window.AudioCheckPlayer && typeof window.AudioCheckPlayer.clearSeekJumpPending === 'function') {
+							window.AudioCheckPlayer.clearSeekJumpPending();
+						}
+						const posText = AudioCheckTime.formatMs(ms);
+						if (posEl) posEl.textContent = posText;
+						e.target.setAttribute('aria-valuetext', posText);
+					});
+					seekInput.addEventListener('change', (e) => {
+						seekDragging = false;
+						if (window.AudioCheckPlayer && typeof window.AudioCheckPlayer.commitScrubMs === 'function') {
+							window.AudioCheckPlayer.commitScrubMs(parseInt(e.target.value, 10) || 0);
+						}
+					});
+				}
 				const timeRow = C.el('div', { className: 'ac-now-time' });
 				posEl = C.el('span', { className: 'ac-now-time__pos', text: '0:00' });
 				durEl = C.el('span', { className: 'ac-now-time__dur', text: '0:00' });

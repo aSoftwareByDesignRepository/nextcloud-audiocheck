@@ -22,6 +22,44 @@
 		seekJumpPendingKey = null;
 		seekJumpSeq += 1;
 		pendingRestoreSeekMs = null;
+		clearCommittedScrubPaint();
+	}
+
+	/**
+	 * Committed-paint hold for scrub commits — paint functions show the
+	 * committed value until the media clock converges (never snap back).
+	 */
+	const committedScrubPaint =
+		(window.AudioCheckSeekJump && typeof AudioCheckSeekJump.createCommittedScrubPaint === 'function')
+			? AudioCheckSeekJump.createCommittedScrubPaint()
+			: null;
+
+	function clearCommittedScrubPaint() {
+		if (committedScrubPaint) committedScrubPaint.clear();
+	}
+
+	/** Paint value for scrub sliders — committed value wins while held. */
+	function scrubPaintMs(currentTimeSec) {
+		return committedScrubPaint ? committedScrubPaint.paintMs(currentTimeSec) : null;
+	}
+
+	/**
+	 * Commit a scrub gesture: exactly ONE currentTime write + ONE progress save.
+	 * `input` events never reach here — previews are label-only.
+	 */
+	function commitScrubMs(ms) {
+		const a = audio();
+		if (!a) return;
+		clearSeekJumpPending();
+		const dur = Number.isFinite(a.duration) && a.duration > 0 ? a.duration : 0;
+		const nextSec = (window.AudioCheckSeekJump && typeof AudioCheckSeekJump.resolveScrubTargetSec === 'function')
+			? AudioCheckSeekJump.resolveScrubTargetSec(ms, dur)
+			: Math.max(0, (Number(ms) || 0) / 1000);
+		a.currentTime = nextSec;
+		if (committedScrubPaint) committedScrubPaint.note(nextSec * 1000);
+		updateMiniSeek();
+		saveProgress(false, false);
+		notify();
 	}
 
 	const queue = [];
@@ -1131,7 +1169,7 @@
 		}
 	}
 
-	let seekDragging = false;
+	let miniScrub = null;
 
 	function updateMiniSeek() {
 		const a = audio();
@@ -1139,11 +1177,13 @@
 		const posEl = document.getElementById('ac-mini-pos');
 		const durEl = document.getElementById('ac-mini-dur');
 		if (!a || !seek) return;
-		if (seekDragging) return;
+		if (miniScrub && miniScrub.dragging()) return;
+		const heldMs = scrubPaintMs(a.currentTime);
+		const paintMs = heldMs != null ? heldMs : Math.floor(a.currentTime * 1000);
 		if (a.duration && Number.isFinite(a.duration)) {
 			seek.max = String(Math.floor(a.duration * 1000));
-			seek.value = String(Math.floor(a.currentTime * 1000));
-			const posText = AudioCheckTime.formatMs(a.currentTime * 1000);
+			seek.value = String(paintMs);
+			const posText = AudioCheckTime.formatMs(paintMs);
 			const durText = AudioCheckTime.formatMs(a.duration * 1000);
 			seek.setAttribute('aria-valuetext', posText + ' ' + t('audiocheck', 'of') + ' ' + durText);
 			if (posEl) posEl.textContent = posText;
@@ -1272,19 +1312,34 @@
 		document.getElementById('ac-mini-next')?.addEventListener('click', next);
 		document.getElementById('ac-mini-jump-back')?.addEventListener('click', () => seekBySec(-SEEK_JUMP_SEC));
 		document.getElementById('ac-mini-jump-forward')?.addEventListener('click', () => seekBySec(SEEK_JUMP_SEC));
-		document.getElementById('ac-mini-seek')?.addEventListener('input', (e) => {
-			const ms = parseInt(e.target.value, 10);
-			clearSeekJumpPending();
-			if (a.duration) a.currentTime = ms / 1000;
-			const posEl = document.getElementById('ac-mini-pos');
-			const posText = AudioCheckTime.formatMs(ms);
-			if (posEl) posEl.textContent = posText;
-			e.target.setAttribute('aria-valuetext', posText);
-		});
 		const miniSeek = document.getElementById('ac-mini-seek');
-		miniSeek?.addEventListener('pointerdown', () => { seekDragging = true; });
-		miniSeek?.addEventListener('pointerup', () => { seekDragging = false; });
-		miniSeek?.addEventListener('pointercancel', () => { seekDragging = false; });
+		// Preview on `input` (labels only — never currentTime); commit once on
+		// `change` (one seek + one progress save per gesture).
+		if (miniSeek && window.AudioCheckSeekJump && typeof AudioCheckSeekJump.bindScrubSlider === 'function') {
+			miniScrub = AudioCheckSeekJump.bindScrubSlider(miniSeek, {
+				userIntent: clearSeekJumpPending,
+				preview(ms) {
+					const posEl = document.getElementById('ac-mini-pos');
+					const posText = AudioCheckTime.formatMs(ms);
+					if (posEl) posEl.textContent = posText;
+					miniSeek.setAttribute('aria-valuetext', posText);
+				},
+				commit: commitScrubMs,
+			});
+		} else if (miniSeek) {
+			// Same preview/commit contract without the shared helper.
+			miniSeek.addEventListener('input', (e) => {
+				const ms = parseInt(e.target.value, 10) || 0;
+				clearSeekJumpPending();
+				const posEl = document.getElementById('ac-mini-pos');
+				const posText = AudioCheckTime.formatMs(ms);
+				if (posEl) posEl.textContent = posText;
+				e.target.setAttribute('aria-valuetext', posText);
+			});
+			miniSeek.addEventListener('change', (e) => {
+				commitScrubMs(parseInt(e.target.value, 10) || 0);
+			});
+		}
 		document.addEventListener('keydown', (e) => {
 			if (shortcutsBlocked(e)) return;
 			const track = currentTrack();
@@ -1750,6 +1805,9 @@
 		SEEK_JUMP_SEC,
 		seekBySec,
 		clearSeekJumpPending,
+		commitScrubMs,
+		scrubPaintMs,
+		clearCommittedScrubPaint,
 		seekToMs(ms) {
 			const a = audio();
 			if (!a) return;
