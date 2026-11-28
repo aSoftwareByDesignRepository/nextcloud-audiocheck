@@ -17,6 +17,9 @@ const path = require('path');
 const fs = require('fs');
 const vm = require('vm');
 const { login, resolveE2eCreds } = require('./helpers/auth.js');
+const { execSync } = require('child_process');
+
+const NC_DIR = path.join(__dirname, '..', '..', '..', '..');
 
 // Load the app's real comparator so expectations share natural-sort semantics
 // (localeCompare orders '01-*' titles differently than the app does).
@@ -91,9 +94,11 @@ test.describe('Queue sort chips (Now playing)', () => {
 		});
 		expect(put.status).toBe(200);
 
+		let e2eUid = '';
 		try {
 			await page.goto(`${BASE}/apps/audiocheck/now-playing`, { waitUntil: 'domcontentloaded' });
 			await expect(page.locator('#ac-main-content')).toBeVisible({ timeout: 30_000 });
+			e2eUid = await page.evaluate(() => window.OC?.getCurrentUser?.()?.uid ?? '');
 			// Bootstrap restore is racy (progress vs queue restore) — drive the
 			// seeded queue through the player API for a deterministic fixture;
 			// durability is asserted via GET /api/queue afterwards anyway.
@@ -187,7 +192,18 @@ test.describe('Queue sort chips (Now playing)', () => {
 				.analyze();
 			expect(axe.violations, JSON.stringify(axe.violations, null, 2)).toEqual([]);
 		} finally {
-			await api(page, 'DELETE', '/api/queue').catch(() => {});
+			const del = await api(page, 'DELETE', '/api/queue')
+				.catch((e) => { console.warn(`[e2e] queue delete threw: ${e}`); return { status: 0, json: null }; });
+			if (del.status < 200 || del.status >= 300) {
+				console.warn(`[e2e] queue delete refused (${del.status}) — SQL backstop covers (uid=${e2eUid || '?'})`);
+				if (e2eUid) {
+					const sqlUid = e2eUid.replace(/'/g, "''");
+					execSync(
+						`docker compose exec -T mariadb sh -c 'echo "DELETE FROM oc_ac_queue_items WHERE queue_id IN (SELECT id FROM oc_ac_queue WHERE user_id='${sqlUid}'); DELETE FROM oc_ac_queue WHERE user_id='${sqlUid}';" | mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"'`,
+						{ cwd: NC_DIR, stdio: 'pipe' },
+					);
+				}
+			}
 		}
 	});
 });

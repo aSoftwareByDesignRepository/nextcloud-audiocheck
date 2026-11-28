@@ -211,11 +211,21 @@ test.describe('Playlist sort picker', () => {
 			expect(axe.violations, JSON.stringify(axe.violations, null, 2)).toEqual([]);
 		} finally {
 			await page.unrouteAll().catch(() => {});
-			if (plId) await api(page, 'DELETE', `/api/playlists/${plId}`).catch(() => {});
+			if (plId) {
+				const del = await api(page, 'DELETE', `/api/playlists/${plId}`)
+					.catch((e) => { console.warn(`[e2e] playlist ${plId} delete threw: ${e}`); return { status: 0, json: null }; });
+				if (del.status < 200 || del.status >= 300) {
+					console.warn(`[e2e] playlist ${plId} delete refused (${del.status}) — SQL backstop covers`);
+					execSync(
+						`docker compose exec -T mariadb sh -c 'echo "DELETE FROM oc_ac_playlist_items WHERE playlist_id=${Number(plId)}; DELETE FROM oc_ac_playlists WHERE id=${Number(plId)};" | mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"'`,
+						{ cwd: NC_DIR, stdio: 'pipe' },
+					);
+				}
+			}
 			const cleared = {};
 			Object.values(metaMap).forEach((mid) => { cleared[mid] = null; });
 			if (Object.keys(cleared).length) {
-				try { seedTrackNos(cleared); } catch { /* restore best-effort */ }
+				try { seedTrackNos(cleared); } catch (e) { console.warn(`[e2e] track_no restore failed (fixture pollution possible): ${e}`); }
 			}
 		}
 	});
